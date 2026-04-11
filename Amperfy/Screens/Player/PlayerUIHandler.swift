@@ -352,10 +352,37 @@ class PlayerUIHandler: NSObject {
       .availableApiTypes.contains(.subsonic)
   }
 
+  /// Duration in seconds to use for the player UI, preferring the engine's
+  /// parsed duration when available and falling back to the currently playing
+  /// entity's persisted duration when the engine reports 0 / NaN.
+  ///
+  /// `AudioStreaming.AudioPlayer.duration` returns 0 until it has parsed
+  /// enough packets to compute the track length (see `AudioEntry.duration()`).
+  /// For VBR files, slow starts, or certain codecs, the player UI would
+  /// otherwise render "--:--" for total track length while elapsed time kept
+  /// ticking up (elapsed comes from `progress` and is available immediately).
+  /// The Subsonic-parsed `AbstractPlayable.duration` is known at playback
+  /// start, so we fall back to it whenever the engine duration isn't usable.
+  ///
+  /// This is intentionally a computed property, NOT a memoized/stored value:
+  /// `refreshTimeInfo` is called on every 1s player tick, so the fallback→
+  /// engine-value transition happens automatically as soon as the engine
+  /// finishes packet parsing. Do not cache the result.
+  private var effectiveDuration: Double {
+    let engineDuration = player.duration
+    if engineDuration.isNormal, !engineDuration.isZero {
+      return engineDuration
+    }
+    if let persisted = player.currentlyPlaying?.duration, persisted > 0 {
+      return Double(persisted)
+    }
+    return 0
+  }
+
   private var remainingTime: Int? {
-    let duration = player.duration
+    let duration = effectiveDuration
     if player.currentlyPlaying != nil, duration.isNormal, !duration.isZero {
-      return Int(player.elapsedTime - ceil(player.duration))
+      return Int(player.elapsedTime - ceil(duration))
     }
     return nil
   }
@@ -372,7 +399,7 @@ class PlayerUIHandler: NSObject {
     let elapsedClockTime = ClockTime(timeInSeconds: Int(timeSlider.value))
     elapsedTimeLabel.text = elapsedClockTime.asShortString()
     let remainingTime =
-      ClockTime(timeInSeconds: Int(Double(timeSlider.value) - ceil(player.duration)))
+      ClockTime(timeInSeconds: Int(Double(timeSlider.value) - ceil(effectiveDuration)))
     remainingTimeLabel.text = remainingTime.asShortString()
   }
 
@@ -390,7 +417,7 @@ class PlayerUIHandler: NSObject {
       let supportTimeInteraction = !currentlyPlaying.isRadio
       timeSlider.isEnabled = supportTimeInteraction && (style != .miniPlayeriOS)
       timeSlider.minimumValue = 0.0
-      timeSlider.maximumValue = Float(player.duration)
+      timeSlider.maximumValue = Float(effectiveDuration)
       if !timeSlider.isTracking, supportTimeInteraction {
         let elapsedClockTime = ClockTime(timeInSeconds: Int(player.elapsedTime))
         elapsedTimeLabel.text = elapsedClockTime.asShortString()

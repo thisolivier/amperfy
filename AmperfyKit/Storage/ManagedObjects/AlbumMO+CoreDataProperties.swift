@@ -47,6 +47,8 @@ extension AlbumMO {
   @NSManaged
   public var remoteSongCount: Int16
   @NSManaged
+  public var releaseType: String?
+  @NSManaged
   public var year: Int16
   @NSManaged
   public var artist: ArtistMO?

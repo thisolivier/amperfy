@@ -44,9 +44,16 @@ struct HomeItem: Hashable, @unchecked Sendable {
 @MainActor
 class HomeManager: NSObject {
   public static let sectionMaxItemCount = 20
+  /// The number of recent-track rows the home widget shows when present.
+  /// Spec: "up to 7 track rows" (BACKLOG.md §3.1).
+  public static let recentTracksWidgetItemCount = 7
 
   public var orderedVisibleSections: [HomeSection]
   public var data: [HomeSection: [HomeItem]] = [:]
+  /// Count of additional recent-tracks (beyond the 7 visible widget rows)
+  /// added in the last 7 days. Used by HomeVC to render the section
+  /// footer / header subtitle. Refreshed alongside `data[.recentTracks]`.
+  public var recentTracksExtraCount: Int = 0
   public var applySnapshotCB: VoidFunctionCallback?
 
   private let account: Account
@@ -100,11 +107,16 @@ class HomeManager: NSObject {
     }
 
     if orderedVisibleSections.contains(where: { $0 == .newestAlbums }) {
+      // Home tab newest-albums section always filters to whole albums
+      // (singles / bags of singles are hidden). Threshold 3 matches the
+      // library-wide setting. See `spike/amperfy/BACKLOG.md` §2.2.
       albumsNewestFetchController = AlbumFetchedResultsController(
         coreDataCompanion: storage.main, account: account,
         sortType: .newest,
         isGroupedInAlphabeticSections: false,
-        fetchLimit: Self.sectionMaxItemCount
+        fetchLimit: Self.sectionMaxItemCount,
+        wholeAlbumsOnly: true,
+        wholeAlbumMinSongCount: 3
       )
       albumsNewestFetchController?.delegate = self
       albumsNewestFetchController?.search(
@@ -195,6 +207,13 @@ class HomeManager: NSObject {
     } else {
       radiosFetchedController?.delegate = nil
       radiosFetchedController = nil
+    }
+
+    if orderedVisibleSections.contains(where: { $0 == .recentTracks }) {
+      // Recent-tracks widget: pure-fetch, no FRC. The widget is a polled
+      // snapshot — we re-run the query on createFetchController() and on
+      // each viewIsAppearing via updateFromRemote(). See BACKLOG.md §3.1.
+      updateRecentTracks()
     }
   }
 
@@ -372,6 +391,36 @@ class HomeManager: NSObject {
         }
       applySnapshotCB?()
     }
+  }
+
+  /// Refresh the recent-tracks widget data. Pulls the top 7 songs that pass
+  /// the non-whole-album filter (threshold 5), hides the section entirely
+  /// when all 7 are older than 7 days (per BACKLOG.md §3.1), and computes
+  /// the "X more in the last 7 days" footer count.
+  func updateRecentTracks() {
+    let context = storage.main.context
+    let topSongs = RecentTracksQuery.topN(
+      context: context,
+      n: Self.recentTracksWidgetItemCount
+    )
+    if RecentTracksQuery.shouldShowWidget(topResults: topSongs) {
+      data[.recentTracks] = topSongs.compactMap { Song(managedObject: $0) }.compactMap {
+        HomeItem(playableContainable: $0)
+      }
+      let lastWeekCount = RecentTracksQuery.lastMDaysCount(context: context, m: 7)
+      // Subtract the visible rows that are themselves in the 7-day window so
+      // the footer reads "X more" rather than double-counting.
+      let visibleFreshCount = topSongs.filter { song in
+        guard let added = song.addedDate else { return false }
+        return added >= Date().addingTimeInterval(-7 * 24 * 60 * 60)
+      }.count
+      recentTracksExtraCount = max(0, lastWeekCount - visibleFreshCount)
+    } else {
+      // All freshest 7 are older than 7 days → hide widget by emptying data.
+      data[.recentTracks] = []
+      recentTracksExtraCount = 0
+    }
+    applySnapshotCB?()
   }
 }
 
