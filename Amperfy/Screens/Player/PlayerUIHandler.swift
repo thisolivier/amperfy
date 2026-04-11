@@ -363,6 +363,11 @@ class PlayerUIHandler: NSObject {
   /// ticking up (elapsed comes from `progress` and is available immediately).
   /// The Subsonic-parsed `AbstractPlayable.duration` is known at playback
   /// start, so we fall back to it whenever the engine duration isn't usable.
+  ///
+  /// This is intentionally a computed property, NOT a memoized/stored value:
+  /// `refreshTimeInfo` is called on every 1s player tick, so the fallback→
+  /// engine-value transition happens automatically as soon as the engine
+  /// finishes packet parsing. Do not cache the result.
   private var effectiveDuration: Double {
     let engineDuration = player.duration
     if engineDuration.isNormal, !engineDuration.isZero {
