@@ -1,0 +1,8 @@
+Hotfix 3 — build 6 (2026-04-11)
+
+• Home "Newest Albums" now honors the whole-album filter. Previously, the init-time wholeAlbumsOnly predicate was silently dropped the moment the Home tab ran its .newest search, so 1-track releases (e.g. God's Son, Sleepless, The Claw) leaked through. AlbumFetchedResultsController now AND-composes the whole-album clause back into every search predicate (QA B-1).
+• "Recently Added Tracks" section header no longer renders with zero items. The header now only appears when the widget has at least one track to show (QA B-2 cosmetic).
+
+Known issues carried over:
+• On a fresh install the "Recently Added Tracks" widget will stay empty until the user opens individual albums, because bulk album sync (getAlbumList2) does not materialize songs or populate Song.addedDate. Root cause confirmed in ADDED_DATE_INVESTIGATION.md; fix scoped for a dedicated PR rather than this hotfix.
+• Album detail view occasionally shows a blank track list for newly-added-to-Navidrome albums on first open (Bug #23, parked — separate investigation).
