@@ -239,10 +239,23 @@ final class HomeVC: UICollectionViewController {
     }
   }
 
+  /// Sections that must be hidden from the Home snapshot when they have no
+  /// items to show. Used to drop the standalone "Recently Added Tracks"
+  /// header on fresh-install / empty-data states (QA Bug B-2, 2026-04-11).
+  /// Sections are opted in explicitly — most Home sections have an
+  /// init-time placeholder or synchronous population path and never
+  /// transit through an empty-but-visible state, so the default continues
+  /// to render an empty section header as before.
+  private static let sectionsHiddenWhenEmpty: Set<HomeSection> = [.recentTracks]
+
   private func applySnapshot(animated: Bool = true) {
     var snapshot = NSDiffableDataSourceSnapshot<HomeSection, HomeItem>()
-    snapshot.appendSections(sharedHome.orderedVisibleSections)
-    for section in sharedHome.orderedVisibleSections {
+    let visibleSections = sharedHome.orderedVisibleSections.filter { section in
+      guard Self.sectionsHiddenWhenEmpty.contains(section) else { return true }
+      return !(sharedHome.data[section]?.isEmpty ?? true)
+    }
+    snapshot.appendSections(visibleSections)
+    for section in visibleSections {
       let items = sharedHome.data[section] ?? []
       snapshot.appendItems(items, toSection: section)
     }
