@@ -30,6 +30,18 @@ class SsAlbumParserDelegate: SsXmlLibWithArtworkParser {
   var parsedAlbums = [Album]()
   private var albumBuffer: Album?
 
+  /// OpenSubsonic `releaseTypes` nested-element values collected for the
+  /// current album. Each `<releaseTypes>Album</releaseTypes>` child appends one
+  /// entry. Joined, lowercased, and stored on the album at `didEndElement` for
+  /// the closing `</album>` tag.
+  private var releaseTypesNestedParts: [String] = []
+  /// Set to `true` while the parser is inside a `<releaseTypes>` child of the
+  /// current album so that `foundCharacters` knows to accumulate text.
+  private var isInsideReleaseTypesElement = false
+  /// Text buffer for the currently open `<releaseTypes>` child. XMLParser may
+  /// deliver characters in multiple chunks, so we accumulate before trimming.
+  private var releaseTypesCharBuffer = ""
+
   override func parser(
     _ parser: XMLParser,
     didStartElement elementName: String,
@@ -48,6 +60,11 @@ class SsAlbumParserDelegate: SsXmlLibWithArtworkParser {
     if elementName == "album" {
       guard let albumId = attributeDict["id"] else { return }
 
+      // Reset per-album nested-element accumulator. Must happen before any
+      // potential early return from the attribute-form branch below so that
+      // a fresh album always starts with a clean buffer.
+      releaseTypesNestedParts = []
+
       if let prefetchedAlbum = prefetch.prefetchedAlbumDict[albumId] {
         albumBuffer = prefetchedAlbum
         guessedArtist = prefetchedAlbum.artist
@@ -60,6 +77,18 @@ class SsAlbumParserDelegate: SsXmlLibWithArtworkParser {
         guessedGenre = nil
       }
       albumBuffer?.remoteStatus = .available
+
+      // OpenSubsonic attribute-form of releaseTypes (some servers emit this
+      // instead of or in addition to nested <releaseTypes> child elements).
+      // Nested form, if present, will override at didEndElement("album").
+      if let attributeReleaseTypes = attributeDict["releaseTypes"] {
+        let trimmed = attributeReleaseTypes
+          .trimmingCharacters(in: .whitespacesAndNewlines)
+          .lowercased()
+        if !trimmed.isEmpty {
+          albumBuffer?.releaseType = trimmed
+        }
+      }
 
       if let attributeAlbumtName = attributeDict["name"] {
         albumBuffer?.name = attributeAlbumtName
@@ -114,6 +143,18 @@ class SsAlbumParserDelegate: SsXmlLibWithArtworkParser {
           albumBuffer?.genre = genre
         }
       }
+    } else if elementName == "releaseTypes", albumBuffer != nil {
+      // OpenSubsonic nested-element form: one <releaseTypes>Album</releaseTypes>
+      // child per release type. We accumulate the text via foundCharacters and
+      // commit in the matching didEndElement handler below.
+      isInsideReleaseTypesElement = true
+      releaseTypesCharBuffer = ""
+    }
+  }
+
+  override func parser(_ parser: XMLParser, foundCharacters string: String) {
+    if isInsideReleaseTypesElement {
+      releaseTypesCharBuffer.append(string)
     }
   }
 
@@ -125,11 +166,30 @@ class SsAlbumParserDelegate: SsXmlLibWithArtworkParser {
   ) {
     switch elementName {
     case "album":
+      // Nested-element form wins over attribute-form: if we collected any
+      // <releaseTypes> children, join them with ", " (the same separator
+      // a comma-delimited attribute would use) so the predicate CONTAINS[c]
+      // checks stay uniform across both wire formats.
+      if !releaseTypesNestedParts.isEmpty {
+        albumBuffer?.releaseType = releaseTypesNestedParts.joined(separator: ", ")
+      }
+      releaseTypesNestedParts = []
       parsedCount += 1
       if let album = albumBuffer {
         parsedAlbums.append(album)
       }
       albumBuffer = nil
+    case "releaseTypes":
+      if isInsideReleaseTypesElement {
+        let trimmed = releaseTypesCharBuffer
+          .trimmingCharacters(in: .whitespacesAndNewlines)
+          .lowercased()
+        if !trimmed.isEmpty {
+          releaseTypesNestedParts.append(trimmed)
+        }
+        releaseTypesCharBuffer = ""
+        isInsideReleaseTypesElement = false
+      }
     default:
       break
     }

@@ -148,6 +148,15 @@ public class Album: AbstractLibraryEntity {
     return moSongCount != 0 ? moSongCount : moRemoteSongCount
   }
 
+  /// OpenSubsonic `releaseTypes` metadata — lowercased, may be nil, may contain
+  /// multiple comma/space separated values (e.g. "album, compilation"). Used by
+  /// `WholeAlbumPredicates` to distinguish whole albums / EPs from bags of
+  /// singles. See `spike/amperfy/BACKLOG.md` §1.
+  public var releaseType: String? {
+    get { managedObject.releaseType }
+    set { managedObject.releaseType = newValue?.lowercased() }
+  }
+
   public var songs: [AbstractPlayable] {
     guard let songsSet = managedObject.songs,
           let songsMO = songsSet.array as? [SongMO] else { return [Song]() }

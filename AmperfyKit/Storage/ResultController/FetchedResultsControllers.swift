@@ -671,7 +671,9 @@ public class AlbumFetchedResultsController: CachedFetchedResultsController<Album
     account: Account,
     sortType: AlbumElementSortType,
     isGroupedInAlphabeticSections: Bool,
-    fetchLimit: Int? = nil
+    fetchLimit: Int? = nil,
+    wholeAlbumsOnly: Bool = false,
+    wholeAlbumMinSongCount: Int16 = 3
   ) {
     self.sortType = sortType
     var fetchRequest = AlbumMO.alphabeticSortedFetchRequest
@@ -692,13 +694,21 @@ public class AlbumFetchedResultsController: CachedFetchedResultsController<Album
       fetchRequest = AlbumMO.yearSortedFetchRequest
     }
     fetchRequest.fetchLimit = fetchLimit ?? 0
-    fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+    var subPredicates: [NSPredicate] = [
       coreDataCompanion.library.getFetchPredicate(forAccount: account),
       NSCompoundPredicate(orPredicateWithSubpredicates: [
         AbstractLibraryEntityMO.excludeRemoteDeleteFetchPredicate,
         coreDataCompanion.library.getFetchPredicate(onlyCachedAlbums: true),
       ]),
-    ])
+    ]
+    if wholeAlbumsOnly {
+      // Whole-album primitive: metadata-driven with a count fallback. See
+      // `WholeAlbumPredicates` + `spike/amperfy/BACKLOG.md` §1.
+      subPredicates.append(
+        WholeAlbumPredicates.wholeAlbum(minSongCount: wholeAlbumMinSongCount)
+      )
+    }
+    fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: subPredicates)
     fetchRequest.relationshipKeyPathsForPrefetching = AlbumMO.relationshipKeyPathsForPrefetching
     fetchRequest.returnsObjectsAsFaults = false
     super.init(

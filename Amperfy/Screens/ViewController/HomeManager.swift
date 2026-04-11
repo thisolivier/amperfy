@@ -100,11 +100,16 @@ class HomeManager: NSObject {
     }
 
     if orderedVisibleSections.contains(where: { $0 == .newestAlbums }) {
+      // Home tab newest-albums section always filters to whole albums
+      // (singles / bags of singles are hidden). Threshold 3 matches the
+      // library-wide setting. See `spike/amperfy/BACKLOG.md` §2.2.
       albumsNewestFetchController = AlbumFetchedResultsController(
         coreDataCompanion: storage.main, account: account,
         sortType: .newest,
         isGroupedInAlphabeticSections: false,
-        fetchLimit: Self.sectionMaxItemCount
+        fetchLimit: Self.sectionMaxItemCount,
+        wholeAlbumsOnly: true,
+        wholeAlbumMinSongCount: 3
       )
       albumsNewestFetchController?.delegate = self
       albumsNewestFetchController?.search(
