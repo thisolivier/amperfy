@@ -228,6 +228,13 @@ final class HomeVC: UICollectionViewController {
         header.showsRefreshButton = false
         header.setRefreshHandler(nil)
       }
+      // Recent-tracks section header is tappable (entry point to the
+      // synthetic detail view). For all other sections this is a no-op.
+      if section == .recentTracks {
+        header.setTapHandler { [weak self] in self?.pushRecentTracksDetail() }
+      } else {
+        header.setTapHandler(nil)
+      }
       return header
     }
   }
@@ -301,12 +308,30 @@ final class HomeVC: UICollectionViewController {
     }
   }
 
+  /// Push the synthetic playlist detail view backing the "Recently Added
+  /// Tracks" widget. Reachable from both row taps and the section header
+  /// (no horizontal-scroll footer slot exists for the "(X more in 7 days)"
+  /// hint, so the header doubles as the entry point — see BACKLOG.md §3.2).
+  func pushRecentTracksDetail() {
+    let detail = RecentTracksDetailVC(account: account)
+    navigationController?.pushViewController(detail, animated: true)
+    navigationController?.navigationBar.prefersLargeTitles = false
+  }
+
   // MARK: - Selection Handling
 
   override func collectionView(
     _ collectionView: UICollectionView,
     didSelectItemAt indexPath: IndexPath
   ) {
+    // Recent-tracks tiles route to the synthetic detail VC instead of an
+    // entity detail screen — there is no parent album/artist/playlist for
+    // a "recently added tracks" widget tile. See BACKLOG.md §3.2.
+    if sharedHome.orderedVisibleSections.element(at: indexPath.section) == .recentTracks {
+      pushRecentTracksDetail()
+      return
+    }
+
     guard let playableContainer = dataSource.itemIdentifier(for: indexPath)?.playableContainable
     else { return }
 
@@ -451,6 +476,31 @@ final class SectionHeaderView: UICollectionReusableView {
     refreshButton.removeTarget(nil, action: nil, for: .allEvents)
     guard let handler else { return }
     refreshButton.addAction(UIAction { _ in handler() }, for: .touchUpInside)
+  }
+
+  private var tapHandler: (() -> ())?
+  private var tapGestureRecognizer: UITapGestureRecognizer?
+
+  /// Install a tap handler on the entire header view (currently used by the
+  /// recent-tracks section to push the synthetic detail VC). Pass `nil` to
+  /// remove an existing handler. Cells reuse, so we always either install a
+  /// fresh recognizer or strip the previous one.
+  func setTapHandler(_ handler: (() -> ())?) {
+    if let existing = tapGestureRecognizer {
+      removeGestureRecognizer(existing)
+      tapGestureRecognizer = nil
+    }
+    tapHandler = handler
+    isUserInteractionEnabled = true
+    guard handler != nil else { return }
+    let recognizer = UITapGestureRecognizer(target: self, action: #selector(handleHeaderTap))
+    addGestureRecognizer(recognizer)
+    tapGestureRecognizer = recognizer
+  }
+
+  @objc
+  private func handleHeaderTap() {
+    tapHandler?()
   }
 
   var title: String? {
