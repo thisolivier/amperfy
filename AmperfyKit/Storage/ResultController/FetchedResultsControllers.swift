@@ -666,6 +666,18 @@ public class ArtistSongsItemsFetchedResultsController: BasicFetchedResultsContro
 public class AlbumFetchedResultsController: CachedFetchedResultsController<AlbumMO> {
   public private(set) var sortType: AlbumElementSortType
 
+  /// The init-time `wholeAlbumsOnly` sub-predicate, retained so every search
+  /// path can AND-compose it back in. `BasicFetchedResultsController.search`
+  /// (and the `CachedFetchedResultsController` override) destructively
+  /// replaces the fetch request's predicate — the init-time predicate
+  /// survives only for `showAllResults` via `defaultPredicate`. Without this
+  /// stored clause, any `search()` call on a controller constructed with
+  /// `wholeAlbumsOnly: true` would silently drop the constraint. This was
+  /// Bug B-1 (QA 2026-04-11): Home tab "Newest Albums" showed 1-track
+  /// releases because `HomeManager` constructed the controller with
+  /// `wholeAlbumsOnly: true` and then called `search(displayFilter: .newest)`.
+  private let wholeAlbumsOnlyPredicate: NSPredicate?
+
   public init(
     coreDataCompanion: CoreDataCompanion,
     account: Account,
@@ -702,11 +714,13 @@ public class AlbumFetchedResultsController: CachedFetchedResultsController<Album
       ]),
     ]
     if wholeAlbumsOnly {
-      // Whole-album primitive: metadata-driven with a count fallback. See
+      // Whole-album primitive: pure-count rule with "single" veto. See
       // `WholeAlbumPredicates` + `spike/amperfy/BACKLOG.md` §1.
-      subPredicates.append(
-        WholeAlbumPredicates.wholeAlbum(minSongCount: wholeAlbumMinSongCount)
-      )
+      let wholeClause = WholeAlbumPredicates.wholeAlbum(minSongCount: wholeAlbumMinSongCount)
+      self.wholeAlbumsOnlyPredicate = wholeClause
+      subPredicates.append(wholeClause)
+    } else {
+      self.wholeAlbumsOnlyPredicate = nil
     }
     fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: subPredicates)
     fetchRequest.relationshipKeyPathsForPrefetching = AlbumMO.relationshipKeyPathsForPrefetching
@@ -717,6 +731,25 @@ public class AlbumFetchedResultsController: CachedFetchedResultsController<Album
       sectionIndexType: sortType.asSectionIndexType,
       isGroupedInAlphabeticSections: isGroupedInAlphabeticSections
     )
+  }
+
+  /// Overrides the inherited `search(predicate:)` so the init-time
+  /// `wholeAlbumsOnly` clause is AND-composed back into every search
+  /// predicate before it reaches the fetch controller. Regression guard
+  /// for Bug B-1. If the controller was constructed with
+  /// `wholeAlbumsOnly: false`, this is a no-op pass-through.
+  override public func search(predicate: NSPredicate?) {
+    let composed: NSPredicate?
+    if let wholeClause = wholeAlbumsOnlyPredicate {
+      if let incoming = predicate {
+        composed = NSCompoundPredicate(andPredicateWithSubpredicates: [incoming, wholeClause])
+      } else {
+        composed = wholeClause
+      }
+    } else {
+      composed = predicate
+    }
+    super.search(predicate: composed)
   }
 
   public func search(searchText: String, onlyCached: Bool, displayFilter: DisplayCategoryFilter) {
