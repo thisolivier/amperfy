@@ -113,10 +113,8 @@ final class HomeVC: UICollectionViewController {
   @objc
   private func handleThemeChanged() {
     collectionView.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
-    // Reconfigure visible cells to pick up new text colors
-    guard var snapshot = dataSource?.snapshot() else { return }
-    snapshot.reconfigureItems(snapshot.itemIdentifiers)
-    dataSource?.apply(snapshot, animatingDifferences: false)
+    // reloadData refreshes cells AND supplementary views (section headers)
+    collectionView.reloadData()
   }
 
   override func viewWillAppear(_ animated: Bool) {
