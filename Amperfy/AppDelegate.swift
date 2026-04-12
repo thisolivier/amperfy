@@ -143,17 +143,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     guard theme.isEnabled else {
       // Reset to defaults
       UINavigationBar.appearance().barTintColor = nil
+      UINavigationBar.appearance().tintColor = nil
       UINavigationBar.appearance().titleTextAttributes = nil
       UINavigationBar.appearance().largeTitleTextAttributes = nil
       UITabBar.appearance().barTintColor = nil
+      UITabBar.appearance().tintColor = nil
       UITabBar.appearance().unselectedItemTintColor = nil
       UITableView.appearance().backgroundColor = nil
+      UICollectionView.appearance().backgroundColor = nil
+      UISearchBar.appearance().tintColor = nil
+      UIView.appearance().tintColor = nil
       return
     }
     if let backgroundColor = theme.dynamicBackground {
       UINavigationBar.appearance().barTintColor = backgroundColor
       UITabBar.appearance().barTintColor = backgroundColor
       UITableView.appearance().backgroundColor = backgroundColor
+      UICollectionView.appearance().backgroundColor = backgroundColor
     }
     if let textColor = theme.dynamicText {
       UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: textColor]
@@ -161,6 +167,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UITabBar.appearance().unselectedItemTintColor = textColor.withAlphaComponent(0.5)
     }
     if let tintColor = theme.dynamicTint {
+      UINavigationBar.appearance().tintColor = tintColor
+      UITabBar.appearance().tintColor = tintColor
+      UISearchBar.appearance().tintColor = tintColor
       UIView.appearance().tintColor = tintColor
     }
   }

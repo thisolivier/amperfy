@@ -419,6 +419,12 @@ class LargeCurrentlyPlayingPlayerView: UIView, UIGestureRecognizerDelegate {
   }
 
   func refresh() {
+    let primaryColor: UIColor = ThemeStore.shared.dynamicText ?? .label
+    let secondaryColor: UIColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6) ?? .secondaryLabel
+    titleLabel.textColor = primaryColor
+    artistLabel.textColor = secondaryColor
+    albumLabel.textColor = secondaryColor
+
     rootView?.playerHandler?.refreshCurrentlyPlayingInfo(
       artworkImage: artworkImage,
       titleLabel: titleLabel,

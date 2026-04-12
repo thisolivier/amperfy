@@ -844,16 +844,32 @@ class MiniPlayerView: UIView {
   }
 
   func refreshPlayer() {
+    let primaryColor: UIColor
+    let secondaryColor: UIColor
+    let controlTint: UIColor
     if let textColor = ThemeStore.shared.textColor(for: traitCollection.userInterfaceStyle) {
-      titleLabel.textColor = textColor
-      subtitleLabel.textColor = textColor.withAlphaComponent(0.6)
+      primaryColor = textColor
+      secondaryColor = textColor.withAlphaComponent(0.6)
+      controlTint = textColor
     } else if traitCollection.userInterfaceStyle == .dark {
-      titleLabel.textColor = .white
-      subtitleLabel.textColor = .lightGray
+      primaryColor = .white
+      secondaryColor = .lightGray
+      controlTint = .label
     } else {
-      titleLabel.textColor = .black
-      subtitleLabel.textColor = .darkGray
+      primaryColor = .black
+      secondaryColor = .darkGray
+      controlTint = .label
     }
+    titleLabel.textColor = primaryColor
+    subtitleLabel.textColor = secondaryColor
+    elapsedTimeLabel.textColor = secondaryColor
+    remainingTimeLabel.textColor = secondaryColor
+    playTypeIcon.tintColor = secondaryColor
+    moreButton.imageView?.tintColor = controlTint
+    moreButton.tintColor = controlTint
+    playButton.tintColor = controlTint
+    previousButton.tintColor = controlTint
+    nextButton.tintColor = controlTint
     playerHandler?.refreshCurrentlyPlayingInfo(
       artworkImage: artworkImage,
       titleLabel: titleLabel,

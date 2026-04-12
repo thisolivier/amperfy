@@ -251,6 +251,22 @@ class PlayerControlView: UIView {
   }
 
   func refreshPlayer() {
+    let controlTint: UIColor = ThemeStore.shared.dynamicText ?? .label
+    let secondaryColor: UIColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6) ?? .secondaryLabel
+    playButton.imageView?.tintColor = controlTint
+    previousButton.tintColor = controlTint
+    nextButton.tintColor = controlTint
+    skipBackwardButton.tintColor = controlTint
+    skipForwardButton.tintColor = controlTint
+    airplayButton.tintColor = controlTint
+    playerModeButton.tintColor = controlTint
+    volumeButton.tintColor = controlTint
+    optionsButton.imageView?.tintColor = controlTint
+    elapsedTimeLabel.textColor = secondaryColor
+    remainingTimeLabel.textColor = secondaryColor
+    audioInfoLabel.textColor = secondaryColor
+    playTypeIcon.tintColor = secondaryColor
+
     playerHandler?.refreshSkipButtons(
       skipBackwardButton: skipBackwardButton,
       skipForwardButton: skipForwardButton
