@@ -195,18 +195,33 @@ class PlaylistFolderContentsVC: UITableViewController {
   override func setEditing(_ editing: Bool, animated: Bool) {
     super.setEditing(editing, animated: animated)
     if editing {
-      let toolbarTitle = parentFolderId != nil ? "Remove from Folder" : "Add to Folder"
-      let toolbarAction = parentFolderId != nil
-        ? #selector(removeSelectedFromFolder)
-        : #selector(addSelectedToFolder)
-      toolbarItems = [
-        UIBarButtonItem(
-          title: toolbarTitle,
-          style: .plain,
-          target: self,
-          action: toolbarAction
-        ),
-      ]
+      let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+      if parentFolderId != nil {
+        toolbarItems = [
+          UIBarButtonItem(
+            title: "Move to Folder",
+            style: .plain,
+            target: self,
+            action: #selector(moveSelectedToFolder)
+          ),
+          flexSpace,
+          UIBarButtonItem(
+            title: "Remove from Folder",
+            style: .plain,
+            target: self,
+            action: #selector(removeSelectedFromFolder)
+          ),
+        ]
+      } else {
+        toolbarItems = [
+          UIBarButtonItem(
+            title: "Add to Folder",
+            style: .plain,
+            target: self,
+            action: #selector(addSelectedToFolder)
+          ),
+        ]
+      }
       navigationController?.setToolbarHidden(false, animated: true)
     } else {
       navigationController?.setToolbarHidden(true, animated: true)
@@ -222,6 +237,23 @@ class PlaylistFolderContentsVC: UITableViewController {
     guard !selectedPlaylistIds.isEmpty else { return }
     presentFolderPicker(title: "Add to Folder") { [weak self] folderId in
       self?.folderStore.addPlaylists(selectedPlaylistIds, to: folderId)
+      self?.setEditing(false, animated: true)
+    }
+  }
+
+  @objc
+  private func moveSelectedToFolder() {
+    guard let currentFolderId = parentFolderId,
+          let selectedRows = tableView.indexPathsForSelectedRows
+    else { return }
+    let selectedPlaylistIds = selectedRows
+      .filter { $0.section == Section.playlists.rawValue }
+      .compactMap { displayedPlaylists[safe: $0.row]?.id }
+    guard !selectedPlaylistIds.isEmpty else { return }
+    presentFolderPicker(title: "Move to Folder", excluding: currentFolderId) { [weak self] destId in
+      for playlistId in selectedPlaylistIds {
+        self?.folderStore.movePlaylist(playlistId, from: currentFolderId, to: destId)
+      }
       self?.setEditing(false, animated: true)
     }
   }
