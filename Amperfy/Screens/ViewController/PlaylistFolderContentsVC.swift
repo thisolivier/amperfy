@@ -428,9 +428,10 @@ class PlaylistFolderContentsVC: UITableViewController {
   private func folderCell(for indexPath: IndexPath) -> UITableViewCell {
     let folder = displayedFolders[indexPath.row]
     let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "FolderCell")
-    cell.imageView?.image = UIImage(systemName: "folder.fill")
-    cell.imageView?.tintColor = .systemBlue
+    cell.imageView?.image = UIImage(systemName: "folder.fill")?.withRenderingMode(.alwaysTemplate)
+    cell.imageView?.tintColor = ThemeStore.shared.dynamicTint ?? .systemBlue
     cell.textLabel?.text = folder.name
+    cell.textLabel?.textColor = ThemeStore.shared.dynamicText ?? .label
     let playlistCount = folder.allPlaylistIdsRecursive.count
     let subfolderCount = folder.subfolders.count
     var details = [String]()
@@ -439,9 +440,10 @@ class PlaylistFolderContentsVC: UITableViewController {
     if subfolderCount >
       0 { details.append("\(subfolderCount) subfolder\(subfolderCount == 1 ? "" : "s")") }
     cell.detailTextLabel?.text = details.isEmpty ? "Empty" : details.joined(separator: ", ")
-    cell.detailTextLabel?.textColor = .secondaryLabel
+    cell.detailTextLabel?.textColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6) ?? .secondaryLabel
     cell.accessoryType = .disclosureIndicator
-    cell.backgroundColor = .secondarySystemGroupedBackground
+    cell.tintColor = ThemeStore.shared.dynamicTint ?? .systemBlue
+    cell.backgroundColor = ThemeStore.shared.dynamicBackground ?? .secondarySystemGroupedBackground
     return cell
   }
 

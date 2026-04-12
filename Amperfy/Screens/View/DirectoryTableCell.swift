@@ -99,7 +99,8 @@ class DirectoryTableCell: BasicTableCell {
       infoLabel.text = folder.name
       iconImage.isHidden = false
     }
+    iconImage.tintColor = ThemeStore.shared.dynamicTint ?? .systemBlue
     accessoryType = .disclosureIndicator
-    backgroundColor = .systemBackground
+    backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
   }
 }

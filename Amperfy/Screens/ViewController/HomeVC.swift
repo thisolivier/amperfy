@@ -519,7 +519,10 @@ final class SectionHeaderView: UICollectionReusableView {
   }
 
   var title: String? {
-    didSet { titleLabel.text = title }
+    didSet {
+      titleLabel.text = title
+      titleLabel.textColor = ThemeStore.shared.dynamicText ?? .label
+    }
   }
 
   override init(frame: CGRect) {

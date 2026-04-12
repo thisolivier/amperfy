@@ -101,7 +101,7 @@ class PlayerControlView: UIView {
 
     playerHandler = PlayerUIHandler(player: player, style: .popupPlayer)
 
-    let controlTint: UIColor = ThemeStore.shared.dynamicText ?? .label
+    let controlTint: UIColor = ThemeStore.shared.dynamicTint ?? .label
     playButton.imageView?.tintColor = controlTint
     previousButton.tintColor = controlTint
     nextButton.tintColor = controlTint
@@ -251,7 +251,7 @@ class PlayerControlView: UIView {
   }
 
   func refreshPlayer() {
-    let controlTint: UIColor = ThemeStore.shared.dynamicText ?? .label
+    let controlTint: UIColor = ThemeStore.shared.dynamicTint ?? .label
     let secondaryColor: UIColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6) ?? .secondaryLabel
     playButton.imageView?.tintColor = controlTint
     previousButton.tintColor = controlTint

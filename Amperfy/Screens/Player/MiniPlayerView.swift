@@ -847,11 +847,12 @@ class MiniPlayerView: UIView {
     let primaryColor: UIColor
     let secondaryColor: UIColor
     let controlTint: UIColor
-    if let textColor = ThemeStore.shared.textColor(for: traitCollection.userInterfaceStyle) {
+    let style = traitCollection.userInterfaceStyle
+    if let textColor = ThemeStore.shared.textColor(for: style) {
       primaryColor = textColor
       secondaryColor = textColor.withAlphaComponent(0.6)
-      controlTint = textColor
-    } else if traitCollection.userInterfaceStyle == .dark {
+      controlTint = ThemeStore.shared.tintColor(for: style) ?? textColor
+    } else if style == .dark {
       primaryColor = .white
       secondaryColor = .lightGray
       controlTint = .label

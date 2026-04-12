@@ -150,21 +150,31 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UITabBar.appearance().tintColor = nil
       UITabBar.appearance().unselectedItemTintColor = nil
       UITableView.appearance().backgroundColor = nil
+      UITableViewCell.appearance().backgroundColor = nil
       UICollectionView.appearance().backgroundColor = nil
       UISearchBar.appearance().tintColor = nil
       UIView.appearance().tintColor = nil
+      // Reset text color proxies
+      UILabel.appearance(whenContainedInInstancesOf: [UITableViewCell.self]).textColor = nil
+      UILabel.appearance(whenContainedInInstancesOf: [UICollectionViewCell.self]).textColor = nil
+      UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self]).textColor = nil
       return
     }
     if let backgroundColor = theme.dynamicBackground {
       UINavigationBar.appearance().barTintColor = backgroundColor
       UITabBar.appearance().barTintColor = backgroundColor
       UITableView.appearance().backgroundColor = backgroundColor
+      UITableViewCell.appearance().backgroundColor = backgroundColor
       UICollectionView.appearance().backgroundColor = backgroundColor
     }
     if let textColor = theme.dynamicText {
       UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: textColor]
       UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: textColor]
       UITabBar.appearance().unselectedItemTintColor = textColor.withAlphaComponent(0.5)
+      // Theme cell body text and section headers
+      UILabel.appearance(whenContainedInInstancesOf: [UITableViewCell.self]).textColor = textColor
+      UILabel.appearance(whenContainedInInstancesOf: [UICollectionViewCell.self]).textColor = textColor
+      UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self]).textColor = textColor
     }
     if let tintColor = theme.dynamicTint {
       UINavigationBar.appearance().tintColor = tintColor

@@ -37,6 +37,27 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 19,
+      date: "2026-04-12",
+      title: "Build 19 — Theme coverage fixes",
+      whatsNew: [
+        "Extended theme background color to all screens (was only Albums grid)",
+        "Themed cell body text (row labels, song titles) with custom text color",
+        "Mini-player controls now use tint color",
+        "Full player controls use tint color (was incorrectly using text color)",
+        "Folder SF Symbol icons pick up theme tint",
+        "Section headers and disclosure chevrons themed",
+      ],
+      testingFocus: [
+        "Enable custom theme — visit every tab and screen, background color should be consistent everywhere",
+        "Check row labels and song titles use the custom text color, not default black/white",
+        "Mini-player: play/pause and skip buttons should use tint color",
+        "Full player: all control buttons should use tint color, not text color",
+        "Playlist folders: folder icons should match tint color",
+        "Section headers and chevron arrows should pick up theme colors",
+      ]
+    ),
+    ReleaseNote(
       id: 16,
       date: "2026-04-12",
       title: "Build 16 — Playlist folders v2 + theme polish",
