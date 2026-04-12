@@ -72,10 +72,23 @@ step "2/6 Bump version"
 
 "$SCRIPTS_DIR/bump-version.sh" "$NEW_VERSION" || fail "version bump"
 
-echo ""
-echo "⚠️  Don't forget to update Amperfy/SwiftUI/Settings/ReleaseNotes.swift"
-echo "    with the new build's What's New and Testing Focus before archiving."
-echo ""
+# Check if ReleaseNotes.swift was updated more recently than the version bump
+RELEASE_NOTES="$PROJECT_DIR/Amperfy/SwiftUI/Settings/ReleaseNotes.swift"
+if [[ -f "$RELEASE_NOTES" ]]; then
+  NOTES_MOD=$(stat -f %m "$RELEASE_NOTES" 2>/dev/null || echo 0)
+  PBXPROJ_MOD=$(stat -f %m "$PBXPROJ" 2>/dev/null || echo 0)
+  if [[ "$NOTES_MOD" -lt "$PBXPROJ_MOD" ]]; then
+    echo ""
+    echo "⚠️  WARNING: ReleaseNotes.swift has NOT been updated since the last version bump!"
+    echo "    Update Amperfy/SwiftUI/Settings/ReleaseNotes.swift with the new build's"
+    echo "    What's New and Testing Focus before archiving."
+    echo ""
+  fi
+else
+  echo ""
+  echo "⚠️  WARNING: ReleaseNotes.swift not found at expected path!"
+  echo ""
+fi
 
 # ------------------------------------------------------------------
 step "3/6 Archive"

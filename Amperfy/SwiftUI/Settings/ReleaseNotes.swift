@@ -37,6 +37,26 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 16,
+      date: "2026-04-12",
+      title: "Build 16 — Playlist folders v2 + theme polish",
+      whatsNew: [
+        "Playlist folders: single unified view (no flat/folder toggle), always-on search and sort",
+        "Playlist folders: custom floating action bar for multi-select (fixes toolbar/tab bar overlap)",
+        "Custom theme now covers all major surfaces: backgrounds, nav bar, tab bar, search bar, mini-player, full player",
+        "Home section title alignment fixed (was double-padded)",
+        "Shared songs renamed to 'Title - Artist.ext' for a friendly filename",
+        "Library tab: 'Albums' (unfiltered) and 'Complete Albums' (whole-album predicate) as separate entries",
+      ],
+      testingFocus: [
+        "Try custom theme on all screens — backgrounds, text, controls should all use custom colors",
+        "Playlist folders: tap Edit, select playlists — floating action bar should appear above the tab bar",
+        "Playlist folders: search and sort should work at all levels without toggling",
+        "Library tab: verify 'Albums' shows everything, 'Complete Albums' filters singles",
+        "Share a song — filename should be 'Song - Artist.ext' in the share sheet",
+      ]
+    ),
+    ReleaseNote(
       id: 15,
       date: "2026-04-12",
       title: "Build 15 — remoteSongCount re-sync",
