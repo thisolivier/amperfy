@@ -72,6 +72,7 @@ class EntityPreviewActionBuilder {
   private var isShowPlaylists = false
   private var isInstantMix = false
   private var isShareSong = false
+  private var isRelatedTracks = false
 
   init(
     container: PlayableContainable,
@@ -155,6 +156,9 @@ class EntityPreviewActionBuilder {
     }
     if isShowPlaylists {
       elementHandlingActions.append(createShowPlaylistsAction())
+    }
+    if isRelatedTracks {
+      elementHandlingActions.append(createRelatedTracksAction())
     }
     if isDownloadPossible {
       elementHandlingActions.append(createDownloadAction())
@@ -272,6 +276,7 @@ class EntityPreviewActionBuilder {
     isShowPlaylists = true
     isInstantMix = appDelegate.storage.settings.user.isOnlineMode
     isShareSong = true
+    isRelatedTracks = TrackAdjacencyStore.shared.hasData(for: song.id)
   }
 
   private func configureFor(podcastEpisode: PodcastEpisode) {
@@ -736,6 +741,22 @@ class EntityPreviewActionBuilder {
       Playlist(library: library, managedObject: managedObject)
     }
     membershipVC.updateWithPlaylists(playlists)
+  }
+
+  private func createRelatedTracksAction() -> UIAction {
+    UIAction(
+      title: "Related Tracks",
+      image: UIImage(systemName: "waveform.path")
+    ) { action in
+      guard let song = (self.entityContainer as? AbstractPlayable)?.asSong else { return }
+
+      let relatedTracksVC = RelatedTracksVC(
+        seedSongId: song.id,
+        seedSongTitle: song.title ?? "Unknown"
+      )
+      let navigationController = UINavigationController(rootViewController: relatedTracksVC)
+      self.rootView.present(navigationController, animated: true)
+    }
   }
 
   private func createShowAlbumAction() -> UIAction {

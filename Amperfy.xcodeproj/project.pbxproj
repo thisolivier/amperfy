@@ -19,6 +19,7 @@
 		5007CE4521EF639200BC5CBA /* PlaylistTableCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5007CE4321EF639200BC5CBA /* PlaylistTableCell.xib */; };
 		5007CE4721EF6A8E00BC5CBA /* PlaylistDetailVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5007CE4621EF6A8E00BC5CBA /* PlaylistDetailVC.swift */; };
 		A5B0A50000000000000050A0 /* PlaylistMembershipVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */; };
+		A0BFFB19CF883D57BA942E6B /* RelatedTracksVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = E63A9F9C82A0199DC6B62B08 /* RelatedTracksVC.swift */; };
 		500B7D4521EDB05F0083ED6F /* LibraryElementDetailTableHeaderView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 500B7D4421EDB05F0083ED6F /* LibraryElementDetailTableHeaderView.xib */; };
 		500B7D4721EDB0890083ED6F /* LibraryElementDetailTableHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500B7D4621EDB0890083ED6F /* LibraryElementDetailTableHeaderView.swift */; };
 		500B7D4921EDD6250083ED6F /* ViewCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500B7D4821EDD6250083ED6F /* ViewCreator.swift */; };
@@ -206,6 +207,7 @@
 		A5B0910000000000000050A0 /* RecentTracksQueryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0920000000000000050A0 /* RecentTracksQueryTest.swift */; };
 		A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */; };
 		A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */; };
+		6B54DADE2AD80F4769973080 /* TrackAdjacencyStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9779F04373BB7D951F3B3163 /* TrackAdjacencyStoreTest.swift */; };
 		A5B0B30000000000000050A0 /* PinnedPlaylistStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */; };
 		50BE5D522850F4D700156FC6 /* HelperTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B798B323B8664700551E62 /* HelperTest.swift */; };
 		50BE5D532850F4E700156FC6 /* MusicPlayerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5095F98B23C8389E008B0805 /* MusicPlayerTest.swift */; };
@@ -361,6 +363,7 @@
 		A5B0510000000000000050A0 /* WholeAlbumPredicates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0520000000000000050A0 /* WholeAlbumPredicates.swift */; };
 		A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0720000000000000050A0 /* RecentTracksQuery.swift */; };
 		A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */; };
+		EFE50091B8DE6C6BDA4A08CF /* TrackAdjacencyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5905710198717320ADD7F4 /* TrackAdjacencyStore.swift */; };
 		A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */; };
 		A5B0E10000000000000050A0 /* PlaylistFolderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */; };
 		A5C0F10000000000000060A0 /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0F20000000000000060A0 /* ThemeStore.swift */; };
@@ -636,6 +639,7 @@
 		5007CE4321EF639200BC5CBA /* PlaylistTableCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = PlaylistTableCell.xib; sourceTree = "<group>"; };
 		5007CE4621EF6A8E00BC5CBA /* PlaylistDetailVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistDetailVC.swift; sourceTree = "<group>"; };
 		A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipVC.swift; sourceTree = "<group>"; };
+		E63A9F9C82A0199DC6B62B08 /* RelatedTracksVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelatedTracksVC.swift; sourceTree = "<group>"; };
 		5009863B2208CB650057A1A6 /* OptionsButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionsButton.swift; sourceTree = "<group>"; };
 		5009863D2208CC1E0057A1A6 /* BasicButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicButton.swift; sourceTree = "<group>"; };
 		500B2B302249607B00D14EF4 /* BackendProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendProxy.swift; sourceTree = "<group>"; };
@@ -1135,6 +1139,7 @@
 		A5B0920000000000000050A0 /* RecentTracksQueryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksQueryTest.swift; sourceTree = "<group>"; };
 		A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumFetchedResultsControllerTest.swift; sourceTree = "<group>"; };
 		A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQueryTest.swift; sourceTree = "<group>"; };
+		9779F04373BB7D951F3B3163 /* TrackAdjacencyStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackAdjacencyStoreTest.swift; sourceTree = "<group>"; };
 		A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedPlaylistStoreTest.swift; sourceTree = "<group>"; };
 		50F81E8923BB5FC500EAAC3E /* Artist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artist.swift; sourceTree = "<group>"; };
 		50F81E8B23BB666100EAAC3E /* ArtistTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistTest.swift; sourceTree = "<group>"; };
@@ -1162,6 +1167,7 @@
 		A5B0520000000000000050A0 /* WholeAlbumPredicates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholeAlbumPredicates.swift; sourceTree = "<group>"; };
 		A5B0720000000000000050A0 /* RecentTracksQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksQuery.swift; sourceTree = "<group>"; };
 		A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQuery.swift; sourceTree = "<group>"; };
+		EC5905710198717320ADD7F4 /* TrackAdjacencyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackAdjacencyStore.swift; sourceTree = "<group>"; };
 		A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistItemsSyncTracker.swift; sourceTree = "<group>"; };
 		A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderStore.swift; sourceTree = "<group>"; };
 		A5C0F20000000000000060A0 /* ThemeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeStore.swift; sourceTree = "<group>"; };
@@ -1638,6 +1644,7 @@
 				5095F98F23CA94BC008B0805 /* ManagedObjects */,
 				A5B0630000000000000050A0 /* ResultController */,
 				A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */,
+					9779F04373BB7D951F3B3163 /* TrackAdjacencyStoreTest.swift */,
 				A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */,
 				A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */,
 			);
@@ -1786,6 +1793,7 @@
 				50C3B9AB2EED848B00F5CAB7 /* LegacySettings.swift */,
 				50BA930521D5715D00E5901D /* LibraryStorage.swift */,
 				A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */,
+					EC5905710198717320ADD7F4 /* TrackAdjacencyStore.swift */,
 				A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */,
 				A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */,
 				50223EF2264543EA007445BC /* LibrarySyncVersion.swift */,
@@ -1897,6 +1905,7 @@
 				5007CE4621EF6A8E00BC5CBA /* PlaylistDetailVC.swift */,
 				502B98EC2D03A02D000FE187 /* PlaylistEditVC.swift */,
 				A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */,
+				E63A9F9C82A0199DC6B62B08 /* RelatedTracksVC.swift */,
 				50065EB321F0584D0066FC32 /* PlaylistSelectorVC.swift */,
 				50C16C0521E241B200F086F0 /* SearchVC.swift */,
 				5077F935221E6D0E0099CA91 /* DownloadsVC.swift */,
@@ -2678,6 +2687,7 @@
 				50BE5D9728511C3200156FC6 /* Amperfy.xcdatamodeld in Sources */,
 				5007CE4721EF6A8E00BC5CBA /* PlaylistDetailVC.swift in Sources */,
 				A5B0A50000000000000050A0 /* PlaylistMembershipVC.swift in Sources */,
+				A0BFFB19CF883D57BA942E6B /* RelatedTracksVC.swift in Sources */,
 				50AAB9F32F0154EB004A39C6 /* SeekToPlaybackTimeIntent.swift in Sources */,
 				5078AFB22B40CA5E0038FD17 /* DisplaySettingsView.swift in Sources */,
 				50DEEE07265E27070073FF20 /* DirectoryTableCell.swift in Sources */,
@@ -2785,6 +2795,7 @@
 				A5B0510000000000000050A0 /* WholeAlbumPredicates.swift in Sources */,
 				A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */,
 				A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */,
+				EFE50091B8DE6C6BDA4A08CF /* TrackAdjacencyStore.swift in Sources */,
 				A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */,
 				A5B0E10000000000000050A0 /* PlaylistFolderStore.swift in Sources */,
 				A5B0B10000000000000050A0 /* PinnedPlaylistStore.swift in Sources */,
@@ -2949,6 +2960,7 @@
 				A5B0910000000000000050A0 /* RecentTracksQueryTest.swift in Sources */,
 				A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */,
 				A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */,
+				6B54DADE2AD80F4769973080 /* TrackAdjacencyStoreTest.swift in Sources */,
 				A5B0B30000000000000050A0 /* PinnedPlaylistStoreTest.swift in Sources */,
 				A5B0E30000000000000050A0 /* PlaylistFolderStoreTest.swift in Sources */,
 				50BE5D8E2850F50F00156FC6 /* PodcastEpisodesParserTest.swift in Sources */,
@@ -3165,7 +3177,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 22;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3204,7 +3216,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 22;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3243,7 +3255,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 22;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3294,7 +3306,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 22;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3343,7 +3355,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 22;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
@@ -3375,7 +3387,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 22;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;

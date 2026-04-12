@@ -157,7 +157,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       // Reset text color proxies
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewCell.self]).textColor = nil
       UILabel.appearance(whenContainedInInstancesOf: [UICollectionViewCell.self]).textColor = nil
-      UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self]).textColor = nil
+      UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
+        .textColor = nil
       // Reset window-level overrides
       let windowScene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
       for window in windowScene.flatMap({ $0.windows }) {
@@ -178,8 +179,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UITabBar.appearance().unselectedItemTintColor = textColor.withAlphaComponent(0.5)
       // Theme cell body text and section headers
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewCell.self]).textColor = textColor
-      UILabel.appearance(whenContainedInInstancesOf: [UICollectionViewCell.self]).textColor = textColor
-      UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self]).textColor = textColor
+      UILabel.appearance(whenContainedInInstancesOf: [UICollectionViewCell.self])
+        .textColor = textColor
+      UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
+        .textColor = textColor
     }
     if let tintColor = theme.dynamicTint {
       UINavigationBar.appearance().tintColor = tintColor
@@ -354,8 +357,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       startManagerForNormalOperation()
     }
     userStatistics.sessionStarted()
+    computeTrackAdjacencyInBackground()
 
     return true
+  }
+
+  private func computeTrackAdjacencyInBackground() {
+    let context = storage.main.context
+    DispatchQueue.global(qos: .utility).async {
+      TrackAdjacencyStore.shared.computeIfNeeded(in: context)
+    }
   }
 
   private var isAlreadyRegisteredToPlayer = false

@@ -37,6 +37,27 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 23,
+      date: "2026-04-12",
+      title: "Build 23 — Track Adjacency Engine",
+      whatsNew: [
+        "NEW: Track Adjacency Engine — analyzes playlist sequencing to find related tracks",
+        "NEW: \"Related Tracks\" in song context menu — shows top 20 tracks that frequently appear near the selected song across your playlists",
+        "Computes similarity from playlist adjacency (±1/±2 position), co-membership, and album membership",
+        "Computation runs in background on launch, persists to disk",
+        "Source info shows \"In N playlists nearby\" or \"Same album\"",
+      ],
+      testingFocus: [
+        "Open a song's … menu that appears in multiple playlists — \"Related Tracks\" should appear",
+        "Tap \"Related Tracks\" — verify the list shows up to 20 songs with title, artist, and album art",
+        "Verify source info text (\"In N playlists nearby\" or \"Same album\") is shown",
+        "Tap a related track — it should start playing",
+        "Try the … menu on a related track row — standard song actions should appear",
+        "Songs not in any playlist should NOT show \"Related Tracks\" in their menu",
+        "Kill and relaunch — Related Tracks should still work (persisted to disk)",
+      ]
+    ),
+    ReleaseNote(
       id: 22,
       date: "2026-04-12",
       title: "Build 22 — Theme lifecycle fix",
