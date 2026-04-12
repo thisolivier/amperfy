@@ -18,6 +18,7 @@
 		5007CE4421EF639200BC5CBA /* PlaylistTableCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5007CE4221EF639200BC5CBA /* PlaylistTableCell.swift */; };
 		5007CE4521EF639200BC5CBA /* PlaylistTableCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5007CE4321EF639200BC5CBA /* PlaylistTableCell.xib */; };
 		5007CE4721EF6A8E00BC5CBA /* PlaylistDetailVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5007CE4621EF6A8E00BC5CBA /* PlaylistDetailVC.swift */; };
+		A5B0A50000000000000050A0 /* PlaylistMembershipVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */; };
 		500B7D4521EDB05F0083ED6F /* LibraryElementDetailTableHeaderView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 500B7D4421EDB05F0083ED6F /* LibraryElementDetailTableHeaderView.xib */; };
 		500B7D4721EDB0890083ED6F /* LibraryElementDetailTableHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500B7D4621EDB0890083ED6F /* LibraryElementDetailTableHeaderView.swift */; };
 		500B7D4921EDD6250083ED6F /* ViewCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500B7D4821EDD6250083ED6F /* ViewCreator.swift */; };
@@ -204,6 +205,7 @@
 		A5B0610000000000000050A0 /* WholeAlbumPredicatesTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0620000000000000050A0 /* WholeAlbumPredicatesTest.swift */; };
 		A5B0910000000000000050A0 /* RecentTracksQueryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0920000000000000050A0 /* RecentTracksQueryTest.swift */; };
 		A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */; };
+		A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */; };
 		50BE5D522850F4D700156FC6 /* HelperTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B798B323B8664700551E62 /* HelperTest.swift */; };
 		50BE5D532850F4E700156FC6 /* MusicPlayerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5095F98B23C8389E008B0805 /* MusicPlayerTest.swift */; };
 		50BE5D542850F4E700156FC6 /* SubsonicVersionTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E964AE25E8E25E00E3210F /* SubsonicVersionTest.swift */; };
@@ -357,6 +359,7 @@
 		50C9D672284FAA4D007F18D0 /* BasicFetchedResultsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FBE7DD262DD86500114278 /* BasicFetchedResultsController.swift */; };
 		A5B0510000000000000050A0 /* WholeAlbumPredicates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0520000000000000050A0 /* WholeAlbumPredicates.swift */; };
 		A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0720000000000000050A0 /* RecentTracksQuery.swift */; };
+		A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */; };
 		50C9D673284FAA4D007F18D0 /* LibraryUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C16C3321EB454100F086F0 /* LibraryUpdater.swift */; };
 		50C9D674284FAA4D007F18D0 /* SwipeActionSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50ACAF1127B144040039913C /* SwipeActionSettings.swift */; };
 		50C9D675284FAA4D007F18D0 /* DuplicateEntitiesResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50253F78284614A100BCCFB2 /* DuplicateEntitiesResolver.swift */; };
@@ -621,6 +624,7 @@
 		5007CE4221EF639200BC5CBA /* PlaylistTableCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistTableCell.swift; sourceTree = "<group>"; };
 		5007CE4321EF639200BC5CBA /* PlaylistTableCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = PlaylistTableCell.xib; sourceTree = "<group>"; };
 		5007CE4621EF6A8E00BC5CBA /* PlaylistDetailVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistDetailVC.swift; sourceTree = "<group>"; };
+		A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipVC.swift; sourceTree = "<group>"; };
 		5009863B2208CB650057A1A6 /* OptionsButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionsButton.swift; sourceTree = "<group>"; };
 		5009863D2208CC1E0057A1A6 /* BasicButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicButton.swift; sourceTree = "<group>"; };
 		500B2B302249607B00D14EF4 /* BackendProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendProxy.swift; sourceTree = "<group>"; };
@@ -1119,6 +1123,7 @@
 		A5B0620000000000000050A0 /* WholeAlbumPredicatesTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholeAlbumPredicatesTest.swift; sourceTree = "<group>"; };
 		A5B0920000000000000050A0 /* RecentTracksQueryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksQueryTest.swift; sourceTree = "<group>"; };
 		A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumFetchedResultsControllerTest.swift; sourceTree = "<group>"; };
+		A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQueryTest.swift; sourceTree = "<group>"; };
 		50F81E8923BB5FC500EAAC3E /* Artist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artist.swift; sourceTree = "<group>"; };
 		50F81E8B23BB666100EAAC3E /* ArtistTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistTest.swift; sourceTree = "<group>"; };
 		50F81E8D23BC6FEA00EAAC3E /* Artwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artwork.swift; sourceTree = "<group>"; };
@@ -1144,6 +1149,7 @@
 		50FBE7DD262DD86500114278 /* BasicFetchedResultsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicFetchedResultsController.swift; sourceTree = "<group>"; };
 		A5B0520000000000000050A0 /* WholeAlbumPredicates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholeAlbumPredicates.swift; sourceTree = "<group>"; };
 		A5B0720000000000000050A0 /* RecentTracksQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksQuery.swift; sourceTree = "<group>"; };
+		A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQuery.swift; sourceTree = "<group>"; };
 		50FE808B26A55A8300CB434D /* Amperfy v13.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v13.xcdatamodel"; sourceTree = "<group>"; };
 		50FE808C26A55CEA00CB434D /* DownloadMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DownloadMO+CoreDataClass.swift"; sourceTree = "<group>"; };
 		50FE808D26A55CEA00CB434D /* DownloadMO+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DownloadMO+CoreDataProperties.swift"; sourceTree = "<group>"; };
@@ -1605,6 +1611,7 @@
 			children = (
 				5095F98F23CA94BC008B0805 /* ManagedObjects */,
 				A5B0630000000000000050A0 /* ResultController */,
+				A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -1742,6 +1749,7 @@
 				50C3B9AD2EED882D00F5CAB7 /* SettingEnumerations.swift */,
 				50C3B9AB2EED848B00F5CAB7 /* LegacySettings.swift */,
 				50BA930521D5715D00E5901D /* LibraryStorage.swift */,
+				A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */,
 				50223EF2264543EA007445BC /* LibrarySyncVersion.swift */,
 				50073BDE22301D9A000130D8 /* DownloadRequestManager.swift */,
 				50C16C2121E7A38A00F086F0 /* Identifyable.swift */,
@@ -1840,6 +1848,7 @@
 				5007CE4021EF5F4300BC5CBA /* PlaylistsVC.swift */,
 				5007CE4621EF6A8E00BC5CBA /* PlaylistDetailVC.swift */,
 				502B98EC2D03A02D000FE187 /* PlaylistEditVC.swift */,
+				A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */,
 				50065EB321F0584D0066FC32 /* PlaylistSelectorVC.swift */,
 				50C16C0521E241B200F086F0 /* SearchVC.swift */,
 				5077F935221E6D0E0099CA91 /* DownloadsVC.swift */,
@@ -2614,6 +2623,7 @@
 				50C9D70D2850759B007F18D0 /* NotificationBannerCustomization.swift in Sources */,
 				50BE5D9728511C3200156FC6 /* Amperfy.xcdatamodeld in Sources */,
 				5007CE4721EF6A8E00BC5CBA /* PlaylistDetailVC.swift in Sources */,
+				A5B0A50000000000000050A0 /* PlaylistMembershipVC.swift in Sources */,
 				50AAB9F32F0154EB004A39C6 /* SeekToPlaybackTimeIntent.swift in Sources */,
 				5078AFB22B40CA5E0038FD17 /* DisplaySettingsView.swift in Sources */,
 				50DEEE07265E27070073FF20 /* DirectoryTableCell.swift in Sources */,
@@ -2719,6 +2729,7 @@
 				50C9D672284FAA4D007F18D0 /* BasicFetchedResultsController.swift in Sources */,
 				A5B0510000000000000050A0 /* WholeAlbumPredicates.swift in Sources */,
 				A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */,
+				A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */,
 				50C9D682284FAA6C007F18D0 /* PodcastEpisodeMO+CoreDataProperties.swift in Sources */,
 				50C9D6F028506EBC007F18D0 /* AmperfyKit.swift in Sources */,
 				50C9D665284FAA0B007F18D0 /* PodcastEpisodeParserDelegate.swift in Sources */,
@@ -2879,6 +2890,7 @@
 				A5B0610000000000000050A0 /* WholeAlbumPredicatesTest.swift in Sources */,
 				A5B0910000000000000050A0 /* RecentTracksQueryTest.swift in Sources */,
 				A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */,
+				A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */,
 				50BE5D8E2850F50F00156FC6 /* PodcastEpisodesParserTest.swift in Sources */,
 				50CEC6432D1F38F800D0E696 /* SsRadioExampleParserTest.swift in Sources */,
 				50BE5D882850F50F00156FC6 /* SongParserTest.swift in Sources */,

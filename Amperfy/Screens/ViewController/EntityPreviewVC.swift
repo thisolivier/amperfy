@@ -69,6 +69,7 @@ class EntityPreviewActionBuilder {
   private var isGoToSiteUrl = false
   private var isShowPodcastDetails = false
   private var isShowSongDetails = false
+  private var isShowPlaylists = false
   private var isInstantMix = false
 
   init(
@@ -150,6 +151,9 @@ class EntityPreviewActionBuilder {
     }
     if isAddToPlaylist {
       elementHandlingActions.append(createAddToPlaylistAction())
+    }
+    if isShowPlaylists {
+      elementHandlingActions.append(createShowPlaylistsAction())
     }
     if isDownloadPossible {
       elementHandlingActions.append(createDownloadAction())
@@ -261,6 +265,7 @@ class EntityPreviewActionBuilder {
     isGoToSiteUrl = false
     isShowPodcastDetails = false
     isShowSongDetails = true
+    isShowPlaylists = true
     isInstantMix = appDelegate.storage.settings.user.isOnlineMode
   }
 
@@ -657,6 +662,37 @@ class EntityPreviewActionBuilder {
         .segueToPlaylistSelector(account: account, itemsToAdd: self.entityPlayables.filterSongs())
       let selectPlaylistNav = UINavigationController(rootViewController: selectPlaylistVC)
       self.rootView.present(selectPlaylistNav, animated: true)
+    }
+  }
+
+  private func createShowPlaylistsAction() -> UIAction {
+    UIAction(title: "In Playlists", image: .playlist) { action in
+      guard let song = (self.entityContainer as? AbstractPlayable)?.asSong,
+            let account = self.entityContainer.account else { return }
+      let context = self.appDelegate.storage.main.context
+      let playlistMOs = PlaylistMembershipQuery.playlistsContaining(
+        songId: song.id,
+        in: context
+      )
+      let playlists = playlistMOs.map { managedObject in
+        Playlist(library: self.appDelegate.storage.main.library, managedObject: managedObject)
+      }
+      let membershipVC = PlaylistMembershipVC(playlists: playlists) { selectedPlaylist in
+        let detailVC = AppStoryboard.Main.segueToPlaylistDetail(
+          account: account,
+          playlist: selectedPlaylist
+        )
+        if let popupPlayer = self.rootView as? PopupPlayerVC {
+          popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: detailVC)
+        } else if let navController = self.rootView.navigationController {
+          navController.pushViewController(detailVC, animated: true)
+        } else {
+          guard let hostingSplitVC = AppDelegate.mainWindowHostVC else { return }
+          hostingSplitVC.pushNavLibrary(vc: detailVC)
+        }
+      }
+      let navigationController = UINavigationController(rootViewController: membershipVC)
+      self.rootView.present(navigationController, animated: true)
     }
   }
 
