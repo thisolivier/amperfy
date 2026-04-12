@@ -125,6 +125,11 @@ enum ShareSongAction {
     )
     activityVC.popoverPresentationController?.sourceView = sourceView
     activityVC.popoverPresentationController?.sourceRect = sourceView.bounds
+    if shareURL != fileURL {
+      activityVC.completionWithItemsHandler = { _, _, _, _ in
+        try? FileManager.default.removeItem(at: shareURL)
+      }
+    }
     presenter.present(activityVC, animated: true)
   }
 }
