@@ -60,6 +60,7 @@ extension AlbumMO {
   static let relationshipKeyPathsForPrefetching = [
     #keyPath(AlbumMO.artwork),
     #keyPath(AlbumMO.artist),
+    #keyPath(AlbumMO.songs),
   ]
 
   static let relationshipKeyPathsForPrefetchingDetailed = [

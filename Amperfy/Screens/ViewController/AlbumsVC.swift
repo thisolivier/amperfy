@@ -27,6 +27,11 @@ import UIKit
 
 class AlbumsDiffableDataSource: BasicUITableViewDiffableDataSource {
   var sortType: AlbumElementSortType = .name
+  private var cachedSectionIndexTitles: [String]?
+
+  func invalidateSectionIndexTitlesCache() {
+    cachedSectionIndexTitles = nil
+  }
 
   func getAlbum(at indexPath: IndexPath) -> Album? {
     guard let objectID = itemIdentifier(for: indexPath) else { return nil }
@@ -74,9 +79,10 @@ class AlbumsDiffableDataSource: BasicUITableViewDiffableDataSource {
   }
 
   override func sectionIndexTitles(for tableView: UITableView) -> [String]? {
+    if let cachedSectionIndexTitles { return cachedSectionIndexTitles }
     let sectionCount = numberOfSections(in: tableView)
     var indexTitles = [String]()
-    for i in 0 ... sectionCount {
+    for i in 0 ..< sectionCount {
       if let sectionName = self.tableView(tableView, titleForHeaderInSection: i) {
         var indexTitle = ""
         switch sortType {
@@ -102,6 +108,7 @@ class AlbumsDiffableDataSource: BasicUITableViewDiffableDataSource {
         indexTitles.append(indexTitle)
       }
     }
+    cachedSectionIndexTitles = indexTitles
     return indexTitles
   }
 
@@ -182,6 +189,7 @@ class AlbumsVC: SingleSnapshotFetchedResultsTableViewController<AlbumMO> {
     }
     common.updateFetchDataSourceCB = {
       (self.diffableDataSource as? AlbumsDiffableDataSource)?.sortType = self.common.sortType
+      self.albumsDataSource?.invalidateSectionIndexTitlesCache()
       self.singleFetchedResultsController = self.common.fetchedResultsController
       self.singleFetchedResultsController?.delegate = self
     }
@@ -237,6 +245,7 @@ class AlbumsVC: SingleSnapshotFetchedResultsTableViewController<AlbumMO> {
       }
     }
     snapshotDidChange = {
+      self.albumsDataSource?.invalidateSectionIndexTitlesCache()
       self.common.updateContentUnavailable()
       self.updateHeaderViewVisibility()
     }

@@ -167,16 +167,22 @@ class SingleSnapshotFetchedResultsTableViewController<ResultType>:
         NSManagedObjectID
       >
 
-      let reloadIdentifiers: [NSManagedObjectID] = snapshot.itemIdentifiers
-        .compactMap { itemIdentifier in
-          guard let currentIndex = currentSnapshot.indexOfItem(itemIdentifier),
-                let index = snapshot.indexOfItem(itemIdentifier), index == currentIndex else {
-            return nil
+      let reloadIdentifiers: [NSManagedObjectID]
+      if controller.managedObjectContext.updatedObjects.isEmpty {
+        reloadIdentifiers = []
+      } else {
+        reloadIdentifiers = snapshot.itemIdentifiers
+          .compactMap { itemIdentifier in
+            guard let currentIndex = currentSnapshot.indexOfItem(itemIdentifier),
+                  let index = snapshot.indexOfItem(itemIdentifier), index == currentIndex else {
+              return nil
+            }
+            guard let existingObject = try? controller.managedObjectContext
+              .existingObject(with: itemIdentifier),
+              existingObject.isUpdated else { return nil }
+            return itemIdentifier
           }
-          guard let existingObject = try? controller.managedObjectContext
-            .existingObject(with: itemIdentifier), existingObject.isUpdated else { return nil }
-          return itemIdentifier
-        }
+      }
       snapshot.reconfigureItems(reloadIdentifiers)
 
       dataSource.apply(
