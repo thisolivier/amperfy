@@ -162,6 +162,31 @@ public struct LibraryDisplaySettings: Sendable, Codable {
       // Fallback to defaults if decoding produced no valid entries
       self = LibraryDisplaySettings(inUse: [])
     }
+    migrateCompleteAlbums()
+  }
+
+  /// One-time migration: if .completeAlbums is missing from both inUse and
+  /// notUsed, insert it where .albums was (replacing it in inUse, or at the
+  /// start of inUse if .albums wasn't present). Existing users whose saved
+  /// settings predate the completeAlbums case will hit this path.
+  private mutating func migrateCompleteAlbums() {
+    let allKnown = combined.flatMap { $0 }
+    guard !allKnown.contains(.completeAlbums) else { return }
+
+    var inUseList = combined[0]
+    var notUsedList = combined[1]
+
+    if let albumsIndex = inUseList.firstIndex(of: .albums) {
+      // Replace .albums with .completeAlbums at the same position
+      inUseList[albumsIndex] = .completeAlbums
+      // Move .albums to notUsed
+      notUsedList.append(.albums)
+    } else {
+      // .albums wasn't in inUse — just add .completeAlbums to inUse
+      inUseList.insert(.completeAlbums, at: min(1, inUseList.count))
+    }
+    notUsedList.removeAll { $0 == .completeAlbums }
+    combined = [inUseList, notUsedList.sorted(by: { $0.rawValue < $1.rawValue })]
   }
 
   public func isVisible(libraryType: LibraryDisplayType) -> Bool {
@@ -177,7 +202,6 @@ public struct LibraryDisplaySettings: Sendable, Codable {
     LibraryDisplaySettings(
       inUse: [
         .artists,
-        .albums,
         .completeAlbums,
         .newestAlbums,
         .recentAlbums,
