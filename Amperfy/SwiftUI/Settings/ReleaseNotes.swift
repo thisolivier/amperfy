@@ -37,6 +37,25 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 21,
+      date: "2026-04-12",
+      title: "Build 21 — Feature sweep polish",
+      whatsNew: [
+        "\"NEW\" badge on What's New row in Settings (clears when viewed)",
+        "\"Show in Playlists\" loads instantly with a spinner instead of blocking",
+        "Share Song temp file cleaned up after share sheet dismisses",
+        "Renamed \"In Playlists\" to \"Show in Playlists\" (Apple convention)",
+        "Selection count (\"N selected\") in playlist folders edit mode action bar",
+      ],
+      testingFocus: [
+        "Install build — Settings should show a NEW badge on What's New; tap it, badge should clear",
+        "Long-press a song → Show in Playlists — sheet should appear immediately with a spinner on first use",
+        "Share a song — verify no leftover temp files accumulate",
+        "Context menu should say \"Show in Playlists\", not \"In Playlists\"",
+        "Playlist folders: tap Edit, select items — \"N selected\" label should update live",
+      ]
+    ),
+    ReleaseNote(
       id: 20,
       date: "2026-04-12",
       title: "Build 20 — Full theme coverage + In Playlists fix",
