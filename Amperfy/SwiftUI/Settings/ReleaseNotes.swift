@@ -39,15 +39,19 @@ enum ReleaseNotes {
     ReleaseNote(
       id: 26,
       date: "2026-04-12",
-      title: "Build 26 — Crash isolation",
+      title: "Build 26 — DIAGNOSTIC: Theme only",
       whatsNew: [
-        "Track Adjacency Engine disabled on launch to isolate crash",
-        "Related Tracks feature temporarily unavailable",
+        "DIAGNOSTIC BUILD: Theme changes ONLY — Track Adjacency Engine fully disabled",
+        "Custom theme, lifecycle observers, and color helpers are all active",
+        "Track adjacency computation disabled on launch and after sync",
+        "\"Related Tracks\" menu item hidden",
+        "If this build crashes, the cause is the THEME changes",
       ],
       testingFocus: [
-        "Launch the app — verify no crash within 30 seconds",
-        "Navigate all tabs — verify stability",
-        "If crash persists, the cause is NOT the adjacency engine",
+        "Launch the app — does it crash within 30 seconds?",
+        "Navigate all tabs — is the app stable?",
+        "Toggle custom theme on/off — any crash?",
+        "Compare with Build 27 (adjacency only) to isolate the crash source",
       ]
     ),
     ReleaseNote(
