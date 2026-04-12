@@ -26,11 +26,13 @@ import UIKit
 /// Presented as a sheet from the song `...` menu's "In Playlists" action.
 /// Tapping a row dismisses the sheet and navigates to that playlist's detail.
 class PlaylistMembershipVC: UITableViewController {
-  private let playlists: [Playlist]
+  private var playlists: [Playlist]
   private let onSelect: (Playlist) -> ()
+  private var isLoading: Bool
 
-  init(playlists: [Playlist], onSelect: @escaping (Playlist) -> ()) {
+  init(playlists: [Playlist], isLoading: Bool = false, onSelect: @escaping (Playlist) -> ()) {
     self.playlists = playlists
+    self.isLoading = isLoading
     self.onSelect = onSelect
     super.init(style: .insetGrouped)
   }
@@ -51,11 +53,27 @@ class PlaylistMembershipVC: UITableViewController {
       forCellReuseIdentifier: PlaylistTableCell.typeName
     )
     tableView.rowHeight = PlaylistTableCell.rowHeight
+    updateContentState()
+  }
 
-    if playlists.isEmpty {
+  func updateWithPlaylists(_ playlists: [Playlist]) {
+    self.playlists = playlists
+    self.isLoading = false
+    tableView.reloadData()
+    updateContentState()
+  }
+
+  private func updateContentState() {
+    if isLoading {
+      var loadingConfig = UIContentUnavailableConfiguration.loading()
+      loadingConfig.text = "Syncing playlists\u{2026}"
+      contentUnavailableConfiguration = loadingConfig
+    } else if playlists.isEmpty {
       var emptyConfig = UIContentUnavailableConfiguration.empty()
       emptyConfig.text = "This song isn't in any playlists"
       contentUnavailableConfiguration = emptyConfig
+    } else {
+      contentUnavailableConfiguration = nil
     }
   }
 

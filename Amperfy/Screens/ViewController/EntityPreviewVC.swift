@@ -694,36 +694,11 @@ class EntityPreviewActionBuilder {
     let tracker = PlaylistItemsSyncTracker.shared
     let unsyncedPlaylists = allPlaylists.filter { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
 
-    if !unsyncedPlaylists.isEmpty {
-      let progressAlert = UIAlertController(
-        title: "Loading playlist data\u{2026}",
-        message: "\(unsyncedPlaylists.count) playlists to sync",
-        preferredStyle: .alert
-      )
-      rootView.present(progressAlert, animated: true)
-
-      let librarySyncer = appDelegate.getMeta(account.info).librarySyncer
-      for playlist in unsyncedPlaylists {
-        do {
-          try await librarySyncer.syncDown(playlist: playlist)
-          tracker.markSynced(playlist.id)
-        } catch {
-          // Skip failed playlists — they'll be retried on next tap.
-        }
-      }
-
-      progressAlert.dismiss(animated: true)
-    }
-
-    let context = appDelegate.storage.main.context
-    let playlistMOs = PlaylistMembershipQuery.playlistsContaining(
-      songId: songId,
-      in: context
-    )
-    let playlists = playlistMOs.map { managedObject in
-      Playlist(library: library, managedObject: managedObject)
-    }
-    let membershipVC = PlaylistMembershipVC(playlists: playlists) { selectedPlaylist in
+    let needsSync = !unsyncedPlaylists.isEmpty
+    let membershipVC = PlaylistMembershipVC(
+      playlists: [],
+      isLoading: needsSync
+    ) { selectedPlaylist in
       let detailVC = AppStoryboard.Main.segueToPlaylistDetail(
         account: account,
         playlist: selectedPlaylist
@@ -739,6 +714,28 @@ class EntityPreviewActionBuilder {
     }
     let navigationController = UINavigationController(rootViewController: membershipVC)
     rootView.present(navigationController, animated: true)
+
+    if needsSync {
+      let librarySyncer = appDelegate.getMeta(account.info).librarySyncer
+      for playlist in unsyncedPlaylists {
+        do {
+          try await librarySyncer.syncDown(playlist: playlist)
+          tracker.markSynced(playlist.id)
+        } catch {
+          // Skip failed playlists — they'll be retried on next tap.
+        }
+      }
+    }
+
+    let context = appDelegate.storage.main.context
+    let playlistMOs = PlaylistMembershipQuery.playlistsContaining(
+      songId: songId,
+      in: context
+    )
+    let playlists = playlistMOs.map { managedObject in
+      Playlist(library: library, managedObject: managedObject)
+    }
+    membershipVC.updateWithPlaylists(playlists)
   }
 
   private func createShowAlbumAction() -> UIAction {
