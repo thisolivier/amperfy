@@ -56,6 +56,7 @@ class PlaylistFolderContentsVC: UITableViewController {
 
   private let editActionBar = UIView()
   private var editActionBarButtons: [UIButton] = []
+  private var selectionCountLabel: UILabel?
   private var editActionBarBottomConstraint: NSLayoutConstraint?
 
   // MARK: - Search
@@ -196,6 +197,15 @@ class PlaylistFolderContentsVC: UITableViewController {
       separator.heightAnchor.constraint(equalToConstant: 0.5),
     ])
 
+    let countLabel = UILabel()
+    countLabel.translatesAutoresizingMaskIntoConstraints = false
+    countLabel.font = .preferredFont(forTextStyle: .caption1)
+    countLabel.textColor = ThemeStore.shared.dynamicSecondaryText ?? .secondaryLabel
+    countLabel.textAlignment = .center
+    countLabel.text = "0 selected"
+    editActionBar.addSubview(countLabel)
+    selectionCountLabel = countLabel
+
     let stackView = UIStackView()
     stackView.translatesAutoresizingMaskIntoConstraints = false
     stackView.axis = .horizontal
@@ -204,25 +214,36 @@ class PlaylistFolderContentsVC: UITableViewController {
     editActionBar.addSubview(stackView)
 
     NSLayoutConstraint.activate([
-      stackView.topAnchor.constraint(equalTo: editActionBar.topAnchor, constant: 8),
+      countLabel.topAnchor.constraint(equalTo: separator.bottomAnchor, constant: 4),
+      countLabel.centerXAnchor.constraint(equalTo: editActionBar.centerXAnchor),
+      stackView.topAnchor.constraint(equalTo: countLabel.bottomAnchor, constant: 4),
       stackView.leadingAnchor.constraint(equalTo: editActionBar.leadingAnchor, constant: 16),
       stackView.trailingAnchor.constraint(equalTo: editActionBar.trailingAnchor, constant: -16),
       stackView.bottomAnchor.constraint(equalTo: editActionBar.bottomAnchor, constant: -8),
     ])
 
     if parentFolderId != nil {
-      let moveButton = makeActionBarButton(title: "Move to Folder", action: #selector(moveSelectedToFolder))
-      let removeButton = makeActionBarButton(title: "Remove from Folder", action: #selector(removeSelectedFromFolder))
+      let moveButton = makeActionBarButton(
+        title: "Move to Folder",
+        action: #selector(moveSelectedToFolder)
+      )
+      let removeButton = makeActionBarButton(
+        title: "Remove from Folder",
+        action: #selector(removeSelectedFromFolder)
+      )
       stackView.addArrangedSubview(moveButton)
       stackView.addArrangedSubview(removeButton)
       editActionBarButtons = [moveButton, removeButton]
     } else {
-      let addButton = makeActionBarButton(title: "Add to Folder", action: #selector(addSelectedToFolder))
+      let addButton = makeActionBarButton(
+        title: "Add to Folder",
+        action: #selector(addSelectedToFolder)
+      )
       stackView.addArrangedSubview(addButton)
       editActionBarButtons = [addButton]
     }
 
-    let barHeight: CGFloat = 50
+    let barHeight: CGFloat = 68
 
     NSLayoutConstraint.activate([
       editActionBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -253,6 +274,7 @@ class PlaylistFolderContentsVC: UITableViewController {
     for button in editActionBarButtons {
       button.isEnabled = hasSelection
     }
+    selectionCountLabel?.text = "\(selectedCount) selected"
   }
 
   // MARK: - Edit mode
@@ -260,7 +282,7 @@ class PlaylistFolderContentsVC: UITableViewController {
   override func setEditing(_ editing: Bool, animated: Bool) {
     super.setEditing(editing, animated: animated)
     editActionBar.isHidden = !editing
-    tableView.contentInset.bottom = editing ? 50 : 0
+    tableView.contentInset.bottom = editing ? 68 : 0
     if editing {
       updateEditActionBarState()
     }
@@ -357,9 +379,11 @@ class PlaylistFolderContentsVC: UITableViewController {
   private func sortPlaylists(_ playlists: [Playlist]) -> [Playlist] {
     switch sortType {
     case .name:
-      return playlists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+      return playlists
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     case .lastPlayed:
-      return playlists.sorted { ($0.lastTimePlayed ?? .distantPast) > ($1.lastTimePlayed ?? .distantPast) }
+      return playlists
+        .sorted { ($0.lastTimePlayed ?? .distantPast) > ($1.lastTimePlayed ?? .distantPast) }
     case .lastChanged:
       return playlists.sorted { ($0.changeDate ?? .distantPast) > ($1.changeDate ?? .distantPast) }
     case .duration:
@@ -440,7 +464,8 @@ class PlaylistFolderContentsVC: UITableViewController {
     if subfolderCount >
       0 { details.append("\(subfolderCount) subfolder\(subfolderCount == 1 ? "" : "s")") }
     cell.detailTextLabel?.text = details.isEmpty ? "Empty" : details.joined(separator: ", ")
-    cell.detailTextLabel?.textColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6) ?? .secondaryLabel
+    cell.detailTextLabel?.textColor = ThemeStore.shared.dynamicText?
+      .withAlphaComponent(0.6) ?? .secondaryLabel
     cell.accessoryType = .disclosureIndicator
     cell.tintColor = ThemeStore.shared.dynamicTint ?? .systemBlue
     cell.backgroundColor = ThemeStore.shared.dynamicBackground ?? .secondarySystemGroupedBackground
@@ -615,7 +640,8 @@ class PlaylistFolderContentsVC: UITableViewController {
     let subfolderCount = folder.subfolders.count
     let message: String
     if subfolderCount > 0 {
-      message = "Delete \"\(folder.name)\" and its \(subfolderCount) subfolder\(subfolderCount == 1 ? "" : "s")? Playlists inside will become unfiled."
+      message =
+        "Delete \"\(folder.name)\" and its \(subfolderCount) subfolder\(subfolderCount == 1 ? "" : "s")? Playlists inside will become unfiled."
     } else {
       message = "Delete \"\(folder.name)\"? Playlists inside will become unfiled."
     }
@@ -686,7 +712,7 @@ class PlaylistFolderContentsVC: UITableViewController {
   }
 }
 
-// MARK: - UISearchResultsUpdating
+// MARK: UISearchResultsUpdating
 
 extension PlaylistFolderContentsVC: UISearchResultsUpdating {
   func updateSearchResults(for searchController: UISearchController) {
