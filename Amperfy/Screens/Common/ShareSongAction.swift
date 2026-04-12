@@ -107,8 +107,20 @@ enum ShareSongAction {
   ) {
     let artistName = song.asSong?.artist?.name ?? "Unknown artist"
     let textItem = "\(song.title) \u{2014} \(artistName)"
+
+    // Rename to "Song Title - Artist.ext" for a friendly filename in the share sheet
+    let safeFileName = "\(song.title) - \(artistName)"
+      .replacingOccurrences(of: "/", with: "-")
+      .replacingOccurrences(of: ":", with: "-")
+    let tempURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent(safeFileName)
+      .appendingPathExtension(fileURL.pathExtension)
+    try? FileManager.default.removeItem(at: tempURL)
+    try? FileManager.default.copyItem(at: fileURL, to: tempURL)
+    let shareURL = FileManager.default.fileExists(atPath: tempURL.path) ? tempURL : fileURL
+
     let activityVC = UIActivityViewController(
-      activityItems: [fileURL, textItem],
+      activityItems: [shareURL, textItem],
       applicationActivities: nil
     )
     activityVC.popoverPresentationController?.sourceView = sourceView
