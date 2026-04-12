@@ -102,6 +102,21 @@ final class HomeVC: UICollectionViewController {
       name: .offlineModeChanged,
       object: nil
     )
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleThemeChanged),
+      name: ThemeStore.didChangeNotification,
+      object: nil
+    )
+  }
+
+  @objc
+  private func handleThemeChanged() {
+    collectionView.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
+    // Reconfigure visible cells to pick up new text colors
+    guard var snapshot = dataSource?.snapshot() else { return }
+    snapshot.reconfigureItems(snapshot.itemIdentifiers)
+    dataSource?.apply(snapshot, animatingDifferences: false)
   }
 
   override func viewWillAppear(_ animated: Bool) {

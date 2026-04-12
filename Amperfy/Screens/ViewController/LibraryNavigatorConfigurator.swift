@@ -103,7 +103,7 @@ class LibraryNavigatorConfigurator: NSObject {
   private let offsetData: [LibraryNavigatorItem]
   private var collectionView: UICollectionView!
   private var dataSource: SideBarDiffableDataSource!
-  private let layoutConfig: UICollectionLayoutListConfiguration
+  private var layoutConfig: UICollectionLayoutListConfiguration
   private let pressedOnLibraryItemCB: (_: LibraryNavigatorItem) -> ()
 
   #if targetEnvironment(macCatalyst)
@@ -135,6 +135,24 @@ class LibraryNavigatorConfigurator: NSObject {
       name: .LibraryItemsChanged,
       object: nil
     )
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleThemeChanged),
+      name: ThemeStore.didChangeNotification,
+      object: nil
+    )
+  }
+
+  @objc
+  func handleThemeChanged() {
+    guard let collectionView else { return }
+    // Update layout config background
+    layoutConfig.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
+    collectionView.collectionViewLayout = createLayout()
+    // Reconfigure all visible cells to pick up new text/tint colors
+    var snapshot = dataSource.snapshot()
+    snapshot.reconfigureItems(snapshot.itemIdentifiers)
+    dataSource.apply(snapshot, animatingDifferences: false)
   }
 
   @objc
