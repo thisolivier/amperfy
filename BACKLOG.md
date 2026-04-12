@@ -1,6 +1,6 @@
 # Amperfy Fork — Feature Backlog
 
-**Scope:** user-visible features and research PRs on the Amperfy fork against a Navidrome server. PR 1 / PR 2 were the first pass. PR 3 / PR 4 / PR 5 are the second pass (added 2026-04-11 after QA round 1). PR 6 (share song) and PR 7 (custom styling, research-first) are the third pass (added 2026-04-11 during Wave 4).
+**Scope:** user-visible features and research PRs on the Amperfy fork against a Navidrome server. PR 1 / PR 2 were the first pass. PR 3 / PR 4 / PR 5 are the second pass (added 2026-04-11 after QA round 1). PR 6 (share song) and PR 7 (custom styling, research-first) are the third pass (added 2026-04-11 during Wave 4). PR 9 (playlist folders, added 2026-04-12) is prioritized ahead of custom styling Phase 2.
 **Audience:** the implementer agent on `navidrome-spike-phaseB`. This file is the authoritative spec — when it disagrees with anything in `IMPLEMENTATION.md` or the spike `NOTES.md`, this file wins.
 **Companion reads (do not re-read unless stuck):** `PRIMER.md` (architecture), `IMPLEMENTATION.md` (dev loop + don't-touch list), `docs/DECISION.md` (why Amperfy).
 **Branch:** work directly on `spike/extension-eval` with feature commits. No feature branches for this pass — Olivier wants two shippable TestFlight builds back-to-back, and branch gymnastics are friction.
@@ -847,6 +847,147 @@ Same monotonic bump pattern as §2.6.
 
 ---
 
+## PR 9 — Feature G: Playlist folders with batch selection
+
+**Release target:** TestFlight build. Bump `CURRENT_PROJECT_VERSION` monotonically. **Prioritized ahead of custom styling (PR 7 Phase 2)** per Olivier, 2026-04-12.
+
+**Intent:** let the user organize playlists into local-only folders with support for nesting, multi-folder membership, and batch selection. Folders live in the Playlists tab. A playlist can appear in multiple folders (references, not copies); once filed in at least one folder, it no longer appears at the top level. Unfiled playlists remain visible at root.
+
+### G.1 Data model
+
+**Local-only, no Core Data.** Same upstream-merge-compat rationale as `PinnedPlaylistStore`. Storage: JSON-serialized tree in UserDefaults (or a `.json` file in Application Support if the tree gets large — implementer's judgment on first read, noting that UserDefaults handles ~100KB of JSON comfortably and most users will have <50 folders).
+
+```swift
+public struct PlaylistFolder: Codable, Identifiable {
+    public let id: UUID
+    public var name: String
+    public var playlistIds: [String]    // Subsonic playlist IDs, ordered
+    public var subfolders: [PlaylistFolder]  // recursive nesting
+}
+```
+
+**Service:** `AmperfyKit/Storage/PlaylistFolderStore.swift` (~120-150 LOC).
+
+```swift
+public final class PlaylistFolderStore {
+    public static let shared = PlaylistFolderStore()
+
+    private let defaultsKey = "amperfy.fork.playlistFolders"
+
+    /// Top-level folders. The root is implicit — unfiled playlists are those
+    /// whose ID does not appear in ANY folder at any depth.
+    public private(set) var folders: [PlaylistFolder]
+
+    // CRUD
+    public func createFolder(name: String, parent: UUID?) -> PlaylistFolder
+    public func renameFolder(id: UUID, to name: String)
+    public func deleteFolder(id: UUID)  // removes folder, playlists become unfiled if not in another folder
+
+    // Membership
+    public func addPlaylists(_ playlistIds: [String], to folderId: UUID)
+    public func removePlaylists(_ playlistIds: [String], from folderId: UUID)
+    public func movePlaylist(_ playlistId: String, from sourceFolderId: UUID, to destFolderId: UUID)
+
+    /// All playlist IDs that appear in at least one folder at any depth.
+    /// Used to partition the Playlists tab: filed playlists are hidden from root.
+    public var allFiledPlaylistIds: Set<String>
+
+    /// Posts on every mutation so UI can refresh.
+    public static let didChangeNotification = Notification.Name("amperfy.fork.playlistFolders.didChange")
+}
+```
+
+**Key invariants:**
+- A playlist ID can appear in multiple folders (multi-membership). Each is a reference to the same underlying `PlaylistMO`, not a copy.
+- Deleting a folder does NOT delete the playlists — they become unfiled (return to root) unless they're still referenced by another folder.
+- `allFiledPlaylistIds` is a computed traversal of the full tree. Cache if perf becomes an issue (unlikely with <100 folders).
+
+### G.2 Playlists tab UI
+
+**Current state (implementer verifies):** the Playlists tab shows a flat list of all `PlaylistMO` objects, likely via an FRC. The new view replaces this with a two-tier display:
+
+**Root level:**
+1. **Folders** — each rendered as a folder row (SF symbol `folder` / `folder.fill`, folder name, subtitle showing playlist count). Tapping a folder pushes a new VC showing that folder's contents (playlists + sub-folders).
+2. **Unfiled playlists** — all playlists whose ID is NOT in `allFiledPlaylistIds`. Rendered exactly as today (same cells, same tap-to-open behavior). These sit below the folders section.
+
+**Inside a folder:**
+- Sub-folders (if any) at top, then playlists in that folder.
+- Same push-based navigation as root → folder. Nesting is recursive — a folder can contain sub-folders to arbitrary depth.
+- Tapping a playlist pushes the existing `PlaylistDetailVC` (same as today).
+- Nav bar title = folder name. Back button returns to parent.
+
+### G.3 Folder management (editing)
+
+All editing happens at the list/folder view level — NOT inside playlist detail.
+
+**Add a folder:**
+- Nav bar "+" button (or Edit mode action) → alert with text field for folder name → creates folder at current level (root or inside current folder).
+
+**Batch select + add to folder:**
+- Standard iOS edit mode: tap "Edit" → checkmark multi-select on playlists → toolbar action "Add to Folder" → picker showing existing folders (with create-new option) → selected playlists added to chosen folder.
+- Playlists that were at root level and are now filed in at least one folder disappear from root on next refresh.
+
+**Three-dots menu on a playlist row (context menu):**
+- **"Add to Folder…"** — always available. Shows folder picker. Adds the playlist to the selected folder (reference, not move). If the playlist was at root and is now filed, it disappears from root.
+- **"Move to Folder…"** — available only when the playlist is currently inside a folder (i.e., you're viewing a folder's contents). Removes from current folder, adds to selected folder.
+- **"Also Show in Folder…"** — available when inside a folder. Adds the playlist to an additional folder without removing from the current one. Makes the multi-membership explicit to the user.
+- **"Remove from Folder"** — available only inside a folder view. Removes the playlist from this folder. If it's not in any other folder, it returns to root.
+
+**Three-dots menu on a folder row:**
+- **"Rename"** → alert with text field.
+- **"Delete Folder"** → confirmation alert. Deletes the folder; contained playlists become unfiled unless they're also in another folder. Sub-folders are also deleted (recursive).
+
+### G.4 Storage design notes
+
+- **Why not Core Data:** same rationale as `PinnedPlaylistStore` §D.2.1 — no schema changes, no upstream merge conflicts. The folder tree is local organizational state, not library data.
+- **Why JSON in UserDefaults vs. a file:** UserDefaults is atomic and survives app termination. The tree is small (a user with 50 playlists and 10 folders produces ~5KB of JSON). If implementer finds the tree growing past ~50KB in testing, switch to a `.json` file in Application Support with atomic writes.
+- **Migration from PinnedPlaylistStore:** PR 5's "pinned playlists" and PR 9's "playlist folders" are complementary features. Pinned = shown on Home tab. Folders = organizational structure in Playlists tab. A playlist can be both pinned AND in a folder. No migration needed — they're orthogonal.
+
+### G.5 Tests
+
+**AmperfyKitTests:**
+- `PlaylistFolderStoreTest` (~10-12 cases):
+  1. Empty state — no folders, `allFiledPlaylistIds` empty.
+  2. Create folder + add playlist → `allFiledPlaylistIds` contains it.
+  3. Add same playlist to two folders → still one entry in `allFiledPlaylistIds`.
+  4. Remove playlist from one folder → still filed (in the other).
+  5. Remove from both → unfiled, returns to `allFiledPlaylistIds` empty.
+  6. Delete folder → contained playlists unfiled.
+  7. Nested subfolder — create, add playlist, verify `allFiledPlaylistIds` traverses depth.
+  8. Delete parent folder → subfolders and their memberships also removed.
+  9. Rename folder persists across store instances.
+  10. `didChangeNotification` fires on every mutation.
+  11. JSON round-trip — encode → decode → structural equality.
+  12. Move playlist between folders — removed from source, present in dest.
+
+**Manual acceptance (sim):**
+- Root shows folders + unfiled playlists.
+- Tap folder → shows contents. Tap playlist → detail opens.
+- Edit mode → multi-select 3 playlists → "Add to Folder" → playlists disappear from root.
+- Three-dots on a playlist inside folder → "Also Show in Folder…" → playlist now in two folders.
+- "Remove from Folder" on a multi-filed playlist → still visible in the other folder.
+- "Remove from Folder" on a single-filed playlist → returns to root.
+- Delete folder → playlists return to root.
+- Kill+relaunch → folder structure persists.
+- Create subfolder inside a folder → navigate in → works recursively.
+
+### G.6 Ship steps
+
+Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
+
+### G.7 Resolved questions (Olivier, 2026-04-12)
+
+1. **Local-only: RESOLVED.** No server sync. UserDefaults/JSON-backed.
+2. **Nesting: RESOLVED → subfolders allowed** (recursive).
+3. **Location: RESOLVED → Playlists tab.**
+4. **Unfiled playlists: RESOLVED → visible at root level, above folders or alongside.**
+5. **Batch selection: RESOLVED → iOS edit-mode multi-select with "Add to Folder" action.**
+6. **Multi-membership: RESOLVED → a playlist can be in multiple folders (references). Once in at least one folder, hidden from root. Removing from all folders returns to root.**
+7. **Priority: RESOLVED → before custom styling (PR 7 Phase 2).**
+8. **Editing: RESOLVED → list/folder view level only.** Three-dots on playlist: Add to Folder / Move to Folder / Also Show in Folder / Remove from Folder. Three-dots on folder: Rename / Delete.
+
+---
+
 ## 4. Decision log (why the spec looks like this)
 
 - **Metadata-path dropped, went to pure count** (Olivier, 2026-04-11, after observing build 3 in production): the shipped predicate let single-track split-off "albums" through because (a) the metadata path had no count floor and (b) a Core Data NULL-handling pitfall silently excluded nil-metadata albums. Olivier explicitly chose pure-count (Option C) over the more-complex 2-track-floor-on-metadata alternative, and told the team NOT to assume a server-side metadata repair sweep is imminent. The 2-track-EP-via-metadata edge case is intentionally unsupported — users with legitimate small EPs will need to find them via search or unfiltered Albums view until/unless we revisit. See §1.1 for the new rule.
@@ -891,6 +1032,7 @@ Same monotonic bump pattern as §2.6.
 | PR 7 | (research — no TestFlight) | — | 2026-04-11 | Custom styling research. Deliverable: `docs/STYLING_RESEARCH.md` (parent repo @ `9dddf96`). Recommends Option A (UtilitiesExtensions + UIAppearance proxy) — GREEN verdict, ~370-410 LOC across 8-10 files. Color surface inventory: 223 refs across ~60 files, but `UtilitiesExtensions.swift` color helpers + `UIAppearance` cover ~70% for free. Font family feasible (~30-40 LOC), font size parked (layout risk). |
 | PR 8 | 048964f6-98d7-4964-be80-24d78c4be894 | 10 | 2026-04-11 | Albums view performance fixes. `spike/extension-eval` @ `faffa3d`. F1: `sectionIndexTitles` cached + off-by-one `0...sectionCount` → `0..<sectionCount` in `AlbumsDiffableDataSource`. F2: `SingleSnapshotFetchedResultsTableViewController.controller(_:didChangeContentWith:)` short-circuits O(n) `existingObject(with:)` scan when `managedObjectContext.updatedObjects` is empty. F4: `AlbumMO.relationshipKeyPathsForPrefetching` now includes `songs` — eliminates fault storms in `handleHeaderPlay/Shuffle`. 398 AmperfyKitTests green. |
 | Hotfix 4 | c56d628e-ec67-476c-a600-c5865692aeeb | 11 | 2026-04-11 | "In Playlists" only showed recently-opened playlists. Root cause: bulk `getPlaylists` API returns metadata only — `PlaylistItemMO` entries are only created by per-playlist `getPlaylist` calls. Fix: `PlaylistItemsSyncTracker` (UserDefaults-backed) tracks which playlists have had items synced; on "In Playlists" tap, any unsynced playlists are fetched sequentially via `syncDown(playlist:)` before running the Core Data query. First tap incurs O(n_playlists) API calls; subsequent taps are instant. `spike/extension-eval` @ `55b20f7`. 398 AmperfyKitTests green. |
+| PR 9 | bf4b4d5e-3058-4d17-9693-ed5e1df19b36 | 12 | 2026-04-12 | Feature G — Playlist folders with batch selection. `spike/extension-eval` @ `16a0820`. `PlaylistFolderStore` (JSON in UserDefaults): recursive folder tree, multi-folder membership, CRUD + membership ops. `PlaylistFolderContentsVC` replaces `PlaylistsVC` as Playlists tab entry point — folders section + unfiled playlists at root, recursive navigation into subfolders. Context menus on playlists (Add/Move/Also Show in/Remove from Folder) and folders (Rename/Delete). Edit mode multi-select with "Add to Folder" toolbar action. Folder picker with create-new option. Flat View fallback to legacy `PlaylistsVC`. 12 new `PlaylistFolderStoreTest` cases; 410 AmperfyKitTests green. |
 
 ---
 
