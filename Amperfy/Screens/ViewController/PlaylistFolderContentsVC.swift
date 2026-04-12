@@ -28,6 +28,9 @@ import UIKit
 /// Shows the contents of a playlist folder (subfolders + playlists), or the
 /// root-level view (top-level folders + unfiled playlists) when `parentFolderId`
 /// is nil. Replaces `PlaylistsVC` as the Playlists tab entry point.
+///
+/// v2 redesign: single unified list (no flat/folder toggle), always-on search
+/// and sort, custom floating action bar for multi-select (above tab bar).
 class PlaylistFolderContentsVC: UITableViewController {
   // MARK: - Sections
 
@@ -46,17 +49,27 @@ class PlaylistFolderContentsVC: UITableViewController {
   private var displayedPlaylists: [Playlist] = []
   private var folderObserver: (any NSObjectProtocol)?
 
-  // Flat view mode (root level only)
-  private var isShowingFlatView = false
-  private var flatViewSortType: PlaylistSortType = .name
-  private var flatSearchText: String = ""
+  private var sortType: PlaylistSortType = .name
+  private var searchText: String = ""
 
-  private lazy var flatSearchController: UISearchController = {
-    let searchController = UISearchController(searchResultsController: nil)
-    searchController.searchResultsUpdater = self
-    searchController.obscuresBackgroundDuringPresentation = false
-    searchController.searchBar.placeholder = "Search in \"Playlists\""
-    return searchController
+  // MARK: - Floating action bar
+
+  private let editActionBar = UIView()
+  private var editActionBarButtons: [UIButton] = []
+  private var editActionBarBottomConstraint: NSLayoutConstraint?
+
+  // MARK: - Search
+
+  private lazy var searchController: UISearchController = {
+    let controller = UISearchController(searchResultsController: nil)
+    controller.searchResultsUpdater = self
+    controller.obscuresBackgroundDuringPresentation = false
+    if let parentFolderId, let folder = folderStore.folder(byId: parentFolderId) {
+      controller.searchBar.placeholder = "Search in \"\(folder.name)\""
+    } else {
+      controller.searchBar.placeholder = "Search in \"Playlists\""
+    }
+    return controller
   }()
 
   // MARK: - Init
@@ -96,6 +109,10 @@ class PlaylistFolderContentsVC: UITableViewController {
     tableView.backgroundColor = .systemGroupedBackground
     tableView.allowsMultipleSelectionDuringEditing = true
 
+    navigationItem.searchController = searchController
+    definesPresentationContext = true
+
+    configureEditActionBar()
     rebuildNavigationItems()
 
     folderObserver = NotificationCenter.default.addObserver(
@@ -125,25 +142,7 @@ class PlaylistFolderContentsVC: UITableViewController {
       self?.promptCreateFolder()
     }
 
-    var menuChildren: [UIMenuElement] = [addFolderAction]
-
-    if parentFolderId == nil {
-      let toggleTitle = isShowingFlatView ? "Folder View" : "Flat View"
-      let toggleImage = isShowingFlatView
-        ? UIImage(systemName: "folder")
-        : UIImage(systemName: "list.bullet")
-      let toggleAction = UIAction(
-        title: toggleTitle,
-        image: toggleImage
-      ) { [weak self] _ in
-        self?.toggleFlatView()
-      }
-      menuChildren.append(toggleAction)
-
-      if isShowingFlatView {
-        menuChildren.append(createSortMenu())
-      }
-    }
+    let menuChildren: [UIMenuElement] = [addFolderAction, createSortMenu()]
 
     let optionsButton = UIBarButtonItem(
       image: UIImage(systemName: "ellipsis.circle"),
@@ -153,19 +152,6 @@ class PlaylistFolderContentsVC: UITableViewController {
     navigationItem.rightBarButtonItems = [optionsButton, editButtonItem]
   }
 
-  private func toggleFlatView() {
-    isShowingFlatView.toggle()
-    if isShowingFlatView {
-      navigationItem.searchController = flatSearchController
-      definesPresentationContext = true
-    } else {
-      navigationItem.searchController = nil
-      flatSearchText = ""
-    }
-    rebuildNavigationItems()
-    reloadContent()
-  }
-
   private func createSortMenu() -> UIMenu {
     let sortOptions: [(String, PlaylistSortType)] = [
       ("Name", .name),
@@ -173,12 +159,12 @@ class PlaylistFolderContentsVC: UITableViewController {
       ("Change date", .lastChanged),
       ("Duration", .duration),
     ]
-    let actions = sortOptions.map { title, sortType in
+    let actions = sortOptions.map { title, option in
       UIAction(
         title: title,
-        image: flatViewSortType == sortType ? UIImage(systemName: "checkmark") : nil
+        image: sortType == option ? UIImage(systemName: "checkmark") : nil
       ) { [weak self] _ in
-        self?.flatViewSortType = sortType
+        self?.sortType = option
         self?.rebuildNavigationItems()
         self?.reloadContent()
       }
@@ -190,41 +176,93 @@ class PlaylistFolderContentsVC: UITableViewController {
     )
   }
 
+  // MARK: - Floating action bar
+
+  private func configureEditActionBar() {
+    editActionBar.translatesAutoresizingMaskIntoConstraints = false
+    editActionBar.backgroundColor = .systemBackground
+    editActionBar.isHidden = true
+    view.addSubview(editActionBar)
+
+    let separator = UIView()
+    separator.translatesAutoresizingMaskIntoConstraints = false
+    separator.backgroundColor = .separator
+    editActionBar.addSubview(separator)
+
+    NSLayoutConstraint.activate([
+      separator.topAnchor.constraint(equalTo: editActionBar.topAnchor),
+      separator.leadingAnchor.constraint(equalTo: editActionBar.leadingAnchor),
+      separator.trailingAnchor.constraint(equalTo: editActionBar.trailingAnchor),
+      separator.heightAnchor.constraint(equalToConstant: 0.5),
+    ])
+
+    let stackView = UIStackView()
+    stackView.translatesAutoresizingMaskIntoConstraints = false
+    stackView.axis = .horizontal
+    stackView.distribution = .fillEqually
+    stackView.spacing = 12
+    editActionBar.addSubview(stackView)
+
+    NSLayoutConstraint.activate([
+      stackView.topAnchor.constraint(equalTo: editActionBar.topAnchor, constant: 8),
+      stackView.leadingAnchor.constraint(equalTo: editActionBar.leadingAnchor, constant: 16),
+      stackView.trailingAnchor.constraint(equalTo: editActionBar.trailingAnchor, constant: -16),
+      stackView.bottomAnchor.constraint(equalTo: editActionBar.bottomAnchor, constant: -8),
+    ])
+
+    if parentFolderId != nil {
+      let moveButton = makeActionBarButton(title: "Move to Folder", action: #selector(moveSelectedToFolder))
+      let removeButton = makeActionBarButton(title: "Remove from Folder", action: #selector(removeSelectedFromFolder))
+      stackView.addArrangedSubview(moveButton)
+      stackView.addArrangedSubview(removeButton)
+      editActionBarButtons = [moveButton, removeButton]
+    } else {
+      let addButton = makeActionBarButton(title: "Add to Folder", action: #selector(addSelectedToFolder))
+      stackView.addArrangedSubview(addButton)
+      editActionBarButtons = [addButton]
+    }
+
+    let barHeight: CGFloat = 50
+
+    NSLayoutConstraint.activate([
+      editActionBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      editActionBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      editActionBar.heightAnchor.constraint(equalToConstant: barHeight),
+      editActionBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+    ])
+
+    updateEditActionBarState()
+  }
+
+  private func makeActionBarButton(title: String, action: Selector) -> UIButton {
+    var config = UIButton.Configuration.filled()
+    config.title = title
+    config.cornerStyle = .medium
+    config.buttonSize = .medium
+    let button = UIButton(configuration: config)
+    button.addTarget(self, action: action, for: .touchUpInside)
+    button.isEnabled = false
+    return button
+  }
+
+  private func updateEditActionBarState() {
+    let selectedCount = tableView.indexPathsForSelectedRows?
+      .filter { $0.section == Section.playlists.rawValue }
+      .count ?? 0
+    let hasSelection = selectedCount > 0
+    for button in editActionBarButtons {
+      button.isEnabled = hasSelection
+    }
+  }
+
   // MARK: - Edit mode
 
   override func setEditing(_ editing: Bool, animated: Bool) {
     super.setEditing(editing, animated: animated)
+    editActionBar.isHidden = !editing
+    tableView.contentInset.bottom = editing ? 50 : 0
     if editing {
-      let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-      if parentFolderId != nil {
-        toolbarItems = [
-          UIBarButtonItem(
-            title: "Move to Folder",
-            style: .plain,
-            target: self,
-            action: #selector(moveSelectedToFolder)
-          ),
-          flexSpace,
-          UIBarButtonItem(
-            title: "Remove from Folder",
-            style: .plain,
-            target: self,
-            action: #selector(removeSelectedFromFolder)
-          ),
-        ]
-      } else {
-        toolbarItems = [
-          UIBarButtonItem(
-            title: "Add to Folder",
-            style: .plain,
-            target: self,
-            action: #selector(addSelectedToFolder)
-          ),
-        ]
-      }
-      navigationController?.setToolbarHidden(false, animated: true)
-    } else {
-      navigationController?.setToolbarHidden(true, animated: true)
+      updateEditActionBarState()
     }
   }
 
@@ -274,10 +312,7 @@ class PlaylistFolderContentsVC: UITableViewController {
   // MARK: - Data loading
 
   private func reloadContent() {
-    if isShowingFlatView && parentFolderId == nil {
-      displayedFolders = []
-      displayedPlaylists = fetchAllPlaylists()
-    } else if let parentFolderId, let folder = folderStore.folder(byId: parentFolderId) {
+    if let parentFolderId, let folder = folderStore.folder(byId: parentFolderId) {
       displayedFolders = folder.subfolders
       displayedPlaylists = fetchPlaylists(ids: folder.playlistIds)
     } else {
@@ -288,53 +323,53 @@ class PlaylistFolderContentsVC: UITableViewController {
     updateContentUnavailable()
   }
 
-  private func fetchAllPlaylists() -> [Playlist] {
-    let library = appDelegate.storage.main.library
-    var playlists = library.getPlaylists(for: account)
-      .filter { !$0.isSmartPlaylist }
-
-    if !flatSearchText.isEmpty {
-      playlists = playlists.filter {
-        $0.name.localizedCaseInsensitiveContains(flatSearchText)
-      }
-    }
-
-    switch flatViewSortType {
-    case .name:
-      playlists.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    case .lastPlayed:
-      playlists.sort { ($0.lastTimePlayed ?? .distantPast) > ($1.lastTimePlayed ?? .distantPast) }
-    case .lastChanged:
-      playlists.sort { ($0.changeDate ?? .distantPast) > ($1.changeDate ?? .distantPast) }
-    case .duration:
-      playlists.sort { $0.duration > $1.duration }
-    }
-
-    return playlists
-  }
-
   private func fetchUnfiledPlaylists() -> [Playlist] {
     let library = appDelegate.storage.main.library
     let allPlaylists = library.getPlaylists(for: account)
     let filedIds = folderStore.allFiledPlaylistIds
-    return allPlaylists
+    var playlists = allPlaylists
       .filter { !$0.isSmartPlaylist && !filedIds.contains($0.id) }
-      .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+    if !searchText.isEmpty {
+      playlists = playlists.filter {
+        $0.name.localizedCaseInsensitiveContains(searchText)
+      }
+    }
+
+    return sortPlaylists(playlists)
   }
 
   private func fetchPlaylists(ids: [String]) -> [Playlist] {
     guard !ids.isEmpty else { return [] }
     let library = appDelegate.storage.main.library
     let allPlaylists = library.getPlaylists(for: account)
-    let idOrder = Dictionary(uniqueKeysWithValues: ids.enumerated().map { ($1, $0) })
-    return allPlaylists
-      .filter { ids.contains($0.id) }
-      .sorted { (idOrder[$0.id] ?? 0) < (idOrder[$1.id] ?? 0) }
+    var playlists = allPlaylists.filter { ids.contains($0.id) }
+
+    if !searchText.isEmpty {
+      playlists = playlists.filter {
+        $0.name.localizedCaseInsensitiveContains(searchText)
+      }
+    }
+
+    return sortPlaylists(playlists)
+  }
+
+  private func sortPlaylists(_ playlists: [Playlist]) -> [Playlist] {
+    switch sortType {
+    case .name:
+      return playlists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    case .lastPlayed:
+      return playlists.sorted { ($0.lastTimePlayed ?? .distantPast) > ($1.lastTimePlayed ?? .distantPast) }
+    case .lastChanged:
+      return playlists.sorted { ($0.changeDate ?? .distantPast) > ($1.changeDate ?? .distantPast) }
+    case .duration:
+      return playlists.sorted { $0.duration > $1.duration }
+    }
   }
 
   private func updateContentUnavailable() {
     if displayedFolders.isEmpty, displayedPlaylists.isEmpty {
-      if isShowingFlatView && !flatSearchText.isEmpty {
+      if !searchText.isEmpty {
         contentUnavailableConfiguration = UIContentUnavailableConfiguration.search()
       } else {
         var config = UIContentUnavailableConfiguration.empty()
@@ -370,7 +405,6 @@ class PlaylistFolderContentsVC: UITableViewController {
     case .folders: return displayedFolders.isEmpty ? nil : "Folders"
     case .playlists:
       if displayedPlaylists.isEmpty { return nil }
-      if isShowingFlatView { return "All Playlists" }
       return parentFolderId == nil ? "Playlists" : nil
     case .none: return nil
     }
@@ -425,7 +459,8 @@ class PlaylistFolderContentsVC: UITableViewController {
 
   override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
     if isEditing {
-      return // multi-select mode, don't navigate
+      updateEditActionBarState()
+      return
     }
     switch Section(rawValue: indexPath.section) {
     case .folders:
@@ -440,6 +475,12 @@ class PlaylistFolderContentsVC: UITableViewController {
       break
     }
     tableView.deselectRow(at: indexPath, animated: true)
+  }
+
+  override func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
+    if isEditing {
+      updateEditActionBarState()
+    }
   }
 
   override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
@@ -494,7 +535,6 @@ class PlaylistFolderContentsVC: UITableViewController {
       var actions = [UIMenuElement]()
 
       if let currentFolderId = parentFolderId {
-        // Inside a folder: show Move, Also Show, and Remove
         actions.append(UIAction(
           title: "Move to Folder\u{2026}",
           image: UIImage(systemName: "folder")
@@ -525,7 +565,6 @@ class PlaylistFolderContentsVC: UITableViewController {
           self?.folderStore.removePlaylists([playlist.id], from: currentFolderId)
         })
       } else {
-        // At root level: only show Add to Folder
         actions.append(UIAction(
           title: "Add to Folder\u{2026}",
           image: UIImage(systemName: "folder.badge.plus")
@@ -571,7 +610,13 @@ class PlaylistFolderContentsVC: UITableViewController {
   }
 
   private func confirmDeleteFolder(_ folder: PlaylistFolder) {
-    let message = "Delete \"\(folder.name)\"? Playlists inside will become unfiled."
+    let subfolderCount = folder.subfolders.count
+    let message: String
+    if subfolderCount > 0 {
+      message = "Delete \"\(folder.name)\" and its \(subfolderCount) subfolder\(subfolderCount == 1 ? "" : "s")? Playlists inside will become unfiled."
+    } else {
+      message = "Delete \"\(folder.name)\"? Playlists inside will become unfiled."
+    }
     let alert = UIAlertController(title: "Delete Folder", message: message, preferredStyle: .alert)
     alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
     alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
@@ -643,7 +688,7 @@ class PlaylistFolderContentsVC: UITableViewController {
 
 extension PlaylistFolderContentsVC: UISearchResultsUpdating {
   func updateSearchResults(for searchController: UISearchController) {
-    flatSearchText = searchController.searchBar.text ?? ""
+    searchText = searchController.searchBar.text ?? ""
     reloadContent()
   }
 }
