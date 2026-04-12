@@ -37,6 +37,24 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 22,
+      date: "2026-04-12",
+      title: "Build 22 — Theme lifecycle fix",
+      whatsNew: [
+        "Theme lifecycle fix: Library and Home tabs update colors immediately when theme is toggled",
+        "Home section headers and carousel album/artist labels refresh on theme change",
+        "Library row labels and icons refresh on theme change",
+        "No app restart needed after enabling or changing custom theme",
+      ],
+      testingFocus: [
+        "Open app fresh — navigate to Home and Library tabs first",
+        "Go to Settings → Display & Interaction → enable Custom Theme with a distinct color",
+        "Switch back to Home tab — section headers and album labels should be themed immediately",
+        "Switch to Library tab — row labels and icons should be themed immediately",
+        "Toggle theme off — colors should revert to defaults without restart",
+      ]
+    ),
+    ReleaseNote(
       id: 21,
       date: "2026-04-12",
       title: "Build 21 — Feature sweep polish",
