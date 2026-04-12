@@ -844,7 +844,10 @@ class MiniPlayerView: UIView {
   }
 
   func refreshPlayer() {
-    if traitCollection.userInterfaceStyle == .dark {
+    if let textColor = ThemeStore.shared.textColor(for: traitCollection.userInterfaceStyle) {
+      titleLabel.textColor = textColor
+      subtitleLabel.textColor = textColor.withAlphaComponent(0.6)
+    } else if traitCollection.userInterfaceStyle == .dark {
       titleLabel.textColor = .white
       subtitleLabel.textColor = .lightGray
     } else {

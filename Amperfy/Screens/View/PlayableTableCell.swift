@@ -473,14 +473,17 @@ class PlayableTableCell: BasicTableCell {
   }
 
   private func refreshSubtitleColor() {
+    let primaryColor = ThemeStore.shared.dynamicText ?? UIColor.labelColor
+    let secondaryColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6)
+      ?? UIColor.secondaryLabelColor
     if playerIndexCb != nil {
-      cacheIconImage.tintColor = UIColor.labelColor
-      artistLabel.textColor = UIColor.labelColor
-      durationLabel.textColor = UIColor.labelColor
+      cacheIconImage.tintColor = primaryColor
+      artistLabel.textColor = primaryColor
+      durationLabel.textColor = primaryColor
     } else {
-      cacheIconImage.tintColor = UIColor.secondaryLabelColor
-      artistLabel.textColor = UIColor.secondaryLabelColor
-      durationLabel.textColor = UIColor.secondaryLabelColor
+      cacheIconImage.tintColor = secondaryColor
+      artistLabel.textColor = secondaryColor
+      durationLabel.textColor = secondaryColor
     }
   }
 

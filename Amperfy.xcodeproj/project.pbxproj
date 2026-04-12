@@ -363,6 +363,8 @@
 		A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */; };
 		A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */; };
 		A5B0E10000000000000050A0 /* PlaylistFolderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */; };
+		A5C0F10000000000000060A0 /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0F20000000000000060A0 /* ThemeStore.swift */; };
+		A5C0F10000000000000060B0 /* ThemeSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0F20000000000000060B0 /* ThemeSettingsSection.swift */; };
 		A5B0E30000000000000050A0 /* PlaylistFolderStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */; };
 		A5B0E50000000000000050A0 /* PlaylistFolderContentsVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E60000000000000050A0 /* PlaylistFolderContentsVC.swift */; };
 		A5B0F10000000000000050A0 /* ReleaseNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0F20000000000000050A0 /* ReleaseNotes.swift */; };
@@ -1162,6 +1164,8 @@
 		A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQuery.swift; sourceTree = "<group>"; };
 		A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistItemsSyncTracker.swift; sourceTree = "<group>"; };
 		A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderStore.swift; sourceTree = "<group>"; };
+		A5C0F20000000000000060A0 /* ThemeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeStore.swift; sourceTree = "<group>"; };
+		A5C0F20000000000000060B0 /* ThemeSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsSection.swift; sourceTree = "<group>"; };
 		A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderStoreTest.swift; sourceTree = "<group>"; };
 		A5B0E60000000000000050A0 /* PlaylistFolderContentsVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderContentsVC.swift; sourceTree = "<group>"; };
 		A5B0F20000000000000050A0 /* ReleaseNotes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotes.swift; sourceTree = "<group>"; };
@@ -1449,6 +1453,7 @@
 				A5B0F20000000000000050A0 /* ReleaseNotes.swift */,
 				A5B0F40000000000000050A0 /* WhatsNewSettingsView.swift */,
 				5078AFB12B40CA5E0038FD17 /* DisplaySettingsView.swift */,
+				A5C0F20000000000000060B0 /* ThemeSettingsSection.swift */,
 				50AE79AB2C1CCBEC0085CBB3 /* DeveloperView.swift */,
 				50791E8428D36F1F006CE6E5 /* LibrarySettingsView.swift */,
 				504B441828D6F0920033982C /* LicenseSettingsView.swift */,
@@ -1508,6 +1513,7 @@
 				509001B52716C7F600A8056D /* AppDelegateAlertExtensions.swift */,
 				50722746286794FC00910574 /* AppDelegateKeyboardCommands.swift */,
 				50C9D716285075E3007F18D0 /* UtilitiesExtensions.swift */,
+				A5C0F20000000000000060A0 /* ThemeStore.swift */,
 				50DE29EC2B8FCFC500ABA78E /* LibraryDisplayType+Extension.swift */,
 				50BA92F421CC2C4800E5901D /* Screens */,
 				50E77DB528D2160800BDF882 /* SwiftUI */,
@@ -2779,6 +2785,8 @@
 				A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */,
 				A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */,
 				A5B0E10000000000000050A0 /* PlaylistFolderStore.swift in Sources */,
+				A5C0F10000000000000060A0 /* ThemeStore.swift in Sources */,
+				A5C0F10000000000000060B0 /* ThemeSettingsSection.swift in Sources */,
 				A5B0B10000000000000050A0 /* PinnedPlaylistStore.swift in Sources */,
 				50C9D682284FAA6C007F18D0 /* PodcastEpisodeMO+CoreDataProperties.swift in Sources */,
 				50C9D6F028506EBC007F18D0 /* AmperfyKit.swift in Sources */,
@@ -3157,7 +3165,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3196,7 +3204,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3235,7 +3243,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3286,7 +3294,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3335,7 +3343,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
@@ -3367,7 +3375,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;

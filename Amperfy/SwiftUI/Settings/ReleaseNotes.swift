@@ -37,6 +37,29 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 14,
+      date: "2026-04-12",
+      title: "Build 14 — Custom Theme",
+      whatsNew: [
+        "New 'Custom Theme' toggle in Settings > Display & Interaction",
+        "Independent color pickers for light and dark mode (background, text, tint)",
+        "Custom font family picker with all system fonts and Dynamic Type support",
+        "Contrast warning shown when text/background colors are too similar",
+        "Reset to Defaults clears all customizations",
+        "Theme persists across app launches",
+      ],
+      testingFocus: [
+        "Toggle Custom Theme ON — swatches should match current stock colors",
+        "Pick a background color — verify it applies to nav bar, tab bar, and table views",
+        "Pick a text color — verify labels update across Home, Albums, Player",
+        "Pick a tint color — verify buttons, tab bar icons, and interactive elements change",
+        "Switch between light and dark mode — each should use its own color set",
+        "Select a custom font — confirm Dynamic Type sizes are preserved",
+        "Reset to Defaults — confirm stock appearance is fully restored",
+        "Kill and relaunch — custom colors should apply on launch with no flash",
+      ]
+    ),
+    ReleaseNote(
       id: 13,
       date: "2026-04-12",
       title: "Build 13 — Playlist folder UX fixes",

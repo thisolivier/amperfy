@@ -55,6 +55,8 @@ struct DisplaySettingsView: View {
           }
         }
 
+        ThemeSettingsSection()
+
         #if !targetEnvironment(macCatalyst)
           SettingsSection(
             content: {

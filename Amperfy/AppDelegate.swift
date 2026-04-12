@@ -135,6 +135,39 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
   func configureDefaultNavigationBarStyle() {
     UINavigationBar.appearance().shadowImage = UIImage()
+    applyCustomThemeAppearance()
+  }
+
+  func applyCustomThemeAppearance() {
+    let theme = ThemeStore.shared
+    guard theme.isEnabled else {
+      // Reset to defaults
+      UINavigationBar.appearance().barTintColor = nil
+      UINavigationBar.appearance().titleTextAttributes = nil
+      UINavigationBar.appearance().largeTitleTextAttributes = nil
+      UITabBar.appearance().barTintColor = nil
+      UITabBar.appearance().unselectedItemTintColor = nil
+      UITableView.appearance().backgroundColor = nil
+      return
+    }
+    if let backgroundColor = theme.dynamicBackground {
+      UINavigationBar.appearance().barTintColor = backgroundColor
+      UITabBar.appearance().barTintColor = backgroundColor
+      UITableView.appearance().backgroundColor = backgroundColor
+    }
+    if let textColor = theme.dynamicText {
+      UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: textColor]
+      UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: textColor]
+      UITabBar.appearance().unselectedItemTintColor = textColor.withAlphaComponent(0.5)
+    }
+    if let tintColor = theme.dynamicTint {
+      UIView.appearance().tintColor = tintColor
+    }
+  }
+
+  func applyCustomThemeAndReload() {
+    applyCustomThemeAppearance()
+    applyAppThemeToAlreadyLoadedViews()
   }
 
   func configureBatteryMonitoring() {

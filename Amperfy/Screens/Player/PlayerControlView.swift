@@ -101,15 +101,16 @@ class PlayerControlView: UIView {
 
     playerHandler = PlayerUIHandler(player: player, style: .popupPlayer)
 
-    playButton.imageView?.tintColor = .label
-    previousButton.tintColor = .label
-    nextButton.tintColor = .label
-    skipBackwardButton.tintColor = .label
-    skipForwardButton.tintColor = .label
-    airplayButton.tintColor = .label
-    playerModeButton.tintColor = .label
-    volumeButton.tintColor = .label
-    optionsButton.imageView?.tintColor = .label
+    let controlTint: UIColor = ThemeStore.shared.dynamicText ?? .label
+    playButton.imageView?.tintColor = controlTint
+    previousButton.tintColor = controlTint
+    nextButton.tintColor = controlTint
+    skipBackwardButton.tintColor = controlTint
+    skipForwardButton.tintColor = controlTint
+    airplayButton.tintColor = controlTint
+    playerModeButton.tintColor = controlTint
+    volumeButton.tintColor = controlTint
+    optionsButton.imageView?.tintColor = controlTint
     refreshPlayer()
     playerHandler?.refreshPlayerOptions(
       optionsButton: optionsButton,
