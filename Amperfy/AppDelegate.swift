@@ -357,11 +357,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       startManagerForNormalOperation()
     }
     userStatistics.sessionStarted()
-    // Only load cached adjacency data on subsequent launches (library already synced).
-    // First launch skips this — post-sync compute in startManagerAfterSync() handles it.
-    if storage.settings.app.isLibrarySynced {
-      computeTrackAdjacencyInBackground()
-    }
+    // DISABLED: isolating launch crash — adjacency engine off for build 26
+    // if storage.settings.app.isLibrarySynced {
+    //   computeTrackAdjacencyInBackground()
+    // }
 
     return true
   }
@@ -382,15 +381,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       isAlreadyRegisteredToPlayer = true
       player.addNotifier(notifier: self)
     }
-    // Recompute track adjacency after sync (covers first-launch case).
-    // Use a fresh background context so we read committed data directly
-    // from SQLite — storage.main.context may not have merged yet.
-    let bgContext = storage.newBackgroundContext()
-    DispatchQueue.global(qos: .utility).async {
-      TrackAdjacencyStore.shared.deleteFromDisk()
-      TrackAdjacencyStore.shared.compute(in: bgContext)
-      try? TrackAdjacencyStore.shared.saveToDisk()
-    }
+    // DISABLED: isolating launch crash — adjacency engine off for build 26
+    // let bgContext = storage.newBackgroundContext()
+    // DispatchQueue.global(qos: .utility).async {
+    //   TrackAdjacencyStore.shared.deleteFromDisk()
+    //   TrackAdjacencyStore.shared.compute(in: bgContext)
+    //   try? TrackAdjacencyStore.shared.saveToDisk()
+    // }
   }
 
   func startManagerForNormalOperation() {

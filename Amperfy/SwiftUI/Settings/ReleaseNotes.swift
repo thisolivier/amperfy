@@ -37,6 +37,20 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 26,
+      date: "2026-04-12",
+      title: "Build 26 — Crash isolation",
+      whatsNew: [
+        "Track Adjacency Engine disabled on launch to isolate crash",
+        "Related Tracks feature temporarily unavailable",
+      ],
+      testingFocus: [
+        "Launch the app — verify no crash within 30 seconds",
+        "Navigate all tabs — verify stability",
+        "If crash persists, the cause is NOT the adjacency engine",
+      ]
+    ),
+    ReleaseNote(
       id: 25,
       date: "2026-04-12",
       title: "Build 25 — Launch crash fix",
