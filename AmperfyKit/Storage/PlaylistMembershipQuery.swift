@@ -68,8 +68,14 @@ public enum PlaylistMembershipQuery {
       #keyPath(PlaylistMO.id),
       Playlist.smartPlaylistIdPrefix
     )
+    let hasNamePredicate = NSPredicate(
+      format: "%K != nil AND %K != %@",
+      #keyPath(PlaylistMO.name),
+      #keyPath(PlaylistMO.name),
+      ""
+    )
     fetchRequest.predicate = NSCompoundPredicate(
-      andPredicateWithSubpredicates: [membershipPredicate, notSmartPredicate]
+      andPredicateWithSubpredicates: [membershipPredicate, notSmartPredicate, hasNamePredicate]
     )
     fetchRequest.sortDescriptors = [
       NSSortDescriptor(

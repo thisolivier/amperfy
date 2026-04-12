@@ -120,4 +120,25 @@ class PlaylistMembershipQueryTest: XCTestCase {
       "Smart playlists should be excluded from membership results"
     )
   }
+
+  /// Playlists with empty or nil names are excluded from results.
+  func testEmptyNamePlaylistExcluded() {
+    let song = makeSong(id: "pmq-song-named")
+    let namedPlaylist = makePlaylist(id: "pmq-pl-named", name: "Real Playlist")
+    let emptyNamePlaylist = makePlaylist(id: "pmq-pl-empty-name", name: "")
+    namedPlaylist.append(playable: song)
+    emptyNamePlaylist.append(playable: song)
+    library.saveContext()
+
+    let results = PlaylistMembershipQuery.playlistsContaining(
+      songId: "pmq-song-named",
+      in: testContext
+    )
+    let resultIds = results.map { $0.id }
+    XCTAssertEqual(
+      resultIds,
+      ["pmq-pl-named"],
+      "Playlists with empty names should be excluded"
+    )
+  }
 }
