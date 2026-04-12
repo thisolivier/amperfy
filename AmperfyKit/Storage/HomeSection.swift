@@ -34,6 +34,9 @@ public enum HomeSection: Int, Sendable, CaseIterable, Codable {
   case randomGenres
   case randomSongs
   case recentTracks
+  case favouriteAlbums
+  case favouriteArtists
+  case favouritePlaylists
 
   static let defaultValue: [HomeSection] = [
     .randomAlbums,
@@ -41,6 +44,9 @@ public enum HomeSection: Int, Sendable, CaseIterable, Codable {
     .lastTimePlayedPlaylists,
     .newestAlbums,
     .recentTracks,
+    .favouriteAlbums,
+    .favouriteArtists,
+    .favouritePlaylists,
   ]
 
   public var title: String {
@@ -56,6 +62,9 @@ public enum HomeSection: Int, Sendable, CaseIterable, Codable {
     case .randomGenres: return "Random Genres"
     case .randomSongs: return "Random Songs"
     case .recentTracks: return "Recently Added Tracks"
+    case .favouriteAlbums: return "Favourite Albums"
+    case .favouriteArtists: return "Favourite Artists"
+    case .favouritePlaylists: return "Favourite Playlists"
     }
   }
 
@@ -76,6 +85,9 @@ public enum HomeSection: Int, Sendable, CaseIterable, Codable {
     case .randomGenres: return true
     case .randomSongs: return true
     case .recentTracks: return false
+    case .favouriteAlbums: return false
+    case .favouriteArtists: return false
+    case .favouritePlaylists: return false
     }
   }
 }

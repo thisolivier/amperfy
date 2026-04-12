@@ -71,6 +71,9 @@ class HomeManager: NSObject {
   private var podcastEpisodesFetchedController: PodcastEpisodesReleaseDateFetchedResultsController?
   private var podcastsFetchedController: PodcastFetchedResultsController?
   private var radiosFetchedController: RadiosFetchedResultsController?
+  private var favouriteAlbumsFetchController: AlbumFetchedResultsController?
+  private var favouriteArtistsFetchController: ArtistFetchedResultsController?
+  private var pinnedPlaylistsObserver: NSObjectProtocol?
 
   init(
     account: Account,
@@ -214,6 +217,65 @@ class HomeManager: NSObject {
       // snapshot — we re-run the query on createFetchController() and on
       // each viewIsAppearing via updateFromRemote(). See BACKLOG.md §3.1.
       updateRecentTracks()
+    }
+
+    if orderedVisibleSections.contains(where: { $0 == .favouriteAlbums }) {
+      // Favourite albums: isFavorite == YES, no whole-album filter (D.4b).
+      favouriteAlbumsFetchController = AlbumFetchedResultsController(
+        coreDataCompanion: storage.main, account: account,
+        sortType: .name,
+        isGroupedInAlphabeticSections: false,
+        fetchLimit: Self.sectionMaxItemCount
+      )
+      favouriteAlbumsFetchController?.delegate = self
+      favouriteAlbumsFetchController?.search(
+        searchText: "",
+        onlyCached: isOfflineMode,
+        displayFilter: .favorites
+      )
+      updateFavouriteAlbums()
+    } else {
+      favouriteAlbumsFetchController?.delegate = nil
+      favouriteAlbumsFetchController = nil
+    }
+
+    if orderedVisibleSections.contains(where: { $0 == .favouriteArtists }) {
+      favouriteArtistsFetchController = ArtistFetchedResultsController(
+        coreDataCompanion: storage.main, account: account,
+        sortType: .name,
+        isGroupedInAlphabeticSections: false,
+        fetchLimit: Self.sectionMaxItemCount
+      )
+      favouriteArtistsFetchController?.delegate = self
+      favouriteArtistsFetchController?.search(
+        searchText: "",
+        onlyCached: isOfflineMode,
+        displayFilter: .favorites
+      )
+      updateFavouriteArtists()
+    } else {
+      favouriteArtistsFetchController?.delegate = nil
+      favouriteArtistsFetchController = nil
+    }
+
+    if orderedVisibleSections.contains(where: { $0 == .favouritePlaylists }) {
+      // Pinned playlists: UserDefaults-backed, not FRC. Subscribe to
+      // PinnedPlaylistStore.didChangeNotification for live updates.
+      if pinnedPlaylistsObserver == nil {
+        pinnedPlaylistsObserver = NotificationCenter.default.addObserver(
+          forName: PinnedPlaylistStore.didChangeNotification,
+          object: nil,
+          queue: .main
+        ) { [weak self] _ in
+          self?.updateFavouritePlaylists()
+        }
+      }
+      updateFavouritePlaylists()
+    } else {
+      if let observer = pinnedPlaylistsObserver {
+        NotificationCenter.default.removeObserver(observer)
+        pinnedPlaylistsObserver = nil
+      }
     }
   }
 
@@ -393,6 +455,53 @@ class HomeManager: NSObject {
     }
   }
 
+  func updateFavouriteAlbums() {
+    if let albums = favouriteAlbumsFetchController?.fetchedObjects as? [AlbumMO] {
+      data[.favouriteAlbums] = albums.prefix(Self.sectionMaxItemCount)
+        .compactMap { Album(managedObject: $0) }.compactMap {
+          HomeItem(playableContainable: $0)
+        }
+      applySnapshotCB?()
+    }
+  }
+
+  func updateFavouriteArtists() {
+    if let artists = favouriteArtistsFetchController?.fetchedObjects as? [ArtistMO] {
+      data[.favouriteArtists] = artists.prefix(Self.sectionMaxItemCount)
+        .compactMap { Artist(managedObject: $0) }.compactMap {
+          HomeItem(playableContainable: $0)
+        }
+      applySnapshotCB?()
+    }
+  }
+
+  func updateFavouritePlaylists() {
+    let pinnedIds = PinnedPlaylistStore.shared.pinnedIds
+    guard !pinnedIds.isEmpty else {
+      data[.favouritePlaylists] = []
+      applySnapshotCB?()
+      return
+    }
+    let fetchRequest: NSFetchRequest<PlaylistMO> = PlaylistMO.fetchRequest()
+    fetchRequest.predicate = NSPredicate(format: "%K IN %@", #keyPath(PlaylistMO.id), pinnedIds)
+    fetchRequest.sortDescriptors = [
+      NSSortDescriptor(
+        key: #keyPath(PlaylistMO.name), ascending: true,
+        selector: #selector(NSString.caseInsensitiveCompare(_:))
+      ),
+    ]
+    let context = storage.main.context
+    do {
+      let playlistMOs = try context.fetch(fetchRequest)
+      data[.favouritePlaylists] = playlistMOs.prefix(Self.sectionMaxItemCount)
+        .compactMap { Playlist(library: storage.main.library, managedObject: $0) }
+        .compactMap { HomeItem(playableContainable: $0) }
+    } catch {
+      data[.favouritePlaylists] = []
+    }
+    applySnapshotCB?()
+  }
+
   /// Refresh the recent-tracks widget data. Pulls the top 7 songs that pass
   /// the non-whole-album filter (threshold 5), hides the section entirely
   /// when all 7 are older than 7 days (per BACKLOG.md §3.1), and computes
@@ -440,6 +549,10 @@ extension HomeManager: @preconcurrency NSFetchedResultsControllerDelegate {
         updatePodcasts()
       } else if controller == radiosFetchedController?.fetchResultsController {
         updateRadios()
+      } else if controller == favouriteAlbumsFetchController?.fetchResultsController {
+        updateFavouriteAlbums()
+      } else if controller == favouriteArtistsFetchController?.fetchResultsController {
+        updateFavouriteArtists()
       }
     }
   }

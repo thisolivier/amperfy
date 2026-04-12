@@ -206,6 +206,7 @@
 		A5B0910000000000000050A0 /* RecentTracksQueryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0920000000000000050A0 /* RecentTracksQueryTest.swift */; };
 		A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */; };
 		A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */; };
+		A5B0B30000000000000050A0 /* PinnedPlaylistStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */; };
 		50BE5D522850F4D700156FC6 /* HelperTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B798B323B8664700551E62 /* HelperTest.swift */; };
 		50BE5D532850F4E700156FC6 /* MusicPlayerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5095F98B23C8389E008B0805 /* MusicPlayerTest.swift */; };
 		50BE5D542850F4E700156FC6 /* SubsonicVersionTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E964AE25E8E25E00E3210F /* SubsonicVersionTest.swift */; };
@@ -360,6 +361,7 @@
 		A5B0510000000000000050A0 /* WholeAlbumPredicates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0520000000000000050A0 /* WholeAlbumPredicates.swift */; };
 		A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0720000000000000050A0 /* RecentTracksQuery.swift */; };
 		A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */; };
+		A5B0B10000000000000050A0 /* PinnedPlaylistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0B20000000000000050A0 /* PinnedPlaylistStore.swift */; };
 		50C9D673284FAA4D007F18D0 /* LibraryUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C16C3321EB454100F086F0 /* LibraryUpdater.swift */; };
 		50C9D674284FAA4D007F18D0 /* SwipeActionSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50ACAF1127B144040039913C /* SwipeActionSettings.swift */; };
 		50C9D675284FAA4D007F18D0 /* DuplicateEntitiesResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50253F78284614A100BCCFB2 /* DuplicateEntitiesResolver.swift */; };
@@ -1124,6 +1126,7 @@
 		A5B0920000000000000050A0 /* RecentTracksQueryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksQueryTest.swift; sourceTree = "<group>"; };
 		A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumFetchedResultsControllerTest.swift; sourceTree = "<group>"; };
 		A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQueryTest.swift; sourceTree = "<group>"; };
+		A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedPlaylistStoreTest.swift; sourceTree = "<group>"; };
 		50F81E8923BB5FC500EAAC3E /* Artist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artist.swift; sourceTree = "<group>"; };
 		50F81E8B23BB666100EAAC3E /* ArtistTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistTest.swift; sourceTree = "<group>"; };
 		50F81E8D23BC6FEA00EAAC3E /* Artwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Artwork.swift; sourceTree = "<group>"; };
@@ -1150,6 +1153,7 @@
 		A5B0520000000000000050A0 /* WholeAlbumPredicates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholeAlbumPredicates.swift; sourceTree = "<group>"; };
 		A5B0720000000000000050A0 /* RecentTracksQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksQuery.swift; sourceTree = "<group>"; };
 		A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQuery.swift; sourceTree = "<group>"; };
+		A5B0B20000000000000050A0 /* PinnedPlaylistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedPlaylistStore.swift; sourceTree = "<group>"; };
 		50FE808B26A55A8300CB434D /* Amperfy v13.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v13.xcdatamodel"; sourceTree = "<group>"; };
 		50FE808C26A55CEA00CB434D /* DownloadMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DownloadMO+CoreDataClass.swift"; sourceTree = "<group>"; };
 		50FE808D26A55CEA00CB434D /* DownloadMO+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DownloadMO+CoreDataProperties.swift"; sourceTree = "<group>"; };
@@ -1612,6 +1616,7 @@
 				5095F98F23CA94BC008B0805 /* ManagedObjects */,
 				A5B0630000000000000050A0 /* ResultController */,
 				A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */,
+				A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -1624,6 +1629,14 @@
 				A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */,
 			);
 			path = ResultController;
+			sourceTree = "<group>";
+		};
+		A5B0B50000000000000050A0 /* Favorites */ = {
+			isa = PBXGroup;
+			children = (
+				A5B0B20000000000000050A0 /* PinnedPlaylistStore.swift */,
+			);
+			path = Favorites;
 			sourceTree = "<group>";
 		};
 		5095F98F23CA94BC008B0805 /* ManagedObjects */ = {
@@ -1923,6 +1936,7 @@
 				50BA931F21DA4CEF00E5901D /* Assets */,
 				5041B7FE220D4DF600603F02 /* Common */,
 				50073BDB222EFEDC000130D8 /* Download */,
+				A5B0B50000000000000050A0 /* Favorites */,
 				50F8CA2B21FA48770084F8D8 /* Player */,
 				50C9D6E7284FAC9D007F18D0 /* Screens */,
 				50BA92F221CC26BE00E5901D /* Storage */,
@@ -2730,6 +2744,7 @@
 				A5B0510000000000000050A0 /* WholeAlbumPredicates.swift in Sources */,
 				A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */,
 				A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */,
+				A5B0B10000000000000050A0 /* PinnedPlaylistStore.swift in Sources */,
 				50C9D682284FAA6C007F18D0 /* PodcastEpisodeMO+CoreDataProperties.swift in Sources */,
 				50C9D6F028506EBC007F18D0 /* AmperfyKit.swift in Sources */,
 				50C9D665284FAA0B007F18D0 /* PodcastEpisodeParserDelegate.swift in Sources */,
@@ -2891,6 +2906,7 @@
 				A5B0910000000000000050A0 /* RecentTracksQueryTest.swift in Sources */,
 				A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */,
 				A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */,
+				A5B0B30000000000000050A0 /* PinnedPlaylistStoreTest.swift in Sources */,
 				50BE5D8E2850F50F00156FC6 /* PodcastEpisodesParserTest.swift in Sources */,
 				50CEC6432D1F38F800D0E696 /* SsRadioExampleParserTest.swift in Sources */,
 				50BE5D882850F50F00156FC6 /* SongParserTest.swift in Sources */,
@@ -3105,7 +3121,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3144,7 +3160,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3183,7 +3199,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3234,7 +3250,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3283,7 +3299,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
@@ -3315,7 +3331,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;

@@ -93,6 +93,7 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
 
   private var editButton: UIBarButtonItem!
   private var optionsButton: UIBarButtonItem!
+  private var favouriteButton: UIBarButtonItem!
   var detailOperationsView: GenericDetailTableHeader?
 
   init(account: Account, playlist: Playlist) {
@@ -160,6 +161,12 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
     optionsButton.menu = UIMenu.lazyMenu {
       EntityPreviewActionBuilder(container: self.playlist, on: self).createMenuActions()
     }
+    favouriteButton = UIBarButtonItem(
+      image: favouriteButtonImage(),
+      style: .plain,
+      target: self,
+      action: #selector(togglePinnedPlaylist)
+    )
 
     let playShuffleInfoConfig = PlayShuffleInfoConfiguration(
       infoCB: { "\(self.playlist.songCount) Song\(self.playlist.songCount == 1 ? "" : "s")" },
@@ -243,7 +250,9 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
       }
     }
 
-    navigationItem.rightBarButtonItems = [optionsButton, edititingBarButton].compactMap { $0 }
+    favouriteButton.image = favouriteButtonImage()
+    navigationItem.rightBarButtonItems = [optionsButton, favouriteButton, edititingBarButton]
+      .compactMap { $0 }
   }
 
   func convertIndexPathToPlayContext(songIndexPath: IndexPath) -> PlayContext? {
@@ -304,5 +313,17 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
       self.detailOperationsView?.refresh()
       self.refreshControl?.endRefreshing()
     }
+  }
+
+  // MARK: - Pinned playlist (local favourite)
+
+  private func favouriteButtonImage() -> UIImage? {
+    PinnedPlaylistStore.shared.isPinned(playlist.id) ? .heartFill : .heartEmpty
+  }
+
+  @objc
+  private func togglePinnedPlaylist() {
+    PinnedPlaylistStore.shared.toggle(playlist.id)
+    favouriteButton.image = favouriteButtonImage()
   }
 }

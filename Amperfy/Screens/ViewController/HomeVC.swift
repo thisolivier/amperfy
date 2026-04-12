@@ -246,7 +246,9 @@ final class HomeVC: UICollectionViewController {
   /// init-time placeholder or synchronous population path and never
   /// transit through an empty-but-visible state, so the default continues
   /// to render an empty section header as before.
-  private static let sectionsHiddenWhenEmpty: Set<HomeSection> = [.recentTracks]
+  private static let sectionsHiddenWhenEmpty: Set<HomeSection> = [
+    .recentTracks, .favouriteAlbums, .favouriteArtists, .favouritePlaylists,
+  ]
 
   private func applySnapshot(animated: Bool = true) {
     var snapshot = NSDiffableDataSourceSnapshot<HomeSection, HomeItem>()
