@@ -1135,6 +1135,64 @@ Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
 
 ---
 
+## PR 12 — Track Adjacency Engine + Discovery Features
+
+**Release target:** multiple TestFlight builds. This is a multi-phase feature with a shared foundation.
+**Priority:** next natural item after current bugfix/polish work is complete. Added 2026-04-12 per Olivier.
+
+**Intent:** build a track-similarity model from playlist sequencing data, then use it to power discovery features. The core insight: adjacent tracks in a well-curated playlist are almost always related by feel, even across genres. This captures curatorial intent that simple co-membership misses.
+
+### Phase 1 — Adjacency Score Model (foundation for everything else)
+
+**The model:** For every pair of tracks that appear in the same playlist, compute a position-weighted affinity score:
+
+- **Immediate neighbors** (±1 position): high score (e.g., 3.0)
+- **Two positions away** (±2): medium score (e.g., 1.5)
+- **All other tracks in the same playlist**: low baseline score (e.g., 0.1)
+- **Same album membership**: additive bonus (e.g., +1.0) — signals good similarity regardless of playlist position
+
+Scores are **summed across all playlists.** If Track A and Track B are adjacent in 5 playlists, their score is 5 × 3.0 = 15.0. If they're in the same playlists but far apart, they get 5 × 0.1 = 0.5. This naturally surfaces tracks that curators consistently place near each other.
+
+**Computation:** Run once on launch (or on playlist change detection). Cache the result. The input is all `PlaylistItemMO` entries — iterate each playlist's ordered items, compute pairwise scores within the ±2 window, accumulate into a dictionary. For a library with ~50 playlists × ~30 tracks average = ~1500 items, this is O(n × window_size) per playlist — fast enough for a one-time compute.
+
+**Storage:** `TrackAdjacencyStore` — in-memory dictionary `[SongPair: Float]` where `SongPair` is a hashable pair of song IDs (order-independent). Optionally persist to a JSON file in the app's documents directory so it survives backgrounding without recompute. Invalidated when playlist content changes (observe `PlaylistMO` save notifications).
+
+**Designer review required:** The designer should review the scoring weights (3.0 / 1.5 / 0.1 / +1.0 album bonus) and validate against real playlist data. These are initial guesses — the right values depend on typical playlist length and diversity. The designer should also consider whether the model needs a decay factor for very long playlists (position 1 vs position 100 in a 200-track playlist).
+
+**Tests:** `TrackAdjacencyScoreTest` — given a known playlist arrangement, verify score computation for adjacent, ±2, distant, and cross-playlist pairs. Verify album bonus. Verify symmetry (A→B == B→A).
+
+### Phase 2 — "More Like This" (uses Phase 1)
+
+**Feature:** In the song detail view (or context menu), show "Related Tracks" — the top N tracks by adjacency score relative to the current track. This surfaces tracks that playlist curators consistently place near this one.
+
+**UI:** New section in the song detail view, or a new action in the `...` menu that pushes a list. Show track name, artist, and the source info ("appears near this track in N playlists").
+
+### Phase 3 — Playlist DNA / Clustering (uses Phase 1)
+
+**Feature:** Cluster playlists by their track overlap. If Playlist X and Playlist Y share many high-adjacency tracks, surface them as related. Powers:
+- "Similar playlists" suggestion when browsing a playlist
+- Auto-suggest folders for the playlist folders feature
+- Visual grouping on the Playlists tab
+
+**Model:** For each playlist pair, sum the adjacency scores of their shared tracks. Normalize by playlist length. High score = similar playlists.
+
+### Phase 4 — "Continue the Vibe" (stretch goal, uses Phase 1)
+
+**Feature:** When a playlist finishes playing, instead of stopping, auto-queue tracks with high adjacency scores to the last few tracks played. This creates a seamless listening experience that extends the playlist's mood without manual curation.
+
+**Algorithm:** Take the last 3-5 tracks from the finished playlist. For each, look up top-scoring adjacent tracks. Filter out tracks already played in this session. Rank by combined score. Queue the top N (configurable, default 10).
+
+**Important:** Uses the adjacency model, NOT playlist co-membership alone. A playlist that varies wildly in genre over its length would produce poor "continue" suggestions from co-membership, but the adjacency model naturally captures local mood because it weights nearby tracks.
+
+### Cross-cutting notes
+
+- All features are **local-only** — no server API needed. Everything computes from `PlaylistItemMO` data already in Core Data.
+- The adjacency model is the foundation — Phases 2-4 are all consumers. Get Phase 1 right and the rest follows.
+- **No changes under `AmperfyKit/`** unless the designer determines the model belongs at the framework layer (unlikely — this is app-level intelligence over Core Data).
+- The designer should do a thorough review of Phase 1 before implementation — the scoring weights and computation strategy need to be validated against real data.
+
+---
+
 **End of backlog.** The implementer should now:
 1. Read `PRIMER.md` and `IMPLEMENTATION.md` if not already.
 2. Run the test baseline per `IMPLEMENTATION.md` §5.2 to confirm green starting state.
