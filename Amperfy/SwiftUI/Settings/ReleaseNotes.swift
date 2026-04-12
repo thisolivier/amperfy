@@ -37,6 +37,29 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 20,
+      date: "2026-04-12",
+      title: "Build 20 — Full theme coverage + In Playlists fix",
+      whatsNew: [
+        "Theme coverage round 2: all screens now fully themed (backgrounds, text, tint)",
+        "Library row labels and icons pick up custom text and tint colors",
+        "Albums grid cell labels (title + artist) now themed",
+        "Song artist subtitles use themed secondary text color",
+        "Background themed on all screens including album detail header and empty states",
+        "Tint color reaches tab bar icons, nav chevrons, Play/Shuffle buttons",
+        "'In Playlists' no longer shows auto-generated playlists with empty names",
+      ],
+      testingFocus: [
+        "Enable custom theme — every screen should have consistent background, text, and tint",
+        "Library tab: row labels and SF Symbol icons should use custom colors",
+        "Albums grid: album titles and artist names should be themed",
+        "Album detail: header area (art + metadata) should have themed background",
+        "Navigate to a page with no content — background should be themed, not white",
+        "Tab bar icons, back chevrons, Play/Shuffle buttons should use tint color",
+        "Long-press a song → In Playlists — should not show nameless/duplicate entries",
+      ]
+    ),
+    ReleaseNote(
       id: 19,
       date: "2026-04-12",
       title: "Build 19 — Theme coverage fixes",
