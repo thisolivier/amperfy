@@ -99,12 +99,14 @@ public class TrackAdjacencyStore: @unchecked Sendable {
   }
 
   /// Computes scores if stale, on the current thread. Call from a background queue.
+  /// Recomputes if cached data is empty (stale from a previous first-launch race).
   public func computeIfNeeded(in context: NSManagedObjectContext) {
     guard isStale else { return }
-    if !loadFromDisk() {
-      compute(in: context)
-      try? saveToDisk()
+    if loadFromDisk(), !scores.isEmpty {
+      return // valid cached data
     }
+    compute(in: context)
+    try? saveToDisk()
   }
 
   // MARK: - Query API
@@ -220,6 +222,11 @@ public class TrackAdjacencyStore: @unchecked Sendable {
     let wrapper = PersistenceWrapper(scores: scores)
     let data = try encoder.encode(wrapper)
     try data.write(to: persistenceURL, options: .atomic)
+  }
+
+  /// Removes the persisted JSON file. Used to clear stale data before recomputing.
+  public func deleteFromDisk() {
+    try? FileManager.default.removeItem(at: persistenceURL)
   }
 
   /// Loads scores from JSON on disk. Returns false if no file exists.

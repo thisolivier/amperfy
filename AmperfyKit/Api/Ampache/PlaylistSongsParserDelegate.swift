@@ -82,6 +82,9 @@ class PlaylistSongsParserDelegate: SongParserDelegate {
         playlist.remoteDuration = collectionDuration
       }
       playlist.isCached = isCollectionCached
+      if playlistChanged {
+        TrackAdjacencyStore.shared.invalidate()
+      }
     default:
       break
     }

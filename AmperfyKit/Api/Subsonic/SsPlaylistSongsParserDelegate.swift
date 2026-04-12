@@ -118,6 +118,9 @@ class SsPlaylistSongsParserDelegate: SsSongParserDelegate {
         playlist.updateArtworkItems()
       }
       playlist.isCached = isCollectionCached
+      if playlistChanged {
+        TrackAdjacencyStore.shared.invalidate()
+      }
     default:
       break
     }

@@ -37,6 +37,26 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 24,
+      date: "2026-04-12",
+      title: "Build 24 — Track Adjacency bug fixes",
+      whatsNew: [
+        "Fixed: \"Show Album\" from Related Tracks no longer traps in the modal (navigates on main stack)",
+        "Fixed: Source info (\"In N playlists nearby\" / \"Same album\") now displays on related track rows",
+        "Fixed: Launch-time adjacency computation skipped on first install (no empty JSON race)",
+        "Adjacency store rejects empty cached data and recomputes automatically",
+        "Playlist sync now invalidates adjacency cache so next computation picks up new data",
+        "Note: On first install, Related Tracks may require browsing a playlist before data appears",
+      ],
+      testingFocus: [
+        "Open Related Tracks → tap … on a row → Show Album — should navigate on the main screen, not inside the modal",
+        "Related track rows should show source info text below artist name",
+        "Fresh install: browse a playlist, then check Related Tracks — should show results",
+        "Kill and relaunch after browsing playlists — Related Tracks should load instantly",
+        "Verify Related Tracks still works on non-fresh installs as before",
+      ]
+    ),
+    ReleaseNote(
       id: 23,
       date: "2026-04-12",
       title: "Build 23 — Track Adjacency Engine",

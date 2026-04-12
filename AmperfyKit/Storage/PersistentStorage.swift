@@ -186,6 +186,11 @@ public class PersistentStorage {
   public var async: AsyncCoreDataAccessWrapper {
     AsyncCoreDataAccessWrapper(persistentContainer: coreDataManager.persistentContainer)
   }
+
+  /// Creates a fresh background context that reads committed data directly from SQLite.
+  public func newBackgroundContext() -> NSManagedObjectContext {
+    coreDataManager.persistentContainer.newBackgroundContext()
+  }
 }
 
 // MARK: - CoreDataManagable
