@@ -367,7 +367,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 
   private func computeTrackAdjacencyInBackground() {
-    let context = storage.main.context
+    let context = storage.newBackgroundContext()
     DispatchQueue.global(qos: .utility).async {
       TrackAdjacencyStore.shared.computeIfNeeded(in: context)
     }
