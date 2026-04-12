@@ -474,8 +474,7 @@ class PlayableTableCell: BasicTableCell {
 
   private func refreshSubtitleColor() {
     let primaryColor = ThemeStore.shared.dynamicText ?? UIColor.labelColor
-    let secondaryColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6)
-      ?? UIColor.secondaryLabelColor
+    let secondaryColor = ThemeStore.shared.dynamicSecondaryText ?? UIColor.secondaryLabelColor
     if playerIndexCb != nil {
       cacheIconImage.tintColor = primaryColor
       artistLabel.textColor = primaryColor

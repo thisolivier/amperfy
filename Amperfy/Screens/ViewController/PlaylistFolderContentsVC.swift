@@ -106,7 +106,7 @@ class PlaylistFolderContentsVC: UITableViewController {
     tableView.register(nibName: PlaylistTableCell.typeName)
     tableView.rowHeight = UITableView.automaticDimension
     tableView.estimatedRowHeight = PlaylistTableCell.rowHeight
-    tableView.backgroundColor = .systemGroupedBackground
+    tableView.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemGroupedBackground
     tableView.allowsMultipleSelectionDuringEditing = true
 
     navigationItem.searchController = searchController
@@ -180,7 +180,7 @@ class PlaylistFolderContentsVC: UITableViewController {
 
   private func configureEditActionBar() {
     editActionBar.translatesAutoresizingMaskIntoConstraints = false
-    editActionBar.backgroundColor = .systemBackground
+    editActionBar.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
     editActionBar.isHidden = true
     view.addSubview(editActionBar)
 

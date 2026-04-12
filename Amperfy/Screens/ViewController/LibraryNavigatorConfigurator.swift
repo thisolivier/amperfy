@@ -343,6 +343,10 @@ class LibraryNavigatorConfigurator: NSObject {
         var content = cell.defaultContentConfiguration()
         content.text = tabItem.title
         content.image = tabItem.icon.withRenderingMode(.alwaysTemplate)
+        if let textColor = ThemeStore.shared.dynamicText {
+          content.textProperties.color = textColor
+          content.imageProperties.tintColor = ThemeStore.shared.dynamicTint ?? textColor
+        }
         cell.contentConfiguration = content
       }
       cell.indentationLevel = 0
@@ -392,6 +396,10 @@ class LibraryNavigatorConfigurator: NSObject {
     let imageSize = CGSize(width: 35.0, height: 25.0)
     contentView.imageProperties.maximumSize = imageSize
     contentView.imageProperties.reservedLayoutSize = imageSize
+    if let textColor = ThemeStore.shared.dynamicText {
+      contentView.textProperties.color = textColor
+      contentView.imageProperties.tintColor = ThemeStore.shared.dynamicTint ?? textColor
+    }
   }
 
   private func applyInitialSnapshots() {

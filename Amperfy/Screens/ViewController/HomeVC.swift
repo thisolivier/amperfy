@@ -168,7 +168,7 @@ final class HomeVC: UICollectionViewController {
   // MARK: - CollectionView Setup
 
   private func configureCollectionView() {
-    collectionView.backgroundColor = .systemBackground
+    collectionView.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
     collectionView.register(
       UINib(nibName: AlbumCollectionCell.typeName, bundle: .main),
       forCellWithReuseIdentifier: AlbumCollectionCell.typeName

@@ -119,6 +119,14 @@ final class ThemeStore: @unchecked Sendable {
     }
   }
 
+  var dynamicSecondaryText: UIColor? {
+    guard isEnabled else { return nil }
+    return UIColor { [self] traits in
+      let base = (traits.userInterfaceStyle == .dark ? darkText : lightText) ?? .label
+      return base.withAlphaComponent(0.6)
+    }
+  }
+
   var dynamicTint: UIColor? {
     guard isEnabled else { return nil }
     return UIColor { [self] traits in

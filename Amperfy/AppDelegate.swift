@@ -158,6 +158,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewCell.self]).textColor = nil
       UILabel.appearance(whenContainedInInstancesOf: [UICollectionViewCell.self]).textColor = nil
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self]).textColor = nil
+      // Reset window-level overrides
+      let windowScene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+      for window in windowScene.flatMap({ $0.windows }) {
+        window.tintColor = nil
+      }
       return
     }
     if let backgroundColor = theme.dynamicBackground {
@@ -376,13 +381,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 
   func setAppTheme(color: UIColor) {
-    UIView.appearance().tintColor = color
+    // Custom theme tint takes priority over account theme color
+    let effectiveColor = ThemeStore.shared.dynamicTint ?? color
+    UIView.appearance().tintColor = effectiveColor
   }
 
   // the following applies the tint color to already loaded views in all windows (UIKit)
   func applyAppThemeToAlreadyLoadedViews() {
     let windowScene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
     let windows = windowScene.flatMap { $0.windows }
+
+    // Set window-level tintColor directly for reliable propagation
+    if let tintColor = ThemeStore.shared.dynamicTint {
+      for window in windows {
+        window.tintColor = tintColor
+      }
+    }
 
     for window in windows {
       for view in window.subviews {

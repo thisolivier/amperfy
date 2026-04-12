@@ -77,7 +77,9 @@ class AlbumCollectionCell: BasicCollectionCell {
     self.container = container
     self.rootView = rootView
     titleLabel.text = container.name
+    titleLabel.textColor = ThemeStore.shared.dynamicText ?? .label
     subtitleLabel.text = container.subtitle
+    subtitleLabel.textColor = ThemeStore.shared.dynamicSecondaryText ?? .secondaryLabel
     entityImage.display(
       theme: appDelegate.storage.settings.accounts.getSetting(container.account?.info).read
         .themePreference,
