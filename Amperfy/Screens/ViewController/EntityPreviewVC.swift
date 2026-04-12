@@ -276,8 +276,7 @@ class EntityPreviewActionBuilder {
     isShowPlaylists = true
     isInstantMix = appDelegate.storage.settings.user.isOnlineMode
     isShareSong = true
-    // DISABLED: isolating launch crash — adjacency engine off for diagnostic builds
-    // isRelatedTracks = TrackAdjacencyStore.shared.hasData(for: song.id)
+    isRelatedTracks = TrackAdjacencyStore.shared.hasData(for: song.id)
   }
 
   private func configureFor(podcastEpisode: PodcastEpisode) {

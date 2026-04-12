@@ -21,6 +21,8 @@
 
 import UIKit
 
+// MARK: - ThemeStore
+
 /// App-layer custom theme store backed by UserDefaults.
 /// Follows the same pattern as PinnedPlaylistStore — no Core Data, no AmperfyKit changes.
 final class ThemeStore: @unchecked Sendable {
@@ -47,8 +49,9 @@ final class ThemeStore: @unchecked Sendable {
 
   // MARK: - Enabled toggle
 
+  // DISABLED: isolating launch crash — theme off for diagnostic build 27
   var isEnabled: Bool {
-    get { defaults.bool(forKey: Key.enabled) }
+    get { return false /* defaults.bool(forKey: Key.enabled) */ }
     set { defaults.set(newValue, forKey: Key.enabled) }
   }
 
@@ -58,22 +61,27 @@ final class ThemeStore: @unchecked Sendable {
     get { color(forKey: Key.lightBackground) }
     set { setColor(newValue, forKey: Key.lightBackground) }
   }
+
   var lightText: UIColor? {
     get { color(forKey: Key.lightText) }
     set { setColor(newValue, forKey: Key.lightText) }
   }
+
   var lightTint: UIColor? {
     get { color(forKey: Key.lightTint) }
     set { setColor(newValue, forKey: Key.lightTint) }
   }
+
   var darkBackground: UIColor? {
     get { color(forKey: Key.darkBackground) }
     set { setColor(newValue, forKey: Key.darkBackground) }
   }
+
   var darkText: UIColor? {
     get { color(forKey: Key.darkText) }
     set { setColor(newValue, forKey: Key.darkText) }
   }
+
   var darkTint: UIColor? {
     get { color(forKey: Key.darkTint) }
     set { setColor(newValue, forKey: Key.darkTint) }
@@ -139,27 +147,33 @@ final class ThemeStore: @unchecked Sendable {
   func populateDefaultsIfNeeded() {
     if lightBackground == nil {
       lightBackground = UIColor.systemBackground.resolvedColor(
-        with: UITraitCollection(userInterfaceStyle: .light))
+        with: UITraitCollection(userInterfaceStyle: .light)
+      )
     }
     if lightText == nil {
       lightText = UIColor.label.resolvedColor(
-        with: UITraitCollection(userInterfaceStyle: .light))
+        with: UITraitCollection(userInterfaceStyle: .light)
+      )
     }
     if lightTint == nil {
       lightTint = UIColor.systemBlue.resolvedColor(
-        with: UITraitCollection(userInterfaceStyle: .light))
+        with: UITraitCollection(userInterfaceStyle: .light)
+      )
     }
     if darkBackground == nil {
       darkBackground = UIColor.systemBackground.resolvedColor(
-        with: UITraitCollection(userInterfaceStyle: .dark))
+        with: UITraitCollection(userInterfaceStyle: .dark)
+      )
     }
     if darkText == nil {
       darkText = UIColor.label.resolvedColor(
-        with: UITraitCollection(userInterfaceStyle: .dark))
+        with: UITraitCollection(userInterfaceStyle: .dark)
+      )
     }
     if darkTint == nil {
       darkTint = UIColor.systemBlue.resolvedColor(
-        with: UITraitCollection(userInterfaceStyle: .dark))
+        with: UITraitCollection(userInterfaceStyle: .dark)
+      )
     }
   }
 

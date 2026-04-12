@@ -357,10 +357,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       startManagerForNormalOperation()
     }
     userStatistics.sessionStarted()
-    // DISABLED: isolating launch crash — adjacency engine off for build 26
-    // if storage.settings.app.isLibrarySynced {
-    //   computeTrackAdjacencyInBackground()
-    // }
+    // Re-enabled for diagnostic build 27 (adjacency only, theme disabled)
+    if storage.settings.app.isLibrarySynced {
+      computeTrackAdjacencyInBackground()
+    }
 
     return true
   }
@@ -381,13 +381,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       isAlreadyRegisteredToPlayer = true
       player.addNotifier(notifier: self)
     }
-    // DISABLED: isolating launch crash — adjacency engine off for build 26
-    // let bgContext = storage.newBackgroundContext()
-    // DispatchQueue.global(qos: .utility).async {
-    //   TrackAdjacencyStore.shared.deleteFromDisk()
-    //   TrackAdjacencyStore.shared.compute(in: bgContext)
-    //   try? TrackAdjacencyStore.shared.saveToDisk()
-    // }
+    // Re-enabled for diagnostic build 27 (adjacency only, theme disabled)
+    let bgContext = storage.newBackgroundContext()
+    DispatchQueue.global(qos: .utility).async {
+      TrackAdjacencyStore.shared.deleteFromDisk()
+      TrackAdjacencyStore.shared.compute(in: bgContext)
+      try? TrackAdjacencyStore.shared.saveToDisk()
+    }
   }
 
   func startManagerForNormalOperation() {

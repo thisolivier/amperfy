@@ -37,6 +37,24 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 27,
+      date: "2026-04-12",
+      title: "Build 27 — DIAGNOSTIC: Adjacency only",
+      whatsNew: [
+        "DIAGNOSTIC BUILD: Track Adjacency Engine ONLY — Custom theme fully disabled",
+        "ThemeStore.isEnabled forced to false — all theme colors use system defaults",
+        "Track adjacency computation active on launch and after sync",
+        "\"Related Tracks\" menu item active",
+        "If this build crashes, the cause is the ADJACENCY ENGINE",
+      ],
+      testingFocus: [
+        "Launch the app — does it crash within 30 seconds?",
+        "Navigate all tabs — is the app stable?",
+        "Custom theme toggle should have no effect (disabled at code level)",
+        "Compare with Build 26 (theme only) to isolate the crash source",
+      ]
+    ),
+    ReleaseNote(
       id: 26,
       date: "2026-04-12",
       title: "Build 26 — DIAGNOSTIC: Theme only",
