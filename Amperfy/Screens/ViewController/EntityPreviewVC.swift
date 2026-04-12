@@ -674,31 +674,71 @@ class EntityPreviewActionBuilder {
     UIAction(title: "In Playlists", image: .playlist) { action in
       guard let song = (self.entityContainer as? AbstractPlayable)?.asSong,
             let account = self.entityContainer.account else { return }
-      let context = self.appDelegate.storage.main.context
-      let playlistMOs = PlaylistMembershipQuery.playlistsContaining(
-        songId: song.id,
-        in: context
-      )
-      let playlists = playlistMOs.map { managedObject in
-        Playlist(library: self.appDelegate.storage.main.library, managedObject: managedObject)
-      }
-      let membershipVC = PlaylistMembershipVC(playlists: playlists) { selectedPlaylist in
-        let detailVC = AppStoryboard.Main.segueToPlaylistDetail(
-          account: account,
-          playlist: selectedPlaylist
+
+      Task { @MainActor in
+        await self.syncUnsyncedPlaylistsThenShowMembership(
+          songId: song.id,
+          account: account
         )
-        if let popupPlayer = self.rootView as? PopupPlayerVC {
-          popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: detailVC)
-        } else if let navController = self.rootView.navigationController {
-          navController.pushViewController(detailVC, animated: true)
-        } else {
-          guard let hostingSplitVC = AppDelegate.mainWindowHostVC else { return }
-          hostingSplitVC.pushNavLibrary(vc: detailVC)
+      }
+    }
+  }
+
+  @MainActor
+  private func syncUnsyncedPlaylistsThenShowMembership(
+    songId: String,
+    account: Account
+  ) async {
+    let library = appDelegate.storage.main.library
+    let allPlaylists = library.getPlaylists(for: account)
+    let tracker = PlaylistItemsSyncTracker.shared
+    let unsyncedPlaylists = allPlaylists.filter { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
+
+    if !unsyncedPlaylists.isEmpty {
+      let progressAlert = UIAlertController(
+        title: "Loading playlist data\u{2026}",
+        message: "\(unsyncedPlaylists.count) playlists to sync",
+        preferredStyle: .alert
+      )
+      rootView.present(progressAlert, animated: true)
+
+      let librarySyncer = appDelegate.getMeta(account.info).librarySyncer
+      for playlist in unsyncedPlaylists {
+        do {
+          try await librarySyncer.syncDown(playlist: playlist)
+          tracker.markSynced(playlist.id)
+        } catch {
+          // Skip failed playlists — they'll be retried on next tap.
         }
       }
-      let navigationController = UINavigationController(rootViewController: membershipVC)
-      self.rootView.present(navigationController, animated: true)
+
+      progressAlert.dismiss(animated: true)
     }
+
+    let context = appDelegate.storage.main.context
+    let playlistMOs = PlaylistMembershipQuery.playlistsContaining(
+      songId: songId,
+      in: context
+    )
+    let playlists = playlistMOs.map { managedObject in
+      Playlist(library: library, managedObject: managedObject)
+    }
+    let membershipVC = PlaylistMembershipVC(playlists: playlists) { selectedPlaylist in
+      let detailVC = AppStoryboard.Main.segueToPlaylistDetail(
+        account: account,
+        playlist: selectedPlaylist
+      )
+      if let popupPlayer = self.rootView as? PopupPlayerVC {
+        popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: detailVC)
+      } else if let navController = self.rootView.navigationController {
+        navController.pushViewController(detailVC, animated: true)
+      } else {
+        guard let hostingSplitVC = AppDelegate.mainWindowHostVC else { return }
+        hostingSplitVC.pushNavLibrary(vc: detailVC)
+      }
+    }
+    let navigationController = UINavigationController(rootViewController: membershipVC)
+    rootView.present(navigationController, animated: true)
   }
 
   private func createShowAlbumAction() -> UIAction {

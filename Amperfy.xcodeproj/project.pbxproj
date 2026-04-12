@@ -361,6 +361,7 @@
 		A5B0510000000000000050A0 /* WholeAlbumPredicates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0520000000000000050A0 /* WholeAlbumPredicates.swift */; };
 		A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0720000000000000050A0 /* RecentTracksQuery.swift */; };
 		A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */; };
+		A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */; };
 		A5B0B10000000000000050A0 /* PinnedPlaylistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0B20000000000000050A0 /* PinnedPlaylistStore.swift */; };
 		50C9D673284FAA4D007F18D0 /* LibraryUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C16C3321EB454100F086F0 /* LibraryUpdater.swift */; };
 		50C9D674284FAA4D007F18D0 /* SwipeActionSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50ACAF1127B144040039913C /* SwipeActionSettings.swift */; };
@@ -1154,6 +1155,7 @@
 		A5B0520000000000000050A0 /* WholeAlbumPredicates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholeAlbumPredicates.swift; sourceTree = "<group>"; };
 		A5B0720000000000000050A0 /* RecentTracksQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksQuery.swift; sourceTree = "<group>"; };
 		A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQuery.swift; sourceTree = "<group>"; };
+		A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistItemsSyncTracker.swift; sourceTree = "<group>"; };
 		A5B0B20000000000000050A0 /* PinnedPlaylistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedPlaylistStore.swift; sourceTree = "<group>"; };
 		50FE808B26A55A8300CB434D /* Amperfy v13.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v13.xcdatamodel"; sourceTree = "<group>"; };
 		50FE808C26A55CEA00CB434D /* DownloadMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DownloadMO+CoreDataClass.swift"; sourceTree = "<group>"; };
@@ -1765,6 +1767,7 @@
 				50C3B9AB2EED848B00F5CAB7 /* LegacySettings.swift */,
 				50BA930521D5715D00E5901D /* LibraryStorage.swift */,
 				A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */,
+				A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */,
 				50223EF2264543EA007445BC /* LibrarySyncVersion.swift */,
 				50073BDE22301D9A000130D8 /* DownloadRequestManager.swift */,
 				50C16C2121E7A38A00F086F0 /* Identifyable.swift */,
@@ -2756,6 +2759,7 @@
 				A5B0510000000000000050A0 /* WholeAlbumPredicates.swift in Sources */,
 				A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */,
 				A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */,
+				A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */,
 				A5B0B10000000000000050A0 /* PinnedPlaylistStore.swift in Sources */,
 				50C9D682284FAA6C007F18D0 /* PodcastEpisodeMO+CoreDataProperties.swift in Sources */,
 				50C9D6F028506EBC007F18D0 /* AmperfyKit.swift in Sources */,
@@ -3133,7 +3137,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3172,7 +3176,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3211,7 +3215,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3262,7 +3266,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3311,7 +3315,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
@@ -3343,7 +3347,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
