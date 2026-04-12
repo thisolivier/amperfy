@@ -888,6 +888,7 @@ Same monotonic bump pattern as §2.6.
 | PR 4 | (research — no TestFlight) | — | 2026-04-11 | Albums view performance investigation. Deliverable: `PERFORMANCE_ALBUMS.md`. 7 hypotheses tested, 6 findings, 5 recommended follow-ups. `spike/extension-eval` @ `b87f196`. |
 | PR 5 | 06c3790e-27b3-41df-a8c7-3257925d4962 | 8 | 2026-04-11 | Feature D — Favourite Albums/Artists/Playlists on Home. `spike/extension-eval` @ `76f40d6`. `PinnedPlaylistStore` (UserDefaults-backed, NOT Core Data). Heart toggle in `PlaylistDetailVC`. 3 new Home sections hidden-when-empty. D.4(b): favourites ignore Complete filter. 6 new `PinnedPlaylistStoreTest` cases; 398 AmperfyKitTests green. First dogfood of `scripts/ship.sh`. |
 | PR 6 | 1079aa12-991b-47c3-9284-4dfd30c5bbc7 | 9 | 2026-04-11 | Feature E — Share a song via iOS share sheet. `spike/extension-eval` @ `c94db32`. `ShareSongAction` + "Share" entry in `EntityPreviewActionBuilder`. Download-then-share via polling for cached file. Ships cached format, download side-effect adds to offline library. 398 AmperfyKitTests green. |
+| PR 7 | (research — no TestFlight) | — | 2026-04-11 | Custom styling research. Deliverable: `docs/STYLING_RESEARCH.md` (parent repo @ `9dddf96`). Recommends Option A (UtilitiesExtensions + UIAppearance proxy) — GREEN verdict, ~370-410 LOC across 8-10 files. Color surface inventory: 223 refs across ~60 files, but `UtilitiesExtensions.swift` color helpers + `UIAppearance` cover ~70% for free. Font family feasible (~30-40 LOC), font size parked (layout risk). |
 
 ---
 
