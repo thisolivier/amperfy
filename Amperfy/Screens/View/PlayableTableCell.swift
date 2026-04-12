@@ -269,7 +269,7 @@ class PlayableTableCell: BasicTableCell {
     #else
       singleTapGestureRecognizer.isEnabled = (displayMode == .normal)
     #endif
-    backgroundColor = .systemBackground
+    backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
     refresh()
   }
 

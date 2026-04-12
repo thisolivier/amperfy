@@ -112,7 +112,7 @@ class PodcastEpisodeTableCell: BasicTableCell {
       cacheIconImage.isHidden = true
       playProgressLabel.textColor = .secondaryLabelColor
     }
-    backgroundColor = .systemBackground
+    backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
   }
 
   override func prepareForReuse() {
