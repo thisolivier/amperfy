@@ -378,6 +378,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       isAlreadyRegisteredToPlayer = true
       player.addNotifier(notifier: self)
     }
+    // Recompute track adjacency after sync (covers first-launch case)
+    TrackAdjacencyStore.shared.invalidate()
+    computeTrackAdjacencyInBackground()
   }
 
   func startManagerForNormalOperation() {

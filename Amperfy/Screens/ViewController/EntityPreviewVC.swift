@@ -752,7 +752,8 @@ class EntityPreviewActionBuilder {
 
       let relatedTracksVC = RelatedTracksVC(
         seedSongId: song.id,
-        seedSongTitle: song.title ?? "Unknown"
+        seedSongTitle: song.title ?? "Unknown",
+        originRootView: self.rootView
       )
       let navigationController = UINavigationController(rootViewController: relatedTracksVC)
       self.rootView.present(navigationController, animated: true)

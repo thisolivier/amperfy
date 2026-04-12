@@ -28,12 +28,14 @@ import UIKit
 class RelatedTracksVC: UITableViewController {
   private let seedSongId: String
   private let seedSongTitle: String
+  private weak var originRootView: UIViewController?
   private var relatedSongs: [AbstractPlayable] = []
   private var sourceInfoByIndex: [Int: String] = [:]
 
-  init(seedSongId: String, seedSongTitle: String) {
+  init(seedSongId: String, seedSongTitle: String, originRootView: UIViewController) {
     self.seedSongId = seedSongId
     self.seedSongTitle = seedSongTitle
+    self.originRootView = originRootView
     super.init(style: .insetGrouped)
   }
 
@@ -61,7 +63,7 @@ class RelatedTracksVC: UITableViewController {
     var songs: [AbstractPlayable] = []
     var sourceInfoMap: [Int: String] = [:]
 
-    for (index, result) in topResults.enumerated() {
+    for result in topResults {
       guard result.score.total >= TrackAdjacencyStore.minimumThreshold else { continue }
       guard let songMO = fetchSongMO(songId: result.songId, in: context) else { continue }
       let song = Song(managedObject: songMO)
@@ -145,13 +147,22 @@ class RelatedTracksVC: UITableViewController {
       for: indexPath
     ) as! PlayableTableCell
     let playable = relatedSongs[indexPath.row]
+    // Pass originRootView so EntityPreviewActionBuilder navigates
+    // on the main nav stack (not the modal's nav stack).
+    // Falls back to self if origin deallocated.
+    let navigationRoot = originRootView ?? self
     cell.display(
       playable: playable,
       playContextCb: { [weak self] tableCell in
         self?.playContext(for: tableCell)
       },
-      rootView: self
+      rootView: navigationRoot
     )
+    // Append source info to artist subtitle
+    if let sourceInfo = sourceInfoByIndex[indexPath.row] {
+      let artistName = playable.creatorName
+      cell.artistLabel.text = "\(artistName) \(CommonString.oneMiddleDot) \(sourceInfo)"
+    }
     return cell
   }
 
