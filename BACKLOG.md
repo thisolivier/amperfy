@@ -1,6 +1,6 @@
 # Amperfy Fork — Feature Backlog
 
-**Scope:** user-visible features and research PRs on the Amperfy fork against a Navidrome server. PR 1 / PR 2 were the first pass. PR 3 / PR 4 / PR 5 are the second pass (added 2026-04-11 after QA round 1). PR 6 (share song) and PR 7 (custom styling, research-first) are the third pass (added 2026-04-11 during Wave 4). PR 9 (playlist folders, added 2026-04-12) is prioritized ahead of custom styling Phase 2.
+**Scope:** user-visible features and research PRs on the Amperfy fork against a Navidrome server. PR 1 / PR 2 were the first pass. PR 3 / PR 4 / PR 5 are the second pass (added 2026-04-11 after QA round 1). PR 6 (share song) and PR 7 (custom styling, research-first) are the third pass (added 2026-04-11 during Wave 4). PR 9 (playlist folders, added 2026-04-12) and PR 10 (in-app release notes) are prioritized ahead of custom styling Phase 2.
 **Audience:** the implementer agent on `navidrome-spike-phaseB`. This file is the authoritative spec — when it disagrees with anything in `IMPLEMENTATION.md` or the spike `NOTES.md`, this file wins.
 **Companion reads (do not re-read unless stuck):** `PRIMER.md` (architecture), `IMPLEMENTATION.md` (dev loop + don't-touch list), `docs/DECISION.md` (why Amperfy).
 **Branch:** work directly on `spike/extension-eval` with feature commits. No feature branches for this pass — Olivier wants two shippable TestFlight builds back-to-back, and branch gymnastics are friction.
@@ -847,6 +847,101 @@ Same monotonic bump pattern as §2.6.
 
 ---
 
+## PR 10 — Feature H: In-app release notes in Settings
+
+**Release target:** TestFlight build. Bump `CURRENT_PROJECT_VERSION` monotonically. **Prioritized alongside PR 9** per Olivier, 2026-04-12. Small scope — ship in the same wave if possible.
+
+**Intent:** add a "What's New" section to the Settings screen showing a changelog of the most recent 5 releases, detailing what's new and what Olivier should be testing. This closes the feedback loop between the implementer shipping builds and Olivier knowing what to look at on his device.
+
+### H.1 Data source
+
+**Static, compiled-in.** The release notes are a Swift array literal in source, updated by the implementer at ship time. No server fetch, no JSON file, no dynamic loading. This is the simplest path and matches the spike-era workflow where the implementer is the one bumping the version and writing the release log entry.
+
+File: `Amperfy/Screens/Settings/ReleaseNotes.swift` (new, ~80-120 LOC).
+
+```swift
+public struct ReleaseNote: Identifiable {
+    public let id: Int                  // CURRENT_PROJECT_VERSION
+    public let date: String             // "2026-04-12"
+    public let title: String            // "Build 12 — Playlist folders"
+    public let whatsNew: [String]       // bullet points
+    public let testingFocus: [String]   // what to exercise on device
+}
+
+public enum ReleaseNotes {
+    /// Most recent 5 releases, newest first.
+    public static let entries: [ReleaseNote] = [
+        ReleaseNote(
+            id: 12,
+            date: "2026-04-12",
+            title: "Build 12 — Playlist folders",
+            whatsNew: [
+                "Organize playlists into folders (Playlists tab)",
+                "Multi-select + batch 'Add to Folder'",
+                "Playlists can appear in multiple folders",
+                "Nested subfolders supported",
+            ],
+            testingFocus: [
+                "Create a folder, add playlists, verify they disappear from root",
+                "Add a playlist to two folders — confirm it shows in both",
+                "Delete a folder — playlists should return to root",
+                "Kill + relaunch — folder structure persists",
+            ]
+        ),
+        // ... 4 more entries for builds 11, 10, 9, 8
+        // Oldest entries rotate out when the array exceeds 5
+    ]
+}
+```
+
+**Implementer updates this array as part of every ship step** — right after bumping the version and before archiving. It's 10 lines per release. Add a reminder to `scripts/ship.sh` output: "Don't forget to update ReleaseNotes.swift".
+
+### H.2 Settings UI
+
+**Where it lives:** Settings tab → new section "What's New" (or "Release Notes"), placed near the top so Olivier sees it on first open after a TestFlight update.
+
+**Shape:** tapping the section row pushes a detail VC / SwiftUI view:
+- Each release is a card/section with:
+  - **Header:** "Build N — Title" + date
+  - **What's New:** bulleted list
+  - **Testing Focus:** bulleted list, visually distinct (different tint or a "🧪 Test this" header) so it's clear these are action items, not just changelog entries.
+- Most recent release expanded by default, older ones collapsed (or all visible if the list is short — implementer's judgment).
+
+**Implementation:** if Settings is SwiftUI (`DisplaySettingsView.swift` or similar), use a `List` with `Section` per release. If UIKit, a plain `UITableViewController` with static cells. Match the existing Settings idiom — don't introduce a new UI framework for one screen.
+
+### H.3 Scope constraints
+
+- **5 releases max.** When a 6th is added, drop the oldest. The array is the source of truth — no trimming logic needed, the implementer just keeps the array at 5 entries.
+- **No server fetch.** This is a compiled-in constant. If we ever want dynamic release notes (e.g., fetched from a GitHub release page), that's a separate PR.
+- **No localization.** English only. This is a spike-era internal tool, not a shipped App Store feature.
+- **No deep links** from release notes to specific screens (e.g., "tap to open Playlists tab"). Plain text is sufficient. If Olivier wants navigation shortcuts later, that's additive.
+
+### H.4 Ship step integration
+
+Update `scripts/ship.sh` to print a reminder after the version bump step:
+
+```
+⚠️  Don't forget to update Amperfy/Screens/Settings/ReleaseNotes.swift
+    with the new build's What's New and Testing Focus before archiving.
+```
+
+This keeps the release notes in sync with the build without adding a build-time code generation step.
+
+### H.5 Tests
+
+**Minimal.** The data is static and the UI is a simple list. No AmperfyKitTests needed.
+
+**Manual acceptance (sim):**
+- Settings → "What's New" → shows most recent 5 builds.
+- Most recent build's "Testing Focus" bullets match what was actually shipped.
+- After a new build ships, the list updates (oldest drops off if >5).
+
+### H.6 Ship steps
+
+Same monotonic bump pattern as §2.6. This PR is small enough to bundle with PR 9's wave or ship standalone — implementer's judgment.
+
+---
+
 ## PR 9 — Feature G: Playlist folders with batch selection
 
 **Release target:** TestFlight build. Bump `CURRENT_PROJECT_VERSION` monotonically. **Prioritized ahead of custom styling (PR 7 Phase 2)** per Olivier, 2026-04-12.
@@ -1033,6 +1128,7 @@ Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
 | PR 8 | 048964f6-98d7-4964-be80-24d78c4be894 | 10 | 2026-04-11 | Albums view performance fixes. `spike/extension-eval` @ `faffa3d`. F1: `sectionIndexTitles` cached + off-by-one `0...sectionCount` → `0..<sectionCount` in `AlbumsDiffableDataSource`. F2: `SingleSnapshotFetchedResultsTableViewController.controller(_:didChangeContentWith:)` short-circuits O(n) `existingObject(with:)` scan when `managedObjectContext.updatedObjects` is empty. F4: `AlbumMO.relationshipKeyPathsForPrefetching` now includes `songs` — eliminates fault storms in `handleHeaderPlay/Shuffle`. 398 AmperfyKitTests green. |
 | Hotfix 4 | c56d628e-ec67-476c-a600-c5865692aeeb | 11 | 2026-04-11 | "In Playlists" only showed recently-opened playlists. Root cause: bulk `getPlaylists` API returns metadata only — `PlaylistItemMO` entries are only created by per-playlist `getPlaylist` calls. Fix: `PlaylistItemsSyncTracker` (UserDefaults-backed) tracks which playlists have had items synced; on "In Playlists" tap, any unsynced playlists are fetched sequentially via `syncDown(playlist:)` before running the Core Data query. First tap incurs O(n_playlists) API calls; subsequent taps are instant. `spike/extension-eval` @ `55b20f7`. 398 AmperfyKitTests green. |
 | PR 9 | bf4b4d5e-3058-4d17-9693-ed5e1df19b36 | 12 | 2026-04-12 | Feature G — Playlist folders with batch selection. `spike/extension-eval` @ `16a0820`. `PlaylistFolderStore` (JSON in UserDefaults): recursive folder tree, multi-folder membership, CRUD + membership ops. `PlaylistFolderContentsVC` replaces `PlaylistsVC` as Playlists tab entry point — folders section + unfiled playlists at root, recursive navigation into subfolders. Context menus on playlists (Add/Move/Also Show in/Remove from Folder) and folders (Rename/Delete). Edit mode multi-select with "Add to Folder" toolbar action. Folder picker with create-new option. Flat View fallback to legacy `PlaylistsVC`. 12 new `PlaylistFolderStoreTest` cases; 410 AmperfyKitTests green. |
+| PR 10 | (pending ship) | 13 | 2026-04-12 | Feature H — In-app release notes in Settings. `spike/extension-eval` @ `3b851e1`. `ReleaseNotes.swift` static data source backfilled for builds 8–12. `WhatsNewSettingsView` (SwiftUI) with What's New + Testing Focus bullet sections per release. Added `.whatsNew` to `NavigationTarget` enum; "What's New" link placed at top of Settings nav. `ship.sh` prints reminder to update `ReleaseNotes.swift` at version-bump step. No new tests (static data + simple list UI). 410 AmperfyKitTests green. |
 
 ---
 
