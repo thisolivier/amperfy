@@ -37,6 +37,26 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 13,
+      date: "2026-04-12",
+      title: "Build 13 — Playlist folder UX fixes",
+      whatsNew: [
+        "Flat View is now an in-place toggle (no more pushing a separate screen)",
+        "Flat View includes search and sort options (name, last played, change date, duration)",
+        "Edit mode with multi-select works at all levels (root + inside folders)",
+        "Inside a folder, toolbar shows 'Remove from Folder' instead of 'Add to Folder'",
+        "Context menu no longer shows irrelevant 'Add to Folder' for playlists already in a folder",
+        "New Folder option available inside subfolders",
+      ],
+      testingFocus: [
+        "Toggle Flat View on/off from the … menu — should switch in place, not push",
+        "In Flat View, use search bar and try each sort option",
+        "Tap Edit at root — multi-select playlists, tap 'Add to Folder'",
+        "Tap Edit inside a folder — multi-select, tap 'Remove from Folder'",
+        "Long-press a playlist inside a folder — should NOT show 'Add to Folder'",
+      ]
+    ),
+    ReleaseNote(
       id: 12,
       date: "2026-04-12",
       title: "Build 12 — Playlist folders",

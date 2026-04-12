@@ -46,6 +46,19 @@ class PlaylistFolderContentsVC: UITableViewController {
   private var displayedPlaylists: [Playlist] = []
   private var folderObserver: (any NSObjectProtocol)?
 
+  // Flat view mode (root level only)
+  private var isShowingFlatView = false
+  private var flatViewSortType: PlaylistSortType = .name
+  private var flatSearchText: String = ""
+
+  private lazy var flatSearchController: UISearchController = {
+    let searchController = UISearchController(searchResultsController: nil)
+    searchController.searchResultsUpdater = self
+    searchController.obscuresBackgroundDuringPresentation = false
+    searchController.searchBar.placeholder = "Search in \"Playlists\""
+    return searchController
+  }()
+
   // MARK: - Init
 
   init(account: Account, parentFolderId: UUID? = nil) {
@@ -81,8 +94,9 @@ class PlaylistFolderContentsVC: UITableViewController {
     tableView.rowHeight = UITableView.automaticDimension
     tableView.estimatedRowHeight = PlaylistTableCell.rowHeight
     tableView.backgroundColor = .systemGroupedBackground
+    tableView.allowsMultipleSelectionDuringEditing = true
 
-    setupNavigationItems()
+    rebuildNavigationItems()
 
     folderObserver = NotificationCenter.default.addObserver(
       forName: PlaylistFolderStore.didChangeNotification,
@@ -103,7 +117,7 @@ class PlaylistFolderContentsVC: UITableViewController {
 
   // MARK: - Navigation items
 
-  private func setupNavigationItems() {
+  private func rebuildNavigationItems() {
     let addFolderAction = UIAction(
       title: "New Folder",
       image: UIImage(systemName: "folder.badge.plus")
@@ -114,15 +128,21 @@ class PlaylistFolderContentsVC: UITableViewController {
     var menuChildren: [UIMenuElement] = [addFolderAction]
 
     if parentFolderId == nil {
-      let openLegacyAction = UIAction(
-        title: "Flat View",
-        image: UIImage(systemName: "list.bullet")
+      let toggleTitle = isShowingFlatView ? "Folder View" : "Flat View"
+      let toggleImage = isShowingFlatView
+        ? UIImage(systemName: "folder")
+        : UIImage(systemName: "list.bullet")
+      let toggleAction = UIAction(
+        title: toggleTitle,
+        image: toggleImage
       ) { [weak self] _ in
-        guard let self else { return }
-        let legacyVC = PlaylistsVC(account: account)
-        navigationController?.pushViewController(legacyVC, animated: true)
+        self?.toggleFlatView()
       }
-      menuChildren.append(openLegacyAction)
+      menuChildren.append(toggleAction)
+
+      if isShowingFlatView {
+        menuChildren.append(createSortMenu())
+      }
     }
 
     let optionsButton = UIBarButtonItem(
@@ -130,15 +150,44 @@ class PlaylistFolderContentsVC: UITableViewController {
       menu: UIMenu(children: menuChildren)
     )
 
-    if isEditModeSupported {
-      navigationItem.rightBarButtonItems = [optionsButton, editButtonItem]
-    } else {
-      navigationItem.rightBarButtonItems = [optionsButton]
-    }
+    navigationItem.rightBarButtonItems = [optionsButton, editButtonItem]
   }
 
-  private var isEditModeSupported: Bool {
-    parentFolderId == nil
+  private func toggleFlatView() {
+    isShowingFlatView.toggle()
+    if isShowingFlatView {
+      navigationItem.searchController = flatSearchController
+      definesPresentationContext = true
+    } else {
+      navigationItem.searchController = nil
+      flatSearchText = ""
+    }
+    rebuildNavigationItems()
+    reloadContent()
+  }
+
+  private func createSortMenu() -> UIMenu {
+    let sortOptions: [(String, PlaylistSortType)] = [
+      ("Name", .name),
+      ("Last time played", .lastPlayed),
+      ("Change date", .lastChanged),
+      ("Duration", .duration),
+    ]
+    let actions = sortOptions.map { title, sortType in
+      UIAction(
+        title: title,
+        image: flatViewSortType == sortType ? UIImage(systemName: "checkmark") : nil
+      ) { [weak self] _ in
+        self?.flatViewSortType = sortType
+        self?.rebuildNavigationItems()
+        self?.reloadContent()
+      }
+    }
+    return UIMenu(
+      title: "Sort",
+      image: UIImage(systemName: "arrow.up.arrow.down"),
+      children: actions
+    )
   }
 
   // MARK: - Edit mode
@@ -146,16 +195,19 @@ class PlaylistFolderContentsVC: UITableViewController {
   override func setEditing(_ editing: Bool, animated: Bool) {
     super.setEditing(editing, animated: animated)
     if editing {
+      let toolbarTitle = parentFolderId != nil ? "Remove from Folder" : "Add to Folder"
+      let toolbarAction = parentFolderId != nil
+        ? #selector(removeSelectedFromFolder)
+        : #selector(addSelectedToFolder)
       toolbarItems = [
         UIBarButtonItem(
-          title: "Add to Folder",
+          title: toolbarTitle,
           style: .plain,
           target: self,
-          action: #selector(addSelectedToFolder)
+          action: toolbarAction
         ),
       ]
       navigationController?.setToolbarHidden(false, animated: true)
-      tableView.allowsMultipleSelectionDuringEditing = true
     } else {
       navigationController?.setToolbarHidden(true, animated: true)
     }
@@ -174,10 +226,26 @@ class PlaylistFolderContentsVC: UITableViewController {
     }
   }
 
+  @objc
+  private func removeSelectedFromFolder() {
+    guard let currentFolderId = parentFolderId,
+          let selectedRows = tableView.indexPathsForSelectedRows
+    else { return }
+    let selectedPlaylistIds = selectedRows
+      .filter { $0.section == Section.playlists.rawValue }
+      .compactMap { displayedPlaylists[safe: $0.row]?.id }
+    guard !selectedPlaylistIds.isEmpty else { return }
+    folderStore.removePlaylists(selectedPlaylistIds, from: currentFolderId)
+    setEditing(false, animated: true)
+  }
+
   // MARK: - Data loading
 
   private func reloadContent() {
-    if let parentFolderId, let folder = folderStore.folder(byId: parentFolderId) {
+    if isShowingFlatView && parentFolderId == nil {
+      displayedFolders = []
+      displayedPlaylists = fetchAllPlaylists()
+    } else if let parentFolderId, let folder = folderStore.folder(byId: parentFolderId) {
       displayedFolders = folder.subfolders
       displayedPlaylists = fetchPlaylists(ids: folder.playlistIds)
     } else {
@@ -186,6 +254,31 @@ class PlaylistFolderContentsVC: UITableViewController {
     }
     tableView.reloadData()
     updateContentUnavailable()
+  }
+
+  private func fetchAllPlaylists() -> [Playlist] {
+    let library = appDelegate.storage.main.library
+    var playlists = library.getPlaylists(for: account)
+      .filter { !$0.isSmartPlaylist }
+
+    if !flatSearchText.isEmpty {
+      playlists = playlists.filter {
+        $0.name.localizedCaseInsensitiveContains(flatSearchText)
+      }
+    }
+
+    switch flatViewSortType {
+    case .name:
+      playlists.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    case .lastPlayed:
+      playlists.sort { ($0.lastTimePlayed ?? .distantPast) > ($1.lastTimePlayed ?? .distantPast) }
+    case .lastChanged:
+      playlists.sort { ($0.changeDate ?? .distantPast) > ($1.changeDate ?? .distantPast) }
+    case .duration:
+      playlists.sort { $0.duration > $1.duration }
+    }
+
+    return playlists
   }
 
   private func fetchUnfiledPlaylists() -> [Playlist] {
@@ -209,10 +302,14 @@ class PlaylistFolderContentsVC: UITableViewController {
 
   private func updateContentUnavailable() {
     if displayedFolders.isEmpty, displayedPlaylists.isEmpty {
-      var config = UIContentUnavailableConfiguration.empty()
-      config.image = .playlist
-      config.text = parentFolderId == nil ? "No Playlists" : "Empty Folder"
-      contentUnavailableConfiguration = config
+      if isShowingFlatView && !flatSearchText.isEmpty {
+        contentUnavailableConfiguration = UIContentUnavailableConfiguration.search()
+      } else {
+        var config = UIContentUnavailableConfiguration.empty()
+        config.image = .playlist
+        config.text = parentFolderId == nil ? "No Playlists" : "Empty Folder"
+        contentUnavailableConfiguration = config
+      }
     } else {
       contentUnavailableConfiguration = nil
     }
@@ -239,8 +336,10 @@ class PlaylistFolderContentsVC: UITableViewController {
     -> String? {
     switch Section(rawValue: section) {
     case .folders: return displayedFolders.isEmpty ? nil : "Folders"
-    case .playlists: return displayedPlaylists
-      .isEmpty ? nil : (parentFolderId == nil ? "Playlists" : nil)
+    case .playlists:
+      if displayedPlaylists.isEmpty { return nil }
+      if isShowingFlatView { return "All Playlists" }
+      return parentFolderId == nil ? "Playlists" : nil
     case .none: return nil
     }
   }
@@ -313,7 +412,7 @@ class PlaylistFolderContentsVC: UITableViewController {
 
   override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
     switch Section(rawValue: indexPath.section) {
-    case .playlists: return isEditModeSupported
+    case .playlists: return true
     default: return false
     }
   }
@@ -362,18 +461,8 @@ class PlaylistFolderContentsVC: UITableViewController {
       guard let self else { return UIMenu(children: []) }
       var actions = [UIMenuElement]()
 
-      // "Add to Folder…" — always available
-      actions.append(UIAction(
-        title: "Add to Folder\u{2026}",
-        image: UIImage(systemName: "folder.badge.plus")
-      ) { [weak self] _ in
-        self?.presentFolderPicker(title: "Add to Folder") { folderId in
-          self?.folderStore.addPlaylists([playlist.id], to: folderId)
-        }
-      })
-
-      // Inside a folder: additional actions
       if let currentFolderId = parentFolderId {
+        // Inside a folder: show Move, Also Show, and Remove
         actions.append(UIAction(
           title: "Move to Folder\u{2026}",
           image: UIImage(systemName: "folder")
@@ -402,6 +491,16 @@ class PlaylistFolderContentsVC: UITableViewController {
           attributes: .destructive
         ) { [weak self] _ in
           self?.folderStore.removePlaylists([playlist.id], from: currentFolderId)
+        })
+      } else {
+        // At root level: only show Add to Folder
+        actions.append(UIAction(
+          title: "Add to Folder\u{2026}",
+          image: UIImage(systemName: "folder.badge.plus")
+        ) { [weak self] _ in
+          self?.presentFolderPicker(title: "Add to Folder") { folderId in
+            self?.folderStore.addPlaylists([playlist.id], to: folderId)
+          }
         })
       }
 
@@ -505,6 +604,15 @@ class PlaylistFolderContentsVC: UITableViewController {
       ))
     }
     return result
+  }
+}
+
+// MARK: - UISearchResultsUpdating
+
+extension PlaylistFolderContentsVC: UISearchResultsUpdating {
+  func updateSearchResults(for searchController: UISearchController) {
+    flatSearchText = searchController.searchBar.text ?? ""
+    reloadContent()
   }
 }
 
