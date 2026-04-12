@@ -671,7 +671,7 @@ class EntityPreviewActionBuilder {
   }
 
   private func createShowPlaylistsAction() -> UIAction {
-    UIAction(title: "In Playlists", image: .playlist) { action in
+    UIAction(title: "Show in Playlists", image: .playlist) { action in
       guard let song = (self.entityContainer as? AbstractPlayable)?.asSong,
             let account = self.entityContainer.account else { return }
 

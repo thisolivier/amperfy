@@ -42,7 +42,7 @@ class PlaylistMembershipVC: UITableViewController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    title = "In Playlists"
+    title = "Show in Playlists"
     navigationItem.rightBarButtonItem = UIBarButtonItem(
       barButtonSystemItem: .done,
       target: self,
