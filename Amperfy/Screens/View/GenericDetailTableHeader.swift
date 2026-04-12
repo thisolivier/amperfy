@@ -79,13 +79,15 @@ class GenericDetailTableHeader: UIView {
 
   public static func createTableHeader(configuration: DetailHeaderConfiguration)
     -> GenericDetailTableHeader? {
-    configuration.tableView.tableHeaderView = UIView(frame: CGRect(
+    let headerWrapper = UIView(frame: CGRect(
       x: 0,
       y: 0,
       width: configuration.rootView.view.bounds.size.width,
       height: GenericDetailTableHeader
         .frameHeight(traitCollection: configuration.rootView.traitCollection)
     ))
+    headerWrapper.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
+    configuration.tableView.tableHeaderView = headerWrapper
     let genericDetailTableHeaderView = ViewCreator<GenericDetailTableHeader>
       .createFromNib(withinFixedFrame: CGRect(
         x: 0,

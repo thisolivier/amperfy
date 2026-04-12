@@ -363,12 +363,34 @@ extension UIColor {
     }
   }
 
+  static func fromHexString(_ hex: String) -> UIColor? {
+    let cleaned = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+      .replacingOccurrences(of: "#", with: "")
+    guard cleaned.count == 6, let value = UInt64(cleaned, radix: 16) else { return nil }
+    return UIColor(
+      red: CGFloat((value >> 16) & 0xFF) / 255.0,
+      green: CGFloat((value >> 8) & 0xFF) / 255.0,
+      blue: CGFloat(value & 0xFF) / 255.0,
+      alpha: 1.0
+    )
+  }
+
   public static var backgroundColor: UIColor {
-    if #available(iOS 13.0, *) {
-      return UIColor.systemBackground
-    } else {
-      return UIColor.white
+    // Check custom theme (reads UserDefaults directly to avoid cross-module dependency)
+    let defaults = UserDefaults.standard
+    if defaults.bool(forKey: "amperfy.fork.theme.enabled") {
+      return UIColor { traits in
+        let key = traits.userInterfaceStyle == .dark
+          ? "amperfy.fork.theme.dark.bg"
+          : "amperfy.fork.theme.light.bg"
+        if let hex = defaults.string(forKey: key),
+           let color = UIColor.fromHexString(hex) {
+          return color
+        }
+        return .systemBackground
+      }
     }
+    return UIColor.systemBackground
   }
 }
 
