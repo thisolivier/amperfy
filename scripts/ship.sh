@@ -72,6 +72,11 @@ step "2/6 Bump version"
 
 "$SCRIPTS_DIR/bump-version.sh" "$NEW_VERSION" || fail "version bump"
 
+echo ""
+echo "⚠️  Don't forget to update Amperfy/SwiftUI/Settings/ReleaseNotes.swift"
+echo "    with the new build's What's New and Testing Focus before archiving."
+echo ""
+
 # ------------------------------------------------------------------
 step "3/6 Archive"
 

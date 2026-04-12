@@ -1,0 +1,123 @@
+//
+//  ReleaseNotes.swift
+//  Amperfy
+//
+//  Created by the Amperfy spike (Feature H — In-app release notes).
+//  Copyright (c) 2026 Olivier Butler. All rights reserved.
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+
+import Foundation
+
+// MARK: - ReleaseNote
+
+struct ReleaseNote: Identifiable {
+  let id: Int // CURRENT_PROJECT_VERSION
+  let date: String // "2026-04-12"
+  let title: String // "Build 12 — Playlist folders"
+  let whatsNew: [String]
+  let testingFocus: [String]
+}
+
+// MARK: - ReleaseNotes
+
+enum ReleaseNotes {
+  /// Most recent 5 releases, newest first. Updated at ship time.
+  static let entries: [ReleaseNote] = [
+    ReleaseNote(
+      id: 12,
+      date: "2026-04-12",
+      title: "Build 12 — Playlist folders",
+      whatsNew: [
+        "Organize playlists into folders (Playlists tab)",
+        "Multi-select + batch 'Add to Folder'",
+        "Playlists can appear in multiple folders",
+        "Nested subfolders supported",
+        "Context menus on folders (Rename, Delete) and playlists (Add/Move/Remove)",
+        "'Flat View' fallback accessible from nav bar menu",
+      ],
+      testingFocus: [
+        "Create a folder, add playlists — verify they disappear from root",
+        "Add a playlist to two folders — confirm it shows in both",
+        "Delete a folder — playlists should return to root",
+        "Kill + relaunch — folder structure persists",
+        "Long-press a playlist for context menu, try each action",
+      ]
+    ),
+    ReleaseNote(
+      id: 11,
+      date: "2026-04-11",
+      title: "Build 11 — In Playlists sync fix",
+      whatsNew: [
+        "Fixed: 'In Playlists' now shows all playlists containing a song, not just recently opened ones",
+        "First tap syncs playlist items from server (one-time cost per playlist)",
+        "Subsequent taps are instant",
+      ],
+      testingFocus: [
+        "Long-press a song → 'In Playlists' — should list ALL playlists containing it",
+        "First tap may show a brief 'Syncing playlists...' progress indicator",
+        "Second tap on same action should be instant",
+      ]
+    ),
+    ReleaseNote(
+      id: 10,
+      date: "2026-04-11",
+      title: "Build 10 — Albums performance",
+      whatsNew: [
+        "Fixed off-by-one crash in Albums section index",
+        "Albums section index titles now cached (faster scrolling)",
+        "Reconfigure scan short-circuited when no objects changed",
+        "Play/Shuffle prefetches album songs in batch (eliminates fault storms)",
+      ],
+      testingFocus: [
+        "Scroll through Albums tab quickly using the side index",
+        "Tap Play or Shuffle on an album — should start without delay",
+        "Switch between Albums tab and other tabs repeatedly",
+      ]
+    ),
+    ReleaseNote(
+      id: 9,
+      date: "2026-04-11",
+      title: "Build 9 — Share a song",
+      whatsNew: [
+        "Share a song via iOS share sheet (long-press → Share)",
+        "Downloads the song if not cached, then shares the audio file",
+        "Downloaded file also added to offline library",
+      ],
+      testingFocus: [
+        "Long-press a song → Share → send via Messages or AirDrop",
+        "Try sharing a song that is not yet downloaded",
+        "Try sharing a song that is already cached",
+      ]
+    ),
+    ReleaseNote(
+      id: 8,
+      date: "2026-04-11",
+      title: "Build 8 — Favourites on Home",
+      whatsNew: [
+        "Favourite Albums, Artists, and Playlists sections on the Home tab",
+        "Pin/unpin playlists via heart toggle in playlist detail view",
+        "Sections hidden when empty",
+        "Favourites ignore the 'Complete Albums Only' filter",
+      ],
+      testingFocus: [
+        "Favourite an album/artist — confirm it appears in the Home tab section",
+        "Unfavourite — confirm it disappears from Home",
+        "Pin a playlist via the heart icon in playlist detail",
+        "Verify pinned playlists appear on Home, unpinned ones don't",
+      ]
+    ),
+  ]
+}

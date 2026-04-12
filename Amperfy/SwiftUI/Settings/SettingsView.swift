@@ -93,6 +93,10 @@ struct SettingsView: View {
 
         #if !targetEnvironment(macCatalyst) // ok
           SettingsSection {
+            navigationLink(.whatsNew)
+          }
+
+          SettingsSection {
             navigationLink(.account)
             navigationLink(.displayAndInteraction)
             navigationLink(.library)

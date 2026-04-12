@@ -365,6 +365,8 @@
 		A5B0E10000000000000050A0 /* PlaylistFolderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */; };
 		A5B0E30000000000000050A0 /* PlaylistFolderStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */; };
 		A5B0E50000000000000050A0 /* PlaylistFolderContentsVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E60000000000000050A0 /* PlaylistFolderContentsVC.swift */; };
+		A5B0F10000000000000050A0 /* ReleaseNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0F20000000000000050A0 /* ReleaseNotes.swift */; };
+		A5B0F30000000000000050A0 /* WhatsNewSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0F40000000000000050A0 /* WhatsNewSettingsView.swift */; };
 		A5B0B10000000000000050A0 /* PinnedPlaylistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0B20000000000000050A0 /* PinnedPlaylistStore.swift */; };
 		50C9D673284FAA4D007F18D0 /* LibraryUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C16C3321EB454100F086F0 /* LibraryUpdater.swift */; };
 		50C9D674284FAA4D007F18D0 /* SwipeActionSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50ACAF1127B144040039913C /* SwipeActionSettings.swift */; };
@@ -1162,6 +1164,8 @@
 		A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderStore.swift; sourceTree = "<group>"; };
 		A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderStoreTest.swift; sourceTree = "<group>"; };
 		A5B0E60000000000000050A0 /* PlaylistFolderContentsVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderContentsVC.swift; sourceTree = "<group>"; };
+		A5B0F20000000000000050A0 /* ReleaseNotes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotes.swift; sourceTree = "<group>"; };
+		A5B0F40000000000000050A0 /* WhatsNewSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewSettingsView.swift; sourceTree = "<group>"; };
 		A5B0B20000000000000050A0 /* PinnedPlaylistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedPlaylistStore.swift; sourceTree = "<group>"; };
 		50FE808B26A55A8300CB434D /* Amperfy v13.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v13.xcdatamodel"; sourceTree = "<group>"; };
 		50FE808C26A55CEA00CB434D /* DownloadMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DownloadMO+CoreDataClass.swift"; sourceTree = "<group>"; };
@@ -1442,6 +1446,8 @@
 				50E77DB628D2163F00BDF882 /* SettingsView.swift */,
 				503BAF332E4A1EAC00AE50B4 /* SettingsTabView.swift */,
 				631C166C2C6D61110085F62E /* NavigationTarget.swift */,
+				A5B0F20000000000000050A0 /* ReleaseNotes.swift */,
+				A5B0F40000000000000050A0 /* WhatsNewSettingsView.swift */,
 				5078AFB12B40CA5E0038FD17 /* DisplaySettingsView.swift */,
 				50AE79AB2C1CCBEC0085CBB3 /* DeveloperView.swift */,
 				50791E8428D36F1F006CE6E5 /* LibrarySettingsView.swift */,
@@ -2539,6 +2545,8 @@
 				5007CE4121EF5F4300BC5CBA /* PlaylistsVC.swift in Sources */,
 				A5B0E50000000000000050A0 /* PlaylistFolderContentsVC.swift in Sources */,
 				631C166D2C6D61110085F62E /* NavigationTarget.swift in Sources */,
+				A5B0F10000000000000050A0 /* ReleaseNotes.swift in Sources */,
+				A5B0F30000000000000050A0 /* WhatsNewSettingsView.swift in Sources */,
 				50E77DB728D2163F00BDF882 /* SettingsView.swift in Sources */,
 				50C16C1A21E704EC00F086F0 /* ArtistDetailVC.swift in Sources */,
 				50DEEE04265E25A40073FF20 /* MusicFoldersVC.swift in Sources */,
