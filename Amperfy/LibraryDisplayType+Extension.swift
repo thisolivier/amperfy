@@ -69,6 +69,13 @@ extension LibraryDisplayType {
       )
     case .radios:
       return AppStoryboard.Main.segueToRadios(account: account)
+    case .completeAlbums:
+      return AppStoryboard.Main.createAlbumsVC(
+        account: account,
+        style: settings.user.albumsStyleSetting,
+        category: .all,
+        wholeAlbumsOnly: true
+      )
     }
   }
 }

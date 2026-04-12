@@ -180,8 +180,8 @@ class AlbumsCollectionVC: SingleSnapshotFetchedResultsCollectionViewController<A
     diffableDataSource as? AlbumsCollectionDiffableDataSource
   }
 
-  override init(collectionViewLayout: UICollectionViewLayout, account: Account) {
-    self.common = AlbumsCommonVCInteractions(account: account)
+  init(collectionViewLayout: UICollectionViewLayout, account: Account, wholeAlbumsOnly: Bool = false) {
+    self.common = AlbumsCommonVCInteractions(account: account, wholeAlbumsOnly: wholeAlbumsOnly)
     super.init(collectionViewLayout: collectionViewLayout, account: account)
   }
 

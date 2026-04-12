@@ -56,16 +56,17 @@ enum AppStoryboard: String {
   func createAlbumsVC(
     account: Account,
     style: AlbumsDisplayStyle,
-    category: DisplayCategoryFilter
+    category: DisplayCategoryFilter,
+    wholeAlbumsOnly: Bool = false
   )
     -> UIViewController {
     switch style {
     case .table:
-      let vc = AlbumsVC(account: account)
+      let vc = AlbumsVC(account: account, wholeAlbumsOnly: wholeAlbumsOnly)
       vc.displayFilter = category
       return vc
     case .grid:
-      let vc = AlbumsCollectionVC(collectionViewLayout: .verticalLayout, account: account)
+      let vc = AlbumsCollectionVC(collectionViewLayout: .verticalLayout, account: account, wholeAlbumsOnly: wholeAlbumsOnly)
       vc.displayFilter = category
       return vc
     }

@@ -87,12 +87,6 @@ class SliderMenuView: UIView {
 
 // MARK: - AlbumsCommonVCInteractions
 
-/// UserDefaults key for the "complete albums only" toggle on the Albums tab.
-/// Matches the `@AppStorage` name used in `spike/amperfy/BACKLOG.md` §2.1, so
-/// if a SwiftUI view ever surfaces the same toggle the storage is already
-/// compatible.
-private let wholeAlbumsOnlyUserDefaultsKey = "wholeAlbumsOnly"
-
 /// Minimum track count for the count-fallback branch of the whole-album
 /// predicate when applied to the library-wide Albums tab. `3` matches the
 /// threshold documented in `spike/amperfy/BACKLOG.md` §4.
@@ -104,7 +98,7 @@ private let wholeAlbumLibraryMinSongCount: Int16 = 3
 class AlbumsCommonVCInteractions {
   var sceneTitle: String? {
     switch displayFilter {
-    case .all: "Albums"
+    case .all: wholeAlbumsOnly ? "Complete Albums" : "Albums"
     case .newest: "Newest Albums"
     case .recent: "Recently Played Albums"
     case .favorites: "Favorite Albums"
@@ -134,22 +128,16 @@ class AlbumsCommonVCInteractions {
   }
 
   private let account: Account
+  private let wholeAlbumsOnly: Bool
 
-  init(account: Account, isSetNavbarButton: Bool = true) {
+  init(account: Account, isSetNavbarButton: Bool = true, wholeAlbumsOnly: Bool = false) {
     self.account = account
     self.isSetNavbarButton = isSetNavbarButton
+    self.wholeAlbumsOnly = wholeAlbumsOnly
   }
 
   public var isContentUnavailable: Bool {
     fetchedResultsController.fetchedObjects?.count ?? 0 == 0
-  }
-
-  /// Persisted user toggle: when `true`, the Albums tab hides releases that
-  /// fail the whole-album predicate (singles, bags of singles, promotional
-  /// releases). Default off. See `spike/amperfy/BACKLOG.md` §2.1.
-  public var isWholeAlbumsOnly: Bool {
-    get { UserDefaults.standard.bool(forKey: wholeAlbumsOnlyUserDefaultsKey) }
-    set { UserDefaults.standard.set(newValue, forKey: wholeAlbumsOnlyUserDefaultsKey) }
   }
 
   func updateContentUnavailable() {
@@ -209,7 +197,7 @@ class AlbumsCommonVCInteractions {
       coreDataCompanion: appDelegate.storage.main, account: account,
       sortType: sortType,
       isGroupedInAlphabeticSections: isGroupedInAlphabeticSections,
-      wholeAlbumsOnly: isWholeAlbumsOnly,
+      wholeAlbumsOnly: wholeAlbumsOnly,
       wholeAlbumMinSongCount: wholeAlbumLibraryMinSongCount
     )
     fetchedResultsController.fetchResultsController.sectionIndexType = sortType.asSectionIndexType
@@ -291,7 +279,6 @@ class AlbumsCommonVCInteractions {
     case .newest, .recent:
       break
     }
-    actions.append(createWholeAlbumsFilterMenu())
     actions.append(createStyleButtonMenu())
 
     if appDelegate.storage.settings.user.isOnlineMode {
@@ -431,29 +418,6 @@ class AlbumsCommonVCInteractions {
     }
   }
 
-  /// "Complete albums only" toggle, attached to the right bar button menu on
-  /// the Albums tab. When enabled the FRC filters out singles / bags of
-  /// singles via `WholeAlbumPredicates.wholeAlbum(minSongCount:)`. State is
-  /// persisted in `UserDefaults` under `wholeAlbumsOnlyUserDefaultsKey` so
-  /// the user's preference survives app restarts and is applied to every
-  /// displayFilter mode (all, newest, recent, favorites).
-  private func createWholeAlbumsFilterMenu() -> UIMenu {
-    let toggleAction = UIAction(
-      title: "Complete albums only",
-      image: isWholeAlbumsOnly ? .check : nil,
-      handler: { _ in
-        self.isWholeAlbumsOnly.toggle()
-        self.change(sortType: self.sortType)
-        self.updateSearchResultsCB?()
-      }
-    )
-    return UIMenu(
-      title: "Filter",
-      options: [.displayInline],
-      children: [toggleAction]
-    )
-  }
-
   private func createStyleButtonMenu() -> UIMenu {
     let tableStyle = UIAction(
       title: "Table",
@@ -465,7 +429,8 @@ class AlbumsCommonVCInteractions {
             .createAlbumsVC(
               account: self.account,
               style: self.appDelegate.storage.settings.user.albumsStyleSetting,
-              category: self.displayFilter
+              category: self.displayFilter,
+              wholeAlbumsOnly: self.wholeAlbumsOnly
             ),
           animated: false
         )
@@ -481,7 +446,8 @@ class AlbumsCommonVCInteractions {
             .createAlbumsVC(
               account: self.account,
               style: self.appDelegate.storage.settings.user.albumsStyleSetting,
-              category: self.displayFilter
+              category: self.displayFilter,
+              wholeAlbumsOnly: self.wholeAlbumsOnly
             ),
           animated: false
         )

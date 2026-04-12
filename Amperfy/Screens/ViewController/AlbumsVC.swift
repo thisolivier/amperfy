@@ -141,8 +141,8 @@ class AlbumsVC: SingleSnapshotFetchedResultsTableViewController<AlbumMO> {
     diffableDataSource as? AlbumsDiffableDataSource
   }
 
-  init(account: Account) {
-    self.common = AlbumsCommonVCInteractions(account: account)
+  init(account: Account, wholeAlbumsOnly: Bool = false) {
+    self.common = AlbumsCommonVCInteractions(account: account, wholeAlbumsOnly: wholeAlbumsOnly)
     super.init(style: .grouped, account: account)
   }
 
