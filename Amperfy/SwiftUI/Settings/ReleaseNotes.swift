@@ -37,6 +37,20 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 15,
+      date: "2026-04-12",
+      title: "Build 15 — remoteSongCount re-sync",
+      whatsNew: [
+        "Fixed: albums with stale remoteSongCount=0 are now re-synced in the background",
+        "Fixes albums missing from 'Newest Albums' and tracks incorrectly appearing in 'Recently Added Tracks'",
+      ],
+      testingFocus: [
+        "Check Home tab 'Newest Albums' — verify all expected albums appear",
+        "Check 'Recently Added Tracks' — should not show tracks from full albums",
+        "Kill and relaunch — background sync should fix any remaining stale albums",
+      ]
+    ),
+    ReleaseNote(
       id: 14,
       date: "2026-04-12",
       title: "Build 14 — Custom Theme",

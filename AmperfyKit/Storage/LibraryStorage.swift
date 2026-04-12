@@ -1463,7 +1463,10 @@ public class LibraryStorage: PlayableFileCachable {
   func getAlbumWithoutSyncedSongs() -> [Album] {
     let fetchRequest: NSFetchRequest<AlbumMO> = AlbumMO.fetchRequest()
     fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-      NSPredicate(format: "%K == FALSE", #keyPath(AlbumMO.isSongsMetaDataSynced)),
+      NSCompoundPredicate(orPredicateWithSubpredicates: [
+        NSPredicate(format: "%K == FALSE", #keyPath(AlbumMO.isSongsMetaDataSynced)),
+        NSPredicate(format: "%K == 0", #keyPath(AlbumMO.remoteSongCount)),
+      ]),
       NSPredicate(
         format: "%K == %i",
         #keyPath(AlbumMO.remoteStatus),
