@@ -46,9 +46,34 @@ struct SettingsView: View {
     appDelegate.configureLockScreenPrevention()
   }
 
+  private static let lastViewedBuildKey = "amperfy.fork.lastViewedBuildNumber"
+
+  private var hasUnseenReleaseNotes: Bool {
+    let lastViewed = UserDefaults.standard.integer(forKey: Self.lastViewedBuildKey)
+    let currentBuild = Int(AppDelegate.buildNumber) ?? 0
+    return currentBuild > lastViewed
+  }
+
   func navigationLink(_ item: NavigationTarget) -> some View {
-    NavigationLink(destination: AnyView(item.view())) {
-      Text(item.displayName)
+    NavigationLink(destination: AnyView(item.view()).onAppear {
+      if item == .whatsNew {
+        let currentBuild = Int(AppDelegate.buildNumber) ?? 0
+        UserDefaults.standard.set(currentBuild, forKey: Self.lastViewedBuildKey)
+      }
+    }) {
+      HStack {
+        Text(item.displayName)
+        if item == .whatsNew && hasUnseenReleaseNotes {
+          Spacer()
+          Text("NEW")
+            .font(.caption2.weight(.bold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.red)
+            .clipShape(Capsule())
+        }
+      }
     }
   }
 
