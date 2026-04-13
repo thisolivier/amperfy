@@ -252,7 +252,8 @@ class PlayerControlView: UIView {
 
   func refreshPlayer() {
     let controlTint: UIColor = ThemeStore.shared.dynamicTint ?? .label
-    let secondaryColor: UIColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6) ?? .secondaryLabel
+    let secondaryColor: UIColor = ThemeStore.shared.dynamicText?
+      .withAlphaComponent(0.6) ?? .secondaryLabel
     playButton.imageView?.tintColor = controlTint
     previousButton.tintColor = controlTint
     nextButton.tintColor = controlTint

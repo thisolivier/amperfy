@@ -722,14 +722,26 @@ class EntityPreviewActionBuilder {
 
     if needsSync {
       let librarySyncer = appDelegate.getMeta(account.info).librarySyncer
-      for playlist in unsyncedPlaylists {
-        do {
-          try await librarySyncer.syncDown(playlist: playlist)
-          tracker.markSynced(playlist.id)
-        } catch {
-          // Skip failed playlists — they'll be retried on next tap.
+      let syncTask = Task { @MainActor in
+        for playlist in unsyncedPlaylists {
+          do {
+            try Task.checkCancellation()
+            try await librarySyncer.syncDown(playlist: playlist)
+            tracker.markSynced(playlist.id)
+          } catch is CancellationError {
+            break
+          } catch {
+            // Skip failed playlists — they'll be retried on next tap.
+          }
         }
       }
+      // 30-second timeout to prevent infinite spinner
+      let timeoutTask = Task {
+        try await Task.sleep(nanoseconds: 30_000_000_000)
+        syncTask.cancel()
+      }
+      await syncTask.value
+      timeoutTask.cancel()
     }
 
     let context = appDelegate.storage.main.context

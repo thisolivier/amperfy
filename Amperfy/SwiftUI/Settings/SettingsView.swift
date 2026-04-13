@@ -63,7 +63,7 @@ struct SettingsView: View {
     }) {
       HStack {
         Text(item.displayName)
-        if item == .whatsNew && hasUnseenReleaseNotes {
+        if item == .whatsNew, hasUnseenReleaseNotes {
           Spacer()
           Text("NEW")
             .font(.caption2.weight(.bold))

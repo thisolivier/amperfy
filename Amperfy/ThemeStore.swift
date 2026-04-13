@@ -271,7 +271,11 @@ extension UIFont {
       return UIFont.preferredFont(forTextStyle: style)
     }
     let systemFont = UIFont.preferredFont(forTextStyle: style)
-    guard let customFont = UIFont(name: family, size: systemFont.pointSize) else {
+    // UIFont(name:) needs a specific font name, not a family name.
+    // Look up the first available font name for this family.
+    guard let fontName = UIFont.fontNames(forFamilyName: family).first,
+          let customFont = UIFont(name: fontName, size: systemFont.pointSize)
+    else {
       return systemFont
     }
     return UIFontMetrics(forTextStyle: style).scaledFont(for: customFont)

@@ -58,7 +58,7 @@ class PlaylistMembershipVC: UITableViewController {
 
   func updateWithPlaylists(_ playlists: [Playlist]) {
     self.playlists = playlists
-    self.isLoading = false
+    isLoading = false
     tableView.reloadData()
     updateContentState()
   }

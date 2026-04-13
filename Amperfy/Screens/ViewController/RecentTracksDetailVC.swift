@@ -103,6 +103,7 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
   private let modeControl = UISegmentedControl(items: ["Top N", "Last M days"])
   private let stepperLabel = UILabel()
   private let stepper = UIStepper()
+  private var cachedHeaderView: UIView?
 
   // MARK: - Init
 
@@ -181,6 +182,14 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     }
     songs = songMOs.map { Song(managedObject: $0) }
     tableView.reloadData()
+    if songs.isEmpty {
+      var emptyConfig = UIContentUnavailableConfiguration.empty()
+      emptyConfig.text = "No recently added singles or EPs"
+      emptyConfig.secondaryText = "Tracks from albums with fewer than 5 songs will appear here"
+      contentUnavailableConfiguration = emptyConfig
+    } else {
+      contentUnavailableConfiguration = nil
+    }
   }
 
   // MARK: - Mode / stepper handlers
@@ -296,6 +305,8 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     viewForHeaderInSection section: Int
   )
     -> UIView? {
+    if let cached = cachedHeaderView { return cached }
+
     let headerView = UIView()
     headerView.backgroundColor = .backgroundColor
 
@@ -320,6 +331,7 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
       ),
     ])
 
+    cachedHeaderView = headerView
     return headerView
   }
 

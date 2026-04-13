@@ -153,11 +153,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UITableViewCell.appearance().backgroundColor = nil
       UICollectionView.appearance().backgroundColor = nil
       UISearchBar.appearance().tintColor = nil
-      // Reset text color proxies
+      // Reset text color and font proxies
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewCell.self]).textColor = nil
       UILabel.appearance(whenContainedInInstancesOf: [UICollectionViewCell.self]).textColor = nil
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
         .textColor = nil
+      UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
+        .font = nil
       // Reset window-level overrides
       let windowScene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
       for window in windowScene.flatMap({ $0.windows }) {
@@ -173,8 +175,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UICollectionView.appearance().backgroundColor = backgroundColor
     }
     if let textColor = theme.dynamicText {
-      UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: textColor]
-      UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: textColor]
+      var titleAttributes: [NSAttributedString.Key: Any] = [.foregroundColor: textColor]
+      var largeTitleAttributes: [NSAttributedString.Key: Any] = [.foregroundColor: textColor]
+      // Apply custom font to nav bar titles and large titles
+      if theme.fontFamily != nil {
+        titleAttributes[.font] = UIFont.themed(style: .headline)
+        largeTitleAttributes[.font] = UIFont.themed(style: .largeTitle)
+      }
+      UINavigationBar.appearance().titleTextAttributes = titleAttributes
+      UINavigationBar.appearance().largeTitleTextAttributes = largeTitleAttributes
       UITabBar.appearance().unselectedItemTintColor = textColor.withAlphaComponent(0.5)
       // Theme cell body text and section headers
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewCell.self]).textColor = textColor
@@ -182,6 +191,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         .textColor = textColor
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
         .textColor = textColor
+      // Apply custom font to section headers
+      if theme.fontFamily != nil {
+        UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
+          .font = UIFont.themed(style: .headline)
+      }
+    } else if theme.fontFamily != nil {
+      // Font-only (no custom text color) — still apply font to nav bar and headers
+      UINavigationBar.appearance().titleTextAttributes = [
+        .font: UIFont.themed(style: .headline),
+      ]
+      UINavigationBar.appearance().largeTitleTextAttributes = [
+        .font: UIFont.themed(style: .largeTitle),
+      ]
+      UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
+        .font = UIFont.themed(style: .headline)
     }
     if let tintColor = theme.dynamicTint {
       UINavigationBar.appearance().tintColor = tintColor
@@ -386,13 +410,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       isAlreadyRegisteredToPlayer = true
       player.addNotifier(notifier: self)
     }
-    // Re-enabled for diagnostic build 27 (adjacency only, theme disabled)
-    let bgContext = storage.newBackgroundContext()
-    DispatchQueue.global(qos: .utility).async {
-      TrackAdjacencyStore.shared.deleteFromDisk()
-      TrackAdjacencyStore.shared.compute(in: bgContext)
-      try? TrackAdjacencyStore.shared.saveToDisk()
-    }
+    // Adjacency recomputation is now handled by BackgroundLibrarySyncer
+    // after playlist items are synced — no need to eagerly recompute here.
   }
 
   func startManagerForNormalOperation() {

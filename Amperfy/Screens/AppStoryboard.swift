@@ -66,7 +66,11 @@ enum AppStoryboard: String {
       vc.displayFilter = category
       return vc
     case .grid:
-      let vc = AlbumsCollectionVC(collectionViewLayout: .verticalLayout, account: account, wholeAlbumsOnly: wholeAlbumsOnly)
+      let vc = AlbumsCollectionVC(
+        collectionViewLayout: .verticalLayout,
+        account: account,
+        wholeAlbumsOnly: wholeAlbumsOnly
+      )
       vc.displayFilter = category
       return vc
     }

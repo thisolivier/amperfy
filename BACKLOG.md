@@ -1136,6 +1136,12 @@ Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
 | Albums split + ship.sh | 599aea0e | 17 | 2026-04-12 | Separate "Albums" (unfiltered) and "Complete Albums" in Library tab. Release notes process hardening (ship.sh stale-notes warning). |
 | Albums freeze fix | 5376225e | 18 | 2026-04-12 | Complete Albums migration for existing users (migrateCompleteAlbums). Fixed freeze on unfiltered Albums for large libraries. |
 | Theme coverage | a9b365b6-e483-4ddd-8dbf-2068288a4168 | 19 | 2026-04-12 | 6 theme coverage fixes: UITableView background, cell body text, mini-player tint, full player tint (was text), SF Symbol folder icons, section headers + disclosure chevrons. |
+| Theme round 2 + In Playlists fix | 4700b35a-ff41-4ca5-bff8-b2998a507ea7 | 20 | 2026-04-12 | Theme coverage round 2: all screens themed (Library labels, Albums grid cells, song artist subtitles, backgrounds everywhere incl. album detail header + empty states, tint on tab bar/chevrons/buttons). UIColor.backgroundColor extension covers 32+ VCs. "In Playlists" filters out Navidrome auto-generated playlists with empty names. |
+| Feature sweep polish | c12727f1-dfa5-49f5-afc2-80f987b547db | 21 | 2026-04-12 | "NEW" badge on What's New row. "Show in Playlists" loading spinner + rename. Share Song temp file cleanup. Selection count in playlist folders edit mode action bar. |
+| Theme lifecycle + In Playlists | 6f48e2d3-e3c8-4f52-96a2-f343045f3031 | 22 | 2026-04-12 | Theme lifecycle fix: Library + Home tabs update colors on runtime toggle without restart. "In Playlists" filters empty-name playlists. |
+| PR 12 Phase 1+2 | d0e1983c-915f-4974-b9e5-8f27b41cace5 | 23 | 2026-04-12 | Track Adjacency Engine + "Related Tracks" UI. Scoring model (±1=3.0, ±2=2.0, co-membership=0.5, album=1.5), decomposed scores, background compute on launch, JSON persistence, 20 tests. "Related Tracks" in song context menu with top 20, playable rows, source info. |
+| PR 12 bugfixes | ccfd0a98-08d5-491c-8ef9-ed6c919f8b48 | 24 | 2026-04-12 | Navigation trap fix (originRootView), source info display ("In N playlists nearby"), first-launch timing fixes (isLibrarySynced guard, empty-data rejection, bgContext, playlist sync invalidation). Known: first install requires browsing a playlist before Related Tracks populates. |
+| HOTFIX: launch crash | da4af8d9-a061-45b3-b132-0e0a539dd626 | 25 | 2026-04-12 | P0: computeTrackAdjacencyInBackground used main context on background queue — performAndWait bounced O(n²) work to main thread, watchdog killed app on large libraries. Fixed: newBackgroundContext(). |
 
 ### Theme coverage round 2 (PR 11 follow-up)
 
@@ -1148,6 +1154,12 @@ UIAppearance proxies landed in build 19 but didn't reach the actual cell labels 
 4. Any other custom section headers on Home tab (e.g., "Random Albums", "Favourite Albums")
 
 **Approach:** UIAppearance proxies for UILabel-in-UITableViewCell are too broad and may not reach custom cell subclasses. The implementer should find the actual cell classes used (likely `PlayableTableCell`, `GenericTableCell`, `AlbumCollectionCell` or similar) and apply theme colors directly in their configure/update methods.
+
+---
+
+### Bug: Font selection doesn't apply (low priority)
+
+Font picker in Custom Theme settings allows selecting a font family but it doesn't visibly change anything. **Priority target when fixed:** page titles (UINavigationBar large titles) and section headings ("Random Albums", "Recently Played Albums", etc.) — NOT body text. Reported by Olivier 2026-04-12.
 
 ---
 
@@ -1175,17 +1187,24 @@ Scores are **summed across all playlists and albums.** If Track A and Track B ar
 
 **Computation:** Run once on launch (or on playlist change detection). Cache the result. The input is all `PlaylistItemMO` entries — iterate each playlist's ordered items, compute pairwise scores within the ±2 window, accumulate into a dictionary. For a library with ~50 playlists × ~30 tracks average = ~1500 items, this is O(n × window_size) per playlist — fast enough for a one-time compute.
 
-**Storage:** `TrackAdjacencyStore` — in-memory dictionary `[SongPair: Float]` where `SongPair` is a hashable pair of song IDs (order-independent). Optionally persist to a JSON file in the app's documents directory so it survives backgrounding without recompute. Invalidated when playlist content changes (observe `PlaylistMO` save notifications).
+**Storage:** `TrackAdjacencyStore` — in-memory dictionary `[SongPair: TrackScore]` where `SongPair` is a hashable pair of song IDs (order-independent) and `TrackScore` is a struct with **decomposed fields**: `adjacency: Float`, `coMembership: Float`, `album: Float`. Total score is the sum. Storing decomposed scores costs almost nothing and prevents a rework when Phase 4 needs adjacency-only ranking. Optionally persist to a JSON file in the app's documents directory so it survives backgrounding without recompute. Invalidated when playlist content changes (observe `PlaylistMO` save notifications).
 
-**Designer review required:** The designer should review the scoring weights (±1=3.0, ±2=2.0, co-membership=0.5, album=1.5) and validate against real playlist data. These weights are Olivier's preferred values (updated 2026-04-12). The designer should consider whether the model needs a decay factor for very long playlists (position 1 vs position 100 in a 200-track playlist) and whether "Continue the Vibe" should use the full similarity score (co-membership + adjacency) or adjacency-only.
+**Designer review:** ✅ Completed 2026-04-12. See `DESIGN_REVIEW_PR12_ADJACENCY.md`. Key decisions:
+- **Weights approved** — 0.5/1.5/3.0/2.0 produce correct orderings. Ship as-is.
+- **No decay factor for Phase 1** — adjacency weights already dominate; add length threshold later only if dump playlists pollute results.
+- **Decomposed scores** — store adjacency/coMembership/album separately (see Storage above).
+- **Ship Phase 1 + Phase 2 together** — Phase 1 alone has no user-visible output.
+- **Exclude smart/auto-generated playlists** from scoring (don't reflect curatorial intent).
+- **Deduplicate tracks per playlist** before scoring (prevent inflation).
+- **Filter to songs only** (exclude podcast episodes).
 
-**Tests:** `TrackAdjacencyScoreTest` — given a known playlist arrangement, verify score computation for adjacent, ±2, distant, and cross-playlist pairs. Verify album bonus. Verify symmetry (A→B == B→A).
+**Tests:** `TrackAdjacencyScoreTest` — 11 unit tests covering all score combinations + symmetry + edge cases, 7 integration tests covering empty library + decomposition + top-N + persistence, 2 performance tests. See design review for full list.
 
 ### Phase 2 — "More Like This" (uses Phase 1)
 
 **Feature:** In the song detail view (or context menu), show "Related Tracks" — the top N tracks by adjacency score relative to the current track. This surfaces tracks that playlist curators consistently place near this one.
 
-**UI:** New section in the song detail view, or a new action in the `...` menu that pushes a list. Show track name, artist, and the source info ("appears near this track in N playlists").
+**UI:** "Related Tracks" action in the song `...` context menu, pushing a dedicated list view. Show top 20 tracks with human-readable source info ("In N playlists near [seed]"). Minimum data threshold: only show the action when a track has at least one pair scoring >= 2.0.
 
 ### Phase 3 — Playlist DNA / Clustering (uses Phase 1)
 
@@ -1202,7 +1221,9 @@ Scores are **summed across all playlists and albums.** If Track A and Track B ar
 
 **Algorithm:** Take the last 3-5 tracks from the finished playlist. For each, look up top-scoring adjacent tracks. Filter out tracks already played in this session. Rank by combined score. Queue the top N (configurable, default 10).
 
-**Important:** Uses the full similarity score (co-membership + adjacency + album), but the adjacency component naturally dominates for the "continue" use case because the seed tracks are the final few played — their immediate neighbors in other playlists are the strongest continuation signal. Co-membership alone would produce poor suggestions for playlists that vary wildly in genre, but adjacency captures local mood. The designer should consider whether "Continue the Vibe" should filter to adjacency-only (±1/±2 scores) or use the full similarity score.
+**Important:** Uses the full similarity score for candidate pool (wider coverage), but **sorts by adjacency score first** with full score as tiebreaker. This gives sequential mood flow from adjacency, with co-membership as fallback for tracks with sparse data. The decomposed `TrackScore` struct makes this trivial.
+
+**Opt-in:** Settings toggle, OFF by default. Per designer review 2026-04-12.
 
 ### Cross-cutting notes
 

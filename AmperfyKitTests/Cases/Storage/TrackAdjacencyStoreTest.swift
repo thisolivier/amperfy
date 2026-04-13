@@ -132,23 +132,22 @@ class TrackAdjacencyScoreTest: XCTestCase {
     XCTAssertEqual(score!.total, 0.5, accuracy: 0.001)
   }
 
-  // MARK: - Test 4: Same album, no shared playlist → 1.5
+  // MARK: - Test 4: Same album, no shared playlist → nil
+
+  // Album bonus only applies to pairs that already have playlist co-membership.
+  // Songs sharing an album but never co-appearing in any playlist get no score.
 
   func testSameAlbumNoSharedPlaylist() {
     let album = makeAlbum(id: "t4-album")
     let songA = makeSong(id: "t4-a", album: album)
     let songB = makeSong(id: "t4-b", album: album)
-    // Put them in separate playlists so album bonus applies but no co-membership
+    // Put them in separate playlists — no co-membership between t4-a and t4-b
     let otherSong = makeSong(id: "t4-other")
     makePlaylist(id: "t4-pl1", name: "Playlist A", songs: [songA, otherSong])
     makePlaylist(id: "t4-pl2", name: "Playlist B", songs: [songB, otherSong])
 
     let score = computeAndGetScore("t4-a", "t4-b")
-    XCTAssertNotNil(score, "Album-only pair should still produce a score")
-    XCTAssertEqual(score!.album, 1.5, accuracy: 0.001)
-    XCTAssertEqual(score!.coMembership, 0.0, accuracy: 0.001)
-    XCTAssertEqual(score!.adjacency, 0.0, accuracy: 0.001)
-    XCTAssertEqual(score!.total, 1.5, accuracy: 0.001)
+    XCTAssertNil(score, "Album-only pair with no playlist co-membership should have no score")
   }
 
   // MARK: - Test 5: ±1 in playlist AND same album → 5.0

@@ -52,12 +52,23 @@ class RelatedTracksVC: UITableViewController {
     )
     tableView.register(nibName: PlayableTableCell.typeName)
     tableView.rowHeight = PlayableTableCell.rowHeight
-    loadRelatedTracks()
+    showLoadingState()
+    Task { @MainActor in
+      await loadRelatedTracks()
+    }
   }
 
-  private func loadRelatedTracks() {
+  private func showLoadingState() {
+    var loadingConfig = UIContentUnavailableConfiguration.loading()
+    loadingConfig.text = "Finding related tracks\u{2026}"
+    contentUnavailableConfiguration = loadingConfig
+  }
+
+  private func loadRelatedTracks() async {
     let store = TrackAdjacencyStore.shared
+    let seedSongId = seedSongId
     let context = appDelegate.storage.main.context
+
     let topResults = store.topRelated(for: seedSongId, limit: 20)
 
     var songs: [AbstractPlayable] = []
@@ -103,8 +114,12 @@ class RelatedTracksVC: UITableViewController {
     if relatedSongs.isEmpty {
       var emptyConfig = UIContentUnavailableConfiguration.empty()
       emptyConfig.text = "No related tracks found"
-      emptyConfig.secondaryText =
-        "Play songs from your playlists to build recommendations"
+      if TrackAdjacencyStore.shared.isStale {
+        emptyConfig.secondaryText = "Building recommendations\u{2026} check back shortly"
+      } else {
+        emptyConfig.secondaryText =
+          "Songs that appear together in your playlists will show up here"
+      }
       contentUnavailableConfiguration = emptyConfig
     } else {
       contentUnavailableConfiguration = nil

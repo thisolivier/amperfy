@@ -33,6 +33,7 @@ class CommonCollectionSectionHeader: UICollectionReusableView {
   func display(title: String?) {
     titleLabel.text = title
     titleLabel.isHidden = (title == nil)
+    titleLabel.font = UIFont.themed(style: .headline)
   }
 
   func displayPlayHeader(configuration: PlayShuffleInfoConfiguration) {

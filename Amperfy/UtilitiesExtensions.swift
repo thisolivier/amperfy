@@ -67,10 +67,12 @@ extension Color {
     if let custom = ThemeStore.shared.dynamicText { return Color(custom) }
     return Color(UIColor.label)
   }
+
   static var secondaryLabel: Color {
     if let custom = ThemeStore.shared.dynamicText { return Color(custom.withAlphaComponent(0.6)) }
     return Color(UIColor.secondaryLabel)
   }
+
   static let tertiaryLabel = Color(UIColor.tertiaryLabel)
   static let quaternaryLabel = Color(UIColor.quaternaryLabel)
 
@@ -80,12 +82,14 @@ extension Color {
     if let custom = ThemeStore.shared.dynamicBackground { return Color(custom) }
     return Color(UIColor.systemBackground)
   }
+
   static var secondarySystemBackground: Color {
     if let custom = ThemeStore.shared.dynamicBackground {
       return Color(custom.withAlphaComponent(0.9))
     }
     return Color(UIColor.secondarySystemBackground)
   }
+
   static let tertiarySystemBackground = Color(UIColor.tertiarySystemBackground)
 
   // MARK: - Fill Colors
@@ -122,6 +126,7 @@ extension Color {
     if let custom = ThemeStore.shared.dynamicTint { return Color(custom) }
     return Color(UIColor.systemBlue)
   }
+
   static let systemPurple = Color(UIColor.systemPurple)
   static let systemGreen = Color(UIColor.systemGreen)
   static let systemYellow = Color(UIColor.systemYellow)

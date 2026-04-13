@@ -53,7 +53,7 @@ public struct SongPair: Hashable, Codable, Equatable {
 // MARK: - SimilarityScore
 
 /// Decomposed score with separate adjacency, co-membership, and album components.
-public struct SimilarityScore: Codable, Equatable {
+public struct SimilarityScore: Codable, Equatable, Sendable {
   public var adjacency: Float = 0
   public var coMembership: Float = 0
   public var album: Float = 0
@@ -78,7 +78,7 @@ public class TrackAdjacencyStore: @unchecked Sendable {
   public static let adjacencyWeight2: Float = 2.0
   public static let coMembershipWeight: Float = 0.5
   public static let albumWeight: Float = 1.5
-  public static let minimumThreshold: Float = 2.0
+  public static let minimumThreshold: Float = 1.0
 
   /// Shared singleton for app-wide use.
   public static let shared = TrackAdjacencyStore()
@@ -344,18 +344,17 @@ public class TrackAdjacencyStore: @unchecked Sendable {
       albumToSongIds[albumMO.objectID, default: []].append(song.id)
     }
 
-    // For each album with 2+ songs, apply bonus to all pairs
+    // For each album with 2+ songs, apply bonus to all pairs.
+    // Note: allSongIds is built from existing scores.keys, so only songs that
+    // already co-appear in playlists are considered. Album-only pairs (no playlist
+    // co-membership) do not receive a score — this is intentional to avoid
+    // flooding the store with every possible album-mate pair.
     for (_, songIdsInAlbum) in albumToSongIds where songIdsInAlbum.count >= 2 {
       for indexI in 0 ..< songIdsInAlbum.count {
         for indexJ in (indexI + 1) ..< songIdsInAlbum.count {
           let pair = SongPair(songIdsInAlbum[indexI], songIdsInAlbum[indexJ])
-          if scores[pair] != nil {
-            // Only apply album bonus to pairs that already exist (from playlist co-membership)
-            // UNLESS they share an album — the spec says album bonus applies even without playlists
-          }
-          var existingScore = scores[pair] ?? SimilarityScore()
-          existingScore.album = Self.albumWeight
-          scores[pair] = existingScore
+          guard scores[pair] != nil else { continue }
+          scores[pair]!.album = Self.albumWeight
         }
       }
     }

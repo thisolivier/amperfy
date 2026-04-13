@@ -37,6 +37,64 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 32,
+      date: "2026-04-13",
+      title: "Build 32 — Memory crash hotfix",
+      whatsNew: [
+        "CRITICAL: Fixed Jetsam memory kill (~2.1 GB) that crashed the app within 20s of launch",
+        "Temporarily disabled background playlist item sync — root cause of unbounded memory growth",
+        "Added memory diagnostics instrumentation for future profiling",
+        "Removed unnecessary Task.detached wrapper in Related Tracks",
+      ],
+      testingFocus: [
+        "Launch the app — should stay open indefinitely without crashing",
+        "Browse library, play music, check all tabs work normally",
+        "Related Tracks will show 'no related tracks' until playlist sync is re-enabled with batching",
+      ]
+    ),
+    ReleaseNote(
+      id: 30,
+      date: "2026-04-13",
+      title: "Build 30 — Font fix + design sweep polish",
+      whatsNew: [
+        "Fixed: Custom font selection now actually applies to nav bar titles, large titles, and section headers",
+        "Fixed: Font picker preview shows the correct font (was showing system font for most entries)",
+        "Related Tracks loads asynchronously with a spinner (no more UI freeze on large libraries)",
+        "Show in Playlists has a 30-second timeout (no more infinite spinner if server is slow)",
+        "Empty state added for Recently Added Tracks when no qualifying songs exist",
+        "Fixed constraint accumulation in Recently Added Tracks header on scroll",
+        "Cleaned up dead code in Track Adjacency Engine album bonus logic",
+        "Removed diagnostic builds (26, 27) from release notes",
+      ],
+      testingFocus: [
+        "Enable Custom Theme, pick a font — nav bar titles and section headers should change",
+        "Font picker: each row should preview in its actual font, not system font",
+        "Open Related Tracks on a song in many playlists — should show spinner, then results (no freeze)",
+        "Show in Playlists with airplane mode — should timeout after ~30s, not spin forever",
+        "Recently Added Tracks with no qualifying songs — should show empty state message",
+        "Scroll the Recently Added Tracks header off and on screen repeatedly — no layout glitches",
+      ]
+    ),
+    ReleaseNote(
+      id: 29,
+      date: "2026-04-12",
+      title: "Build 29 — Auto-fetch playlists + stale score fix",
+      whatsNew: [
+        "Playlist items are now automatically fetched in the background on launch",
+        "Related Tracks works without manually browsing each playlist first",
+        "Stale adjacency scores remain readable during background recomputation (no blank window)",
+        "Adjacency scores persist across launches and work offline",
+        "Background sync: albums first, then playlist items, then adjacency recomputation",
+      ],
+      testingFocus: [
+        "Fresh install: launch app, wait for background sync — Related Tracks should populate automatically",
+        "Kill and relaunch offline — Related Tracks should still show results from cached data",
+        "While background sync is running, open Related Tracks — should show stale data, not empty",
+        "After sync completes, Related Tracks should reflect updated playlist data",
+        "Verify no UI freezes during background playlist sync",
+      ]
+    ),
+    ReleaseNote(
       id: 28,
       date: "2026-04-12",
       title: "Build 28 — Launch crash fix",
@@ -55,42 +113,8 @@ enum ReleaseNotes {
         "Switch accounts — no crash during theme re-application",
       ]
     ),
-    ReleaseNote(
-      id: 27,
-      date: "2026-04-12",
-      title: "Build 27 — DIAGNOSTIC: Adjacency only",
-      whatsNew: [
-        "DIAGNOSTIC BUILD: Track Adjacency Engine ONLY — Custom theme fully disabled",
-        "ThemeStore.isEnabled forced to false — all theme colors use system defaults",
-        "Track adjacency computation active on launch and after sync",
-        "\"Related Tracks\" menu item active",
-        "If this build crashes, the cause is the ADJACENCY ENGINE",
-      ],
-      testingFocus: [
-        "Launch the app — does it crash within 30 seconds?",
-        "Navigate all tabs — is the app stable?",
-        "Custom theme toggle should have no effect (disabled at code level)",
-        "Compare with Build 26 (theme only) to isolate the crash source",
-      ]
-    ),
-    ReleaseNote(
-      id: 26,
-      date: "2026-04-12",
-      title: "Build 26 — DIAGNOSTIC: Theme only",
-      whatsNew: [
-        "DIAGNOSTIC BUILD: Theme changes ONLY — Track Adjacency Engine fully disabled",
-        "Custom theme, lifecycle observers, and color helpers are all active",
-        "Track adjacency computation disabled on launch and after sync",
-        "\"Related Tracks\" menu item hidden",
-        "If this build crashes, the cause is the THEME changes",
-      ],
-      testingFocus: [
-        "Launch the app — does it crash within 30 seconds?",
-        "Navigate all tabs — is the app stable?",
-        "Toggle custom theme on/off — any crash?",
-        "Compare with Build 27 (adjacency only) to isolate the crash source",
-      ]
-    ),
+    // Builds 26 & 27 were diagnostic-only builds (theme/adjacency isolation)
+    // — removed from user-facing release notes.
     ReleaseNote(
       id: 25,
       date: "2026-04-12",

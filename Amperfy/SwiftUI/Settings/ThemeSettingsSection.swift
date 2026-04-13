@@ -25,26 +25,64 @@ import UIKit
 // MARK: - ThemeSettingsSection
 
 struct ThemeSettingsSection: View {
-  @State private var isEnabled: Bool = ThemeStore.shared.isEnabled
-  @State private var lightBackground: Color = Self.loadColor(\.lightBackground, fallbackStyle: .light, fallbackSystem: .systemBackground)
-  @State private var lightText: Color = Self.loadColor(\.lightText, fallbackStyle: .light, fallbackSystem: .label)
-  @State private var lightTint: Color = Self.loadColor(\.lightTint, fallbackStyle: .light, fallbackSystem: .systemBlue)
-  @State private var darkBackground: Color = Self.loadColor(\.darkBackground, fallbackStyle: .dark, fallbackSystem: .systemBackground)
-  @State private var darkText: Color = Self.loadColor(\.darkText, fallbackStyle: .dark, fallbackSystem: .label)
-  @State private var darkTint: Color = Self.loadColor(\.darkTint, fallbackStyle: .dark, fallbackSystem: .systemBlue)
-  @State private var selectedFontFamily: String = ThemeStore.shared.fontFamily ?? "System Default"
-  @State private var showResetAlert = false
-  @State private var contrastWarning: String?
+  @State
+  private var isEnabled: Bool = ThemeStore.shared.isEnabled
+  @State
+  private var lightBackground: Color = Self.loadColor(
+    \.lightBackground,
+    fallbackStyle: .light,
+    fallbackSystem: .systemBackground
+  )
+  @State
+  private var lightText: Color = Self.loadColor(
+    \.lightText,
+    fallbackStyle: .light,
+    fallbackSystem: .label
+  )
+  @State
+  private var lightTint: Color = Self.loadColor(
+    \.lightTint,
+    fallbackStyle: .light,
+    fallbackSystem: .systemBlue
+  )
+  @State
+  private var darkBackground: Color = Self.loadColor(
+    \.darkBackground,
+    fallbackStyle: .dark,
+    fallbackSystem: .systemBackground
+  )
+  @State
+  private var darkText: Color = Self.loadColor(
+    \.darkText,
+    fallbackStyle: .dark,
+    fallbackSystem: .label
+  )
+  @State
+  private var darkTint: Color = Self.loadColor(
+    \.darkTint,
+    fallbackStyle: .dark,
+    fallbackSystem: .systemBlue
+  )
+  @State
+  private var selectedFontFamily: String = ThemeStore.shared.fontFamily ?? "System Default"
+  @State
+  private var showResetAlert = false
+  @State
+  private var contrastWarning: String?
 
   private static func loadColor(
     _ keyPath: KeyPath<ThemeStore, UIColor?>,
     fallbackStyle: UIUserInterfaceStyle,
     fallbackSystem: UIColor
-  ) -> Color {
+  )
+    -> Color {
     if let stored = ThemeStore.shared[keyPath: keyPath] {
       return Color(stored)
     }
-    return Color(fallbackSystem.resolvedColor(with: UITraitCollection(userInterfaceStyle: fallbackStyle)))
+    return Color(
+      fallbackSystem
+        .resolvedColor(with: UITraitCollection(userInterfaceStyle: fallbackStyle))
+    )
   }
 
   var body: some View {
@@ -145,8 +183,9 @@ struct ThemeSettingsSection: View {
   private func colorRow(
     title: String,
     color: Binding<Color>,
-    onChanged: @escaping (UIColor) -> Void
-  ) -> some View {
+    onChanged: @escaping (UIColor) -> ()
+  )
+    -> some View {
     ColorPicker(selection: color, supportsOpacity: false) {
       Text(title)
     }
@@ -165,10 +204,18 @@ struct ThemeSettingsSection: View {
   }
 
   private func reloadColorsFromStore() {
-    lightBackground = Self.loadColor(\.lightBackground, fallbackStyle: .light, fallbackSystem: .systemBackground)
+    lightBackground = Self.loadColor(
+      \.lightBackground,
+      fallbackStyle: .light,
+      fallbackSystem: .systemBackground
+    )
     lightText = Self.loadColor(\.lightText, fallbackStyle: .light, fallbackSystem: .label)
     lightTint = Self.loadColor(\.lightTint, fallbackStyle: .light, fallbackSystem: .systemBlue)
-    darkBackground = Self.loadColor(\.darkBackground, fallbackStyle: .dark, fallbackSystem: .systemBackground)
+    darkBackground = Self.loadColor(
+      \.darkBackground,
+      fallbackStyle: .dark,
+      fallbackSystem: .systemBackground
+    )
     darkText = Self.loadColor(\.darkText, fallbackStyle: .dark, fallbackSystem: .label)
     darkTint = Self.loadColor(\.darkTint, fallbackStyle: .dark, fallbackSystem: .systemBlue)
   }
@@ -207,8 +254,10 @@ struct ThemeSettingsSection: View {
 // MARK: - FontPickerView
 
 struct FontPickerView: View {
-  @Binding var selectedFamily: String
-  @Environment(\.dismiss) private var dismiss
+  @Binding
+  var selectedFamily: String
+  @Environment(\.dismiss)
+  private var dismiss
 
   private var fontFamilies: [String] {
     ["System Default"] + UIFont.familyNames.sorted {
@@ -224,9 +273,14 @@ struct FontPickerView: View {
       } label: {
         HStack {
           Text(family)
-            .font(family == "System Default"
-              ? .body
-              : Font.custom(family, size: UIFont.preferredFont(forTextStyle: .body).pointSize))
+            .font(
+              family == "System Default"
+                ? .body
+                : Font.custom(
+                  UIFont.fontNames(forFamilyName: family).first ?? family,
+                  size: UIFont.preferredFont(forTextStyle: .body).pointSize
+                )
+            )
           Spacer()
           if family == selectedFamily {
             Image(systemName: "checkmark")

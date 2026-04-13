@@ -19,6 +19,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+import CoreData
 import Foundation
 import os.log
 
@@ -53,6 +54,8 @@ public final class BackgroundLibrarySyncer: AbstractBackgroundLibrarySyncer, Sen
   @MainActor
   private let autoDownloadLibrarySyncer: AutoDownloadLibrarySyncer
   private let eventLogger: EventLogger
+  @MainActor
+  private let account: Account
 
   private let log = OSLog(subsystem: "Amperfy", category: "BackgroundLibrarySyncer")
   private let isRunning = Atomic<Bool>(wrappedValue: false)
@@ -69,7 +72,8 @@ public final class BackgroundLibrarySyncer: AbstractBackgroundLibrarySyncer, Sen
     librarySyncer: LibrarySyncer,
     playableDownloadManager: DownloadManageable,
     autoDownloadLibrarySyncer: AutoDownloadLibrarySyncer,
-    eventLogger: EventLogger
+    eventLogger: EventLogger,
+    account: Account
   ) {
     self.storage = storage
     self.mainStorage = mainStorage
@@ -79,6 +83,7 @@ public final class BackgroundLibrarySyncer: AbstractBackgroundLibrarySyncer, Sen
     self.playableDownloadManager = playableDownloadManager
     self.autoDownloadLibrarySyncer = autoDownloadLibrarySyncer
     self.eventLogger = eventLogger
+    self.account = account
     self.taskQueue = OperationQueue()
     taskQueue.maxConcurrentOperationCount = 1
   }
@@ -102,6 +107,7 @@ public final class BackgroundLibrarySyncer: AbstractBackgroundLibrarySyncer, Sen
   private func syncAlbumSongsInBackground() {
     backgroundTask.wrappedValue = Task {
       os_log("start", log: self.log, type: .info)
+      MemoryReporter.logMemory(label: "sync start")
 
       if self.isRunning.wrappedValue, self.settings.user.isOnlineMode,
          self.networkMonitor.isConnectedToNetwork {
@@ -142,8 +148,73 @@ public final class BackgroundLibrarySyncer: AbstractBackgroundLibrarySyncer, Sen
         }
       }
 
-      addOperationsEndMessage()
+      MemoryReporter.logMemory(label: "after album song sync")
+
+      // Phase 2: Playlist item sync + adjacency recomputation DISABLED (Build 30 hotfix)
+      // These operations accumulate Core Data objects in memory (~2 GB on large libraries)
+      // causing Jetsam kills on physical devices. Will be re-enabled with batched/reset approach.
+      // await self.queuePlaylistItemSyncs()
+
+      self.addOperationsEndMessage()
     }
+  }
+
+  private func queuePlaylistItemSyncs() async {
+    // Fetch playlist data on the main actor (required for mainStorage access),
+    // but capture only the lightweight IDs/objectIDs so we release the main thread quickly.
+    let playlistInfo: [(id: String, objectID: NSManagedObjectID)] = await MainActor.run {
+      let tracker = PlaylistItemsSyncTracker.shared
+      let allPlaylists = mainStorage.library.getPlaylists(
+        for: account,
+        areSystemPlaylistsIncluded: false
+      )
+      let unsynced = allPlaylists.filter { !tracker.isSynced($0.id) }
+      os_log(
+        "Playlist item sync: %d unsynced of %d total",
+        log: self.log,
+        type: .info,
+        unsynced.count,
+        allPlaylists.count
+      )
+      return unsynced.map { (id: $0.id, objectID: $0.managedObject.objectID) }
+    }
+
+    guard !playlistInfo.isEmpty else { return }
+
+    let tracker = PlaylistItemsSyncTracker.shared
+    for info in playlistInfo {
+      let playlistId = info.id
+      let playlistObjectID = info.objectID
+      let asyncOperation = BackgroundSyncOperation {
+        guard !Task.isCancelled, self.isRunning.wrappedValue, self.settings.user.isOnlineMode,
+              self.networkMonitor.isConnectedToNetwork else { return }
+        let playlistMO = self.mainStorage.context.object(with: playlistObjectID) as! PlaylistMO
+        let playlistToSync = Playlist(library: self.mainStorage.library, managedObject: playlistMO)
+        do {
+          try await self.librarySyncer.syncDown(playlist: playlistToSync)
+          tracker.markSynced(playlistId)
+        } catch {
+          self.eventLogger.report(
+            topic: "Playlist Items Background Sync",
+            error: error,
+            displayPopup: false
+          )
+        }
+      }
+      taskQueue.addOperation(asyncOperation)
+    }
+
+    // After all playlist items are synced, recompute track adjacency on a background context
+    let adjacencyOperation = BackgroundSyncOperation {
+      guard self.isRunning.wrappedValue else { return }
+      os_log("Playlist item sync complete, recomputing track adjacency", log: self.log, type: .info)
+      let bgContext = await self.storage.persistentContainer.newBackgroundContext()
+      // compute() builds new scores in a local dict then swaps atomically,
+      // so stale scores remain readable throughout the computation.
+      TrackAdjacencyStore.shared.compute(in: bgContext)
+      try? TrackAdjacencyStore.shared.saveToDisk()
+    }
+    taskQueue.addOperation(adjacencyOperation)
   }
 
   func addOperationsEndMessage() {
