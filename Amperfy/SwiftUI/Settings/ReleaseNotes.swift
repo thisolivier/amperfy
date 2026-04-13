@@ -37,6 +37,25 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 28,
+      date: "2026-04-12",
+      title: "Build 28 — Launch crash fix",
+      whatsNew: [
+        "CRITICAL: Fixed launch crash caused by theme + adjacency engine interaction",
+        "Removed UIView.appearance().tintColor (interfered with system views)",
+        "Replaced unsafe window subview remove/re-add with safe setNeedsLayout",
+        "Tint color now applied via targeted proxies and window-level property",
+        "Both custom theme and Track Adjacency Engine re-enabled",
+      ],
+      testingFocus: [
+        "Launch the app — should not crash or freeze",
+        "Enable custom theme — verify tint color applies to nav bar, tab bar, buttons",
+        "Related Tracks should still work",
+        "Toggle theme on/off — no crash, colors update correctly",
+        "Switch accounts — no crash during theme re-application",
+      ]
+    ),
+    ReleaseNote(
       id: 27,
       date: "2026-04-12",
       title: "Build 27 — DIAGNOSTIC: Adjacency only",

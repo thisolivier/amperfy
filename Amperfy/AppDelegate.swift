@@ -153,7 +153,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UITableViewCell.appearance().backgroundColor = nil
       UICollectionView.appearance().backgroundColor = nil
       UISearchBar.appearance().tintColor = nil
-      UIView.appearance().tintColor = nil
       // Reset text color proxies
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewCell.self]).textColor = nil
       UILabel.appearance(whenContainedInInstancesOf: [UICollectionViewCell.self]).textColor = nil
@@ -188,7 +187,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UINavigationBar.appearance().tintColor = tintColor
       UITabBar.appearance().tintColor = tintColor
       UISearchBar.appearance().tintColor = tintColor
-      UIView.appearance().tintColor = tintColor
+      // Set window-level tint for broad coverage (NOT UIView.appearance()
+      // which interferes with system views and causes crashes)
+      let windowScenes = UIApplication.shared.connectedScenes
+        .compactMap { $0 as? UIWindowScene }
+      for window in windowScenes.flatMap({ $0.windows }) {
+        window.tintColor = tintColor
+      }
     }
   }
 
@@ -404,26 +409,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   func setAppTheme(color: UIColor) {
     // Custom theme tint takes priority over account theme color
     let effectiveColor = ThemeStore.shared.dynamicTint ?? color
-    UIView.appearance().tintColor = effectiveColor
+    // Apply to targeted appearance proxies, not UIView.appearance()
+    UINavigationBar.appearance().tintColor = effectiveColor
+    UITabBar.appearance().tintColor = effectiveColor
+    UISearchBar.appearance().tintColor = effectiveColor
   }
 
   // the following applies the tint color to already loaded views in all windows (UIKit)
   func applyAppThemeToAlreadyLoadedViews() {
-    let windowScene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-    let windows = windowScene.flatMap { $0.windows }
+    let windowScenes = UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+    let windows = windowScenes.flatMap { $0.windows }
 
-    // Set window-level tintColor directly for reliable propagation
-    if let tintColor = ThemeStore.shared.dynamicTint {
-      for window in windows {
+    let tintColor = ThemeStore.shared.dynamicTint
+    for window in windows {
+      if let tintColor {
         window.tintColor = tintColor
       }
-    }
-
-    for window in windows {
-      for view in window.subviews {
-        view.removeFromSuperview()
-        window.addSubview(view)
-      }
+      // Safe re-layout — no remove/re-add which can crash when
+      // concurrent background work (e.g. adjacency engine) is running
+      window.setNeedsLayout()
+      window.layoutIfNeeded()
     }
   }
 

@@ -49,9 +49,8 @@ final class ThemeStore: @unchecked Sendable {
 
   // MARK: - Enabled toggle
 
-  // DISABLED: isolating launch crash — theme off for diagnostic build 27
   var isEnabled: Bool {
-    get { return false /* defaults.bool(forKey: Key.enabled) */ }
+    get { defaults.bool(forKey: Key.enabled) }
     set { defaults.set(newValue, forKey: Key.enabled) }
   }
 
