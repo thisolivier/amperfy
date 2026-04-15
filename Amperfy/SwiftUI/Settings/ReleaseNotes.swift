@@ -37,6 +37,23 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 35,
+      date: "2026-04-14",
+      title: "Build 35 — Playlist page UX simplify",
+      whatsNew: [
+        "Playlists tab: merged Edit button into the … menu as 'Select Items' — single top-level control",
+        "Nav bar now shows only one button (…) instead of two, reducing visual clutter",
+        "Select Items toggles to 'Done' when in edit mode",
+      ],
+      testingFocus: [
+        "Playlists tab → tap … menu — 'Select Items', 'New Folder', and 'Sort' should all appear",
+        "Tap 'Select Items' → multi-select mode activates with floating action bar",
+        "Tap … menu again → should show 'Done' instead of 'Select Items'",
+        "Tap 'Done' → exits edit mode normally",
+        "Verify New Folder and Sort still work from the … menu",
+      ]
+    ),
+    ReleaseNote(
       id: 34,
       date: "2026-04-14",
       title: "Build 34 — Menu cleanup",
