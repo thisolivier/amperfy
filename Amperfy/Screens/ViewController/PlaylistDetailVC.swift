@@ -159,7 +159,28 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
     )
     optionsButton = UIBarButtonItem.createOptionsBarButton()
     optionsButton.menu = UIMenu.lazyMenu {
-      EntityPreviewActionBuilder(container: self.playlist, on: self).createMenuActions()
+      var actions = EntityPreviewActionBuilder(container: self.playlist, on: self).createMenuActions()
+
+      // Add Favourite toggle and Edit into the overflow menu
+      var favouriteActions = [UIMenuElement]()
+      let isPinned = PinnedPlaylistStore.shared.isPinned(self.playlist.id)
+      let favAction = UIAction(
+        title: isPinned ? "Unfavourite" : "Favourite",
+        image: isPinned ? .heartFill : .heartEmpty
+      ) { _ in
+        PinnedPlaylistStore.shared.toggle(self.playlist.id)
+      }
+      favouriteActions.append(favAction)
+
+      if self.appDelegate.storage.settings.user.isOnlineMode && !self.playlist.isSmartPlaylist {
+        let editAction = UIAction(title: "Edit", image: UIImage(systemName: "pencil")) { _ in
+          self.openEditView(sender: self.optionsButton)
+        }
+        favouriteActions.append(editAction)
+      }
+
+      actions.insert(UIMenu(options: .displayInline, children: favouriteActions), at: 0)
+      return actions
     }
     favouriteButton = UIBarButtonItem(
       image: favouriteButtonImage(),
@@ -239,20 +260,7 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
   }
 
   func refreshBarButtons() {
-    var edititingBarButton: UIBarButtonItem? = nil
-
-    if appDelegate.storage.settings.user.isOnlineMode {
-      edititingBarButton = editButton
-      edititingBarButton?.title = "Edit"
-      edititingBarButton?.style = .plain
-      if playlist.isSmartPlaylist {
-        edititingBarButton?.isEnabled = false
-      }
-    }
-
-    favouriteButton.image = favouriteButtonImage()
-    navigationItem.rightBarButtonItems = [optionsButton, favouriteButton, edititingBarButton]
-      .compactMap { $0 }
+    navigationItem.rightBarButtonItems = [optionsButton]
   }
 
   func convertIndexPathToPlayContext(songIndexPath: IndexPath) -> PlayContext? {
@@ -269,7 +277,7 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
   }
 
   @objc
-  private func openEditView(sender: UIBarButtonItem) {
+  func openEditView(sender: UIBarButtonItem) {
     let playlistDetailVC = AppStoryboard.Main.segueToPlaylistEdit(
       account: account,
       playlist: playlist

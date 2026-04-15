@@ -1234,6 +1234,72 @@ Scores are **summed across all playlists and albums.** If Track A and Track B ar
 
 ---
 
+## 13. PR 13 — Offline-aware Downloaded Albums view
+
+**Release target:** TBD.
+**Priority:** backlog.
+
+**Intent:** The downloaded albums view in the Library tab should update dynamically based on whether the app is in offline mode. When in offline mode, only fully-downloaded albums should appear as "complete" — partially downloaded albums should reflect their actual cached track count, not the server-reported total.
+
+### 13.1 User Flow
+When the user toggles offline mode, the Library → Downloaded Albums list refreshes. Fully-downloaded albums display normally. Partially-downloaded albums show their cached track count (e.g. "7 of 12 tracks") instead of appearing complete. Albums with zero cached tracks are hidden entirely.
+
+### 13.2 Implementation Shape
+- Listen to the offline-mode toggle notification and trigger a re-fetch of the albums fetch controller.
+- Add an `NSFetchedResultsController` predicate that, in offline mode, counts downloaded `PlaylistItemMO`/`SongMO` entities per album rather than trusting `remoteSongCount`.
+- Surface cached-track counts in the album cell subtitle when in offline mode.
+- Ensure the view animates correctly on toggle (diff-based reload, not full reload).
+- No server calls — all data is already in Core Data.
+
+### 13.3 Ship Steps
+Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
+
+---
+
+## 14. PR 14 — Offline "Complete" title reflects cached tracks only
+
+**Release target:** TBD.
+**Priority:** backlog.
+
+**Intent:** In offline mode, the "complete" label/title on albums should count only downloaded (cached) tracks towards the total, not the server-reported `remoteSongCount`. This gives users an accurate picture of what they can actually play offline.
+
+### 14.1 User Flow
+When viewing an album detail screen in offline mode, the header/title area shows completeness based on cached tracks only. For example, an album with 12 server-reported tracks but only 9 downloaded shows "9 of 12" rather than "Complete". The label reverts to normal behaviour when offline mode is turned off.
+
+### 14.2 Implementation Shape
+- Add a computed property on the album entity (or a helper) that returns `cachedSongCount` by querying downloaded songs in Core Data.
+- In offline mode, the album detail header uses `cachedSongCount` / `remoteSongCount` for its completeness display.
+- Mark albums as "Complete" only when `cachedSongCount == remoteSongCount`.
+- Reuse the offline-mode notification listener pattern from PR 13 to refresh the header on toggle.
+- Keep the logic in the view model / cell configuration — no model-layer changes needed.
+
+### 14.3 Ship Steps
+Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
+
+---
+
+## 15. PR 15 — Offline playlist completeness filter
+
+**Release target:** TBD.
+**Priority:** backlog.
+
+**Intent:** In offline mode, the Playlists tab gains a new `...` menu item to filter for only "complete" playlists — playlists where every track has been downloaded. This helps users quickly find playlists they can play fully offline without interruption.
+
+### 15.1 User Flow
+In the Playlists tab, the existing `...` (ellipsis/overflow) menu gains a new option visible only in offline mode: "Show Complete Only". When active, the playlist list filters to show only playlists where every track is cached locally. A second tap on the filter item (or toggling offline mode off) clears the filter.
+
+### 15.2 Implementation Shape
+- Add a `isFullyCached` computed check on playlists: compare downloaded track count against the playlist's total item count.
+- Wire a new menu action in the Playlists tab `...` button that toggles an `NSPredicate` filter on the fetch controller.
+- Only show the menu item when the app is in offline mode; hide it otherwise.
+- Persist the filter preference in `UserDefaults` so it survives app restarts while offline.
+- Reuse the cached-track counting logic established in PR 13/14.
+
+### 15.3 Ship Steps
+Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
+
+---
+
 **End of backlog.** The implementer should now:
 1. Read `PRIMER.md` and `IMPLEMENTATION.md` if not already.
 2. Run the test baseline per `IMPLEMENTATION.md` §5.2 to confirm green starting state.

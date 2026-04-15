@@ -320,13 +320,18 @@ class EntityPreviewActionBuilder {
   }
 
   private func configureFor(playlist: Playlist) {
-    isPlay = appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
-      .hasCachedItems
-    isShuffle = (
-      appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
+    if rootView is PlaylistDetailVC {
+      isPlay = false
+      isShuffle = false
+    } else {
+      isPlay = appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
         .hasCachedItems
-    ) &&
-      appDelegate.storage.settings.user.isPlayerShuffleButtonEnabled
+      isShuffle = (
+        appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
+          .hasCachedItems
+      ) &&
+        appDelegate.storage.settings.user.isPlayerShuffleButtonEnabled
+    }
     isMusicQueue = true
     isPodcastQueue = false
     isShowAlbum = false
@@ -395,17 +400,23 @@ class EntityPreviewActionBuilder {
   }
 
   private func configureFor(album: Album) {
-    isPlay = appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
-      .hasCachedItems
-    isShuffle = (
-      appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
+    if rootView is AlbumDetailVC {
+      isPlay = false
+      isShuffle = false
+      isShowArtist = false
+    } else {
+      isPlay = appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
         .hasCachedItems
-    ) &&
-      appDelegate.storage.settings.user.isPlayerShuffleButtonEnabled
+      isShuffle = (
+        appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
+          .hasCachedItems
+      ) &&
+        appDelegate.storage.settings.user.isPlayerShuffleButtonEnabled
+      isShowArtist = !(rootView is ArtistDetailVC)
+    }
     isMusicQueue = true
     isPodcastQueue = false
     isShowAlbum = false
-    isShowArtist = !(rootView is ArtistDetailVC)
     isAddToPlaylist = appDelegate.storage.settings.user.isOnlineMode
     isDeleteOnServer = false
     isGoToSiteUrl = false
