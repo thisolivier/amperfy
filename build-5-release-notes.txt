@@ -1,0 +1,7 @@
+Hotfix 2 — build 5 (2026-04-11)
+
+• Complete albums filter: now uses a pure track-count threshold (default: 3+). Previously, single-track "albums" (common with bad ID3 grouping) could slip through via an unreliable metadata path, and most nil-metadata albums were silently excluded by a Core Data NULL-handling pitfall. Both fixed.
+• Player track length: (shipped in build 4 as Bug #22 hotfix, included in this build) falls back to the Subsonic-parsed duration when the streaming engine hasn't yet computed bitrate. No more "--:--" at the start of playback.
+
+Known issue carried over:
+• Album detail view occasionally shows a blank track list for newly-added-to-Navidrome albums on first open (Bug #23, parked — cannot reproduce in current environment).
