@@ -276,7 +276,7 @@ class EntityPreviewActionBuilder {
     isShowPlaylists = true
     isInstantMix = appDelegate.storage.settings.user.isOnlineMode
     isShareSong = true
-    isRelatedTracks = TrackAdjacencyStore.shared.hasData(for: song.id)
+    isRelatedTracks = DefaultTrackAdjacencyService.shared.hasData(for: song.id)
   }
 
   private func configureFor(podcastEpisode: PodcastEpisode) {

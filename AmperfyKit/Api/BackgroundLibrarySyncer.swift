@@ -204,15 +204,12 @@ public final class BackgroundLibrarySyncer: AbstractBackgroundLibrarySyncer, Sen
       taskQueue.addOperation(asyncOperation)
     }
 
-    // After all playlist items are synced, recompute track adjacency on a background context
+    // After all playlist items are synced, recompute track adjacency
     let adjacencyOperation = BackgroundSyncOperation {
       guard self.isRunning.wrappedValue else { return }
       os_log("Playlist item sync complete, recomputing track adjacency", log: self.log, type: .info)
-      let bgContext = await self.storage.persistentContainer.newBackgroundContext()
-      // compute() builds new scores in a local dict then swaps atomically,
-      // so stale scores remain readable throughout the computation.
-      TrackAdjacencyStore.shared.compute(in: bgContext)
-      try? TrackAdjacencyStore.shared.saveToDisk()
+      DefaultTrackAdjacencyService.shared.invalidate()
+      DefaultTrackAdjacencyService.shared.computeIfNeeded()
     }
     taskQueue.addOperation(adjacencyOperation)
   }
