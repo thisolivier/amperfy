@@ -119,7 +119,7 @@ class SsPlaylistSongsParserDelegate: SsSongParserDelegate {
       }
       playlist.isCached = isCollectionCached
       if playlistChanged {
-        TrackAdjacencyStore.shared.invalidate()
+        DefaultTrackAdjacencyService.shared.invalidate()
       }
     default:
       break

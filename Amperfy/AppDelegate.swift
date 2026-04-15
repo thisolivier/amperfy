@@ -352,6 +352,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       os_log("application launch", log: self.log, type: .info)
     }
 
+    MemoryReporter.clearLog()
+    MemoryReporter.logMemory(label: "app-launch-start")
+
     storage.applyMultiAccountSettingsUpdateIfNeeded()
     libraryUpdater.performAccountCleanUpIfNeccessaryInBackground()
 
@@ -380,13 +383,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       type: .info,
       CacheFileManager.shared.getAmperfyPath() ?? "-"
     )
+    MemoryReporter.logMemory(label: "before-blocking-updates")
     libraryUpdater.performSmallBlockingLibraryUpdatesIfNeeded()
+    MemoryReporter.logMemory(label: "after-blocking-updates")
     // start manager only if no visual indicated updates are needed
     if !libraryUpdater.isVisualUpadateNeeded {
       startManagerForNormalOperation()
     }
+    MemoryReporter.logMemory(label: "after-start-manager")
     userStatistics.sessionStarted()
-    // Re-enabled for diagnostic build 27 (adjacency only, theme disabled)
+    // Configure adjacency service with Core Data context provider
+    let adjacencyStorage = storage
+    DefaultTrackAdjacencyService.configure(contextProvider: {
+      adjacencyStorage.newBackgroundContext()
+    })
+
     if storage.settings.app.isLibrarySynced {
       computeTrackAdjacencyInBackground()
     }
@@ -395,9 +406,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 
   private func computeTrackAdjacencyInBackground() {
-    let context = storage.newBackgroundContext()
     DispatchQueue.global(qos: .utility).async {
-      TrackAdjacencyStore.shared.computeIfNeeded(in: context)
+      DefaultTrackAdjacencyService.shared.computeIfNeeded()
     }
   }
 

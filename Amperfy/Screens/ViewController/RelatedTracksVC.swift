@@ -65,25 +65,24 @@ class RelatedTracksVC: UITableViewController {
   }
 
   private func loadRelatedTracks() async {
-    let store = TrackAdjacencyStore.shared
+    let service = DefaultTrackAdjacencyService.shared
     let seedSongId = seedSongId
     let context = appDelegate.storage.main.context
 
-    let topResults = store.topRelated(for: seedSongId, limit: 20)
+    let topResults = service.topRelated(for: seedSongId, limit: 20)
 
     var songs: [AbstractPlayable] = []
     var sourceInfoMap: [Int: String] = [:]
 
     for result in topResults {
-      guard result.score.total >= TrackAdjacencyStore.minimumThreshold else { continue }
+      guard result.score.total >= TrackAdjacencyWeights.minimumThreshold else { continue }
       guard let songMO = fetchSongMO(songId: result.songId, in: context) else { continue }
       let song = Song(managedObject: songMO)
       songs.append(song)
 
-      let playlistCount = store.playlistCoOccurrenceCount(
+      let playlistCount = service.playlistCoOccurrenceCount(
         songIdA: seedSongId,
-        songIdB: result.songId,
-        in: context
+        songIdB: result.songId
       )
       if playlistCount > 0 {
         let playlistWord = playlistCount == 1 ? "playlist" : "playlists"
@@ -114,7 +113,7 @@ class RelatedTracksVC: UITableViewController {
     if relatedSongs.isEmpty {
       var emptyConfig = UIContentUnavailableConfiguration.empty()
       emptyConfig.text = "No related tracks found"
-      if TrackAdjacencyStore.shared.isStale {
+      if DefaultTrackAdjacencyService.shared.isStale {
         emptyConfig.secondaryText = "Building recommendations\u{2026} check back shortly"
       } else {
         emptyConfig.secondaryText =
