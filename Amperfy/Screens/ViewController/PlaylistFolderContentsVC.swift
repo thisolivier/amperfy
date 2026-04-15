@@ -136,21 +136,31 @@ class PlaylistFolderContentsVC: UITableViewController {
   // MARK: - Navigation items
 
   private func rebuildNavigationItems() {
-    let addFolderAction = UIAction(
-      title: "New Folder",
-      image: UIImage(systemName: "folder.badge.plus")
-    ) { [weak self] _ in
-      self?.promptCreateFolder()
-    }
-
-    let menuChildren: [UIMenuElement] = [addFolderAction, createSortMenu()]
-
     let optionsButton = UIBarButtonItem(
       image: UIImage(systemName: "ellipsis.circle"),
-      menu: UIMenu(children: menuChildren)
+      menu: UIMenu.lazyMenu { [weak self] in
+        guard let self else { return [] }
+
+        let selectItemsAction = UIAction(
+          title: self.isEditing ? "Done" : "Select Items",
+          image: UIImage(systemName: "checkmark.circle")
+        ) { [weak self] _ in
+          guard let self else { return }
+          self.setEditing(!self.isEditing, animated: true)
+        }
+
+        let addFolderAction = UIAction(
+          title: "New Folder",
+          image: UIImage(systemName: "folder.badge.plus")
+        ) { [weak self] _ in
+          self?.promptCreateFolder()
+        }
+
+        return [selectItemsAction, addFolderAction, self.createSortMenu()]
+      }
     )
 
-    navigationItem.rightBarButtonItems = [optionsButton, editButtonItem]
+    navigationItem.rightBarButtonItems = [optionsButton]
   }
 
   private func createSortMenu() -> UIMenu {

@@ -37,6 +37,41 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 34,
+      date: "2026-04-14",
+      title: "Build 34 — Menu cleanup",
+      whatsNew: [
+        "Album detail: removed redundant Play, Shuffle, and Show Artist from the … menu (already available as buttons)",
+        "Playlist detail: removed redundant Play and Shuffle from the … menu",
+        "Playlist detail: moved Edit and Favourite actions into the … menu for a cleaner toolbar",
+        "Added backlog items: Offline Downloaded Albums (PR 13), Offline Complete Title (PR 14), Offline Playlist Filter (PR 15)",
+      ],
+      testingFocus: [
+        "Open an album → tap … menu — Play, Shuffle, and Show Artist should NOT appear",
+        "Open a playlist → tap … menu — Play and Shuffle should NOT appear; Edit and Favourite SHOULD appear",
+        "Verify Play and Shuffle still work via the header buttons on both album and playlist detail",
+        "Long-press a playlist → context menu should still work as before",
+      ]
+    ),
+    ReleaseNote(
+      id: 33,
+      date: "2026-04-14",
+      title: "Build 33 — Adjacency Engine v2",
+      whatsNew: [
+        "Rebuilt Track Adjacency Engine with SQLite storage (replaces crash-prone in-memory JSON)",
+        "Fixed Jetsam memory kill on launch — peak memory down from 154 MB+ crash to ~100 MB",
+        "Windowed O(n×W) algorithm caps pair generation per playlist (W=10)",
+        "Protocol-separated architecture (compute/storage/query) for maintainability",
+        "Second launch is instant — SQLite cached, no recomputation needed",
+      ],
+      testingFocus: [
+        "Launch the app — should not crash (was crashing within 20s on Build 32 for large libraries)",
+        "Related Tracks should still work — open a song's … menu and tap Related Tracks",
+        "Kill and relaunch — Related Tracks should load instantly without recomputation",
+        "Browse library, play music — verify no memory-related crashes during normal use",
+      ]
+    ),
+    ReleaseNote(
       id: 32,
       date: "2026-04-13",
       title: "Build 32 — Memory crash hotfix",
