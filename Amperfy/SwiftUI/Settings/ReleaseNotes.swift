@@ -37,6 +37,28 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 36,
+      date: "2026-04-15",
+      title: "Build 36 — Whole-album randomizer + heading theme tier",
+      whatsNew: [
+        "Home 'Random Albums' and CarPlay Play Random now serve whole albums only (min 3 tracks) and weight albums with mostly-unplayed tracks 2× higher",
+        "Custom Theme: new 'Heading Color' row per mode separates heading text from body text; existing installs migrate their old text color into both tiers",
+        "Custom Theme: selected font family now flows through Home section headers and album/artist/playlist detail titles",
+        "Contrast warning in Settings now checks heading and body colors against the background independently",
+      ],
+      testingFocus: [
+        "Home tab → pull to refresh 'Random Albums' a few times: all entries should be full albums (3+ tracks), no singles/EPs, with visible variety",
+        "Play a handful of tracks on one album, refresh Random Albums repeatedly — the unplayed album should show up notably more often than the fully-played one",
+        "CarPlay → Play Random should likewise surface only whole albums",
+        "Settings → Custom Theme: toggle ON — 'Heading Color' and 'Body Color' rows should appear under each mode",
+        "Pick a distinct heading color vs body color — Home section headers, nav bar titles, and album detail title should use heading color; table/collection cell labels should use body color",
+        "Pick a custom font — Home section headers and album/artist detail title should adopt the font (weight may look lighter, that is expected)",
+        "Set heading color very close to background — a 'low heading/background contrast' warning should appear; set body too close — a separate 'low body/background contrast' warning should appear",
+        "Upgrade from Build 35 with a custom text color already set — heading and body should both adopt that color on first launch (no default-label regression)",
+        "Settings → Reset to Defaults → confirm — both heading and body colors should clear",
+      ]
+    ),
+    ReleaseNote(
       id: 35,
       date: "2026-04-14",
       title: "Build 35 — Playlist page UX simplify",

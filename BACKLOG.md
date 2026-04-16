@@ -1,6 +1,6 @@
 # Amperfy Fork — Feature Backlog
 
-**Scope:** user-visible features and research PRs on the Amperfy fork against a Navidrome server. PR 1 / PR 2 were the first pass. PR 3 / PR 4 / PR 5 are the second pass (added 2026-04-11 after QA round 1). PR 6 (share song) and PR 7 (custom styling, research-first) are the third pass (added 2026-04-11 during Wave 4). PR 9 (playlist folders, added 2026-04-12) and PR 10 (in-app release notes) are prioritized ahead of custom styling Phase 2.
+**Scope:** user-visible features and research PRs on the Amperfy fork against a Navidrome server. PR 1 / PR 2 were the first pass. PR 3 / PR 4 / PR 5 are the second pass (added 2026-04-11 after QA round 1). PR 6 (share song) and PR 7 (custom styling, research-first) are the third pass (added 2026-04-11 during Wave 4). PR 9 (playlist folders, added 2026-04-12) and PR 10 (in-app release notes) are prioritized ahead of custom styling Phase 2. PR 16 (random albums improvements, added 2026-04-15) and PR 17 (styling phase 2, added 2026-04-15) are the latest additions.
 **Audience:** the implementer agent on `navidrome-spike-phaseB`. This file is the authoritative spec — when it disagrees with anything in `IMPLEMENTATION.md` or the spike `NOTES.md`, this file wins.
 **Companion reads (do not re-read unless stuck):** `PRIMER.md` (architecture), `IMPLEMENTATION.md` (dev loop + don't-touch list), `docs/DECISION.md` (why Amperfy).
 **Branch:** work directly on `spike/extension-eval` with feature commits. No feature branches for this pass — Olivier wants two shippable TestFlight builds back-to-back, and branch gymnastics are friction.
@@ -1296,6 +1296,92 @@ In the Playlists tab, the existing `...` (ellipsis/overflow) menu gains a new op
 - Reuse the cached-track counting logic established in PR 13/14.
 
 ### 15.3 Ship Steps
+Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
+
+---
+
+## 16. PR 16 — Random Albums Improvements
+
+**Release target:** TBD.
+**Priority:** backlog.
+
+**Intent:** The random albums feature should only surface "whole" albums (using the complete-albums predicate from §1) and should bias toward albums with unplayed tracks.
+
+### 16.1 Use the complete-albums predicate
+
+Random album selection must filter through `WholeAlbumPredicates.wholeAlbum(minSongCount: 3)` — the same predicate used by the Albums tab "complete albums only" toggle and the Home tab "new albums" filter. Singles and sub-3-track releases are excluded from random selection entirely.
+
+### 16.2 Weighted selection favoring unplayed albums
+
+After filtering to whole albums, the selection is weighted to favor albums the user hasn't fully listened to:
+
+- **Double-counting rule:** any album where **more than half** the tracks are unplayed gets entered into the candidate pool twice, making it roughly 2× as likely to be picked.
+- **Deduplication guarantee:** even though a heavily-unplayed album appears twice in the weighted pool, the final random selection must **never list the same album twice** in a single result set. After picking, deduplicate before presenting.
+- An album with zero unplayed tracks is still eligible (entered once) — this is a soft bias, not a hard filter.
+
+### 16.3 Implementation shape
+
+- Fetch all whole albums via the existing predicate.
+- For each album, compute `unplayedCount` vs `remoteSongCount`. If `unplayedCount > remoteSongCount / 2`, add the album to the candidate array a second time.
+- Shuffle the weighted array, then deduplicate (keeping first occurrence) and take the first N results.
+- Unit test the weighting logic: given a known set of albums with known play counts, verify the weighted pool has the correct size and deduplication works.
+
+### 16.4 Ship Steps
+Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
+
+---
+
+## 17. PR 17 — Styling Improvements Phase 2
+
+**Release target:** TBD.
+**Priority:** backlog.
+
+**Intent:** Expand the custom styling system (PR 7 research) with font propagation, gradient backgrounds, album art borders, heading color tiers, and saveable presets.
+
+### 17.1 Font selection applies to all headings
+
+The user-selected font (from PR 7's font customization) must apply consistently to:
+- Widget headings (home screen section titles)
+- Album detail headings
+- Artist detail headings
+- Playlist detail headings
+- Navigation bar / view controller titles
+
+Currently font selection may only apply to body text. Audit all heading labels and ensure the custom font flows through to every heading site.
+
+### 17.2 Gradient backgrounds
+
+- **Scope:** main app background and album detail view. Now Playing is **not** targeted.
+- Users can pick from a list of previously-used gradients (persisted in `UserDefaults` or the styling store).
+- A gradient is defined by two or more colors plus a direction (top-to-bottom, diagonal, etc.).
+- Provide a small set of built-in gradient presets as starting options.
+- When a user creates/selects a gradient, it is saved to the "previously used" list automatically.
+
+### 17.3 Album art borders
+
+- Users can set a border on album artwork thumbnails and on the 4-tile composite art view used by playlists.
+- Configurable properties: **border color** and **border width** (size).
+- Border settings are part of the styling configuration and persist across launches.
+- Default: no border (width = 0).
+
+### 17.4 Heading vs body text color
+
+Two-tier color system:
+- **Heading color:** applies to widget headings, album/artist detail headings, and navigation bar / view controller titles.
+- **Body text color:** applies to everything else — body text, metadata labels, playback controls, subtitle text.
+- Each tier has an independent color picker.
+- This replaces (or extends) any single text-color setting from PR 7.
+
+### 17.5 Styling presets
+
+- Users can **save** the current styling configuration as a preset. Naming is optional — presets can be auto-labeled (e.g., "Preset 1", "Preset 2") or given a user-defined name.
+- Light mode and dark mode configurations save to the **same preset list** as independent entries — each can load any existing preset independently.
+- A preset captures all styling state: font, gradient, border settings, heading color, body text color, and any other styling properties.
+- No hard limit on number of saved presets.
+- Presets are stored in a persistent format (Core Data entity or JSON file in the app's documents directory).
+- UI: a "Save Preset" action and a "Load Preset" picker in the styling settings screen.
+
+### 17.6 Ship Steps
 Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
 
 ---
