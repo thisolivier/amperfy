@@ -168,6 +168,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       }
       return
     }
+    // BUG-1 fix (Release 1 QA): previously `populateDefaultsIfNeeded` was
+    // only invoked on the enabled-toggle OFF→ON transition. Pre-17.4
+    // installs with a stored `.light.text` but no `.light.headingText`
+    // rendered correctly at runtime (via the heading→body→label fallback
+    // in `dynamicHeadingText`) but showed `.label` in the Heading picker
+    // until the user toggled the theme off-and-on. Calling the populator
+    // here closes that gap — every launch with theme enabled migrates
+    // missing defaults before any settings UI is rendered. Idempotent
+    // (every mutation is nil-gated). Also seeds the PR 17.2 gradient
+    // presets on first launch.
+    theme.populateDefaultsIfNeeded()
     if let backgroundColor = theme.dynamicBackground {
       UINavigationBar.appearance().barTintColor = backgroundColor
       UITabBar.appearance().barTintColor = backgroundColor
