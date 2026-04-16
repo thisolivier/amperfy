@@ -1468,7 +1468,12 @@ A **"Run now"** action on each row triggers that background task on demand (for 
 - Instrument the three process sites to emit state transitions: start → `.running`; success → `.completed(Date())`; failure → `.failed(Date(), errorDescription)`.
 - For track adjacency: instrument `DefaultTrackAdjacencyService` to record the same state transitions.
 - For complete-album-scan: instrument `BackgroundLibrarySyncer` Phase 1.
-- **Phase 2 re-enable (confirmed 2026-04-16):** PR 19 reintroduces the disabled Phase 2 path. The implementer must first investigate why it was disabled in Build 30 (git blame `BackgroundLibrarySyncer.swift:153`, check Release Notes for Build 30, read any linked QA notes), validate that the underlying issue is addressed (or guard around it), then re-enable with a feature flag so we can disable quickly if regressions surface. Status panel reports live Phase 2 state once re-enabled. Keep on-demand sync fallback intact — in-playlist lookups should still trigger a lazy sync if background sync hasn't caught up yet.
+- **Phase 2 re-enable + centralised runner (confirmed 2026-04-16):** PR 19 reintroduces the disabled Phase 2 path. Olivier's hypothesis (2026-04-16, flagged as jetlagged thinking so treat as direction not spec): Phase 2 was likely disabled for performance — races or bottlenecks with the other background work. He wants PR 19 to pursue a **unified or centralised background task runner** for the three heavy processes (adjacency, playlist sync, complete-album fetch) with shared patterns that don't race or bottleneck.
+  - Implementer step 1: investigate why Phase 2 was disabled (git blame `BackgroundLibrarySyncer.swift:153`, check Build 30 release notes / QA notes). Confirm the performance hypothesis.
+  - Implementer step 2: **surface a brief architecture proposal** to Olivier before building. A centralised runner with a task queue, per-task throttling, and coordination (e.g., don't run adjacency while Phase 2 is mid-pass) is the rough direction — but the concrete shape needs sign-off.
+  - Implementer step 3: implement on the agreed shape. Phase 2 re-enables through the new runner, behind a feature flag for fast rollback. Status panel observes the runner directly.
+  - Keep on-demand sync fallback intact — in-playlist lookups should still trigger a lazy sync if the background runner hasn't caught up.
+  - This scope may push PR 19 out of a bundled release with PR 17.3. Re-evaluate bundling after the architecture proposal is reviewed.
 - New SwiftUI screen `BackgroundTasksSection` in Settings → Library area.
 - Observe status store via Combine/Published so the screen updates live while a sync is running.
 
