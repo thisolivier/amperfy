@@ -33,6 +33,11 @@ class SettingsHostVC: UIViewController {
   var changesAgent: [AnyCancellable] = []
   private var isForOwnWindow = false
   private var accountNotificationHandler: AccountNotificationHandler?
+  /// PR 21: gradient / solid theme backing for the Settings modal. The
+  /// modal is hosted in its own window and sits on top of the app's
+  /// gradient — without this, the modal renders on system-grouped grey
+  /// and the chosen theme surface stops at the modal edge.
+  private var themeBackgroundView: GradientBackgroundView?
 
   override var sceneTitle: String { windowSettingsTitle }
 
@@ -77,6 +82,57 @@ class SettingsHostVC: UIViewController {
     addChild(hostingVC)
     view.addSubview(hostingVC.view)
     hostingVC.didMove(toParent: self)
+
+    installThemeBackground()
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleThemeDidChangeForBackground),
+      name: ThemeStore.didChangeNotification,
+      object: nil
+    )
+  }
+
+  deinit {
+    // PR 21: `removeObserver(self)` over the token path — token is
+    // `NSObjectProtocol?` which isn't Sendable and Swift 6's isolation
+    // guard rejects it from non-isolated deinit contexts.
+    NotificationCenter.default.removeObserver(self)
+  }
+
+  @objc
+  private func handleThemeDidChangeForBackground() {
+    installThemeBackground()
+  }
+
+  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
+      installThemeBackground()
+    }
+  }
+
+  /// PR 21: (re)install the themed background view for the Settings
+  /// modal. Behind-the-host-VC injection so the SwiftUI `NavigationView`
+  /// renders on top of the themed surface (paired with a
+  /// `.scrollContentBackground(.hidden)` on `SettingsList`). No-op
+  /// cleanup when neither a gradient nor a solid custom background is
+  /// configured — falls through to the default system background.
+  private func installThemeBackground() {
+    themeBackgroundView?.removeFromSuperview()
+    themeBackgroundView = nil
+    let style = traitCollection.userInterfaceStyle
+    if let gradient = ThemeStore.shared.resolvedGradient(for: style) {
+      let backdrop = GradientBackgroundView(gradient: gradient)
+      backdrop.frame = view.bounds
+      backdrop.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+      view.insertSubview(backdrop, at: 0)
+      themeBackgroundView = backdrop
+      view.backgroundColor = .clear
+    } else if let solid = ThemeStore.shared.dynamicBackground {
+      view.backgroundColor = solid
+    } else {
+      view.backgroundColor = .clear
+    }
   }
 
   required init?(coder: NSCoder) {
