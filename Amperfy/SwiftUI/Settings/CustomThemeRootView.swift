@@ -131,15 +131,12 @@ struct CustomThemeRootView: View {
 
         SettingsSection(content: {
           SettingsButtonRow(title: "Save Current as Preset") {
-            let nextAutoLabelIndex = StylingPresetStore.shared.presets.count + 1
             savePresetNameField = ""
-            // Trigger the alert — placeholder shows next auto-label index.
-            _ = nextAutoLabelIndex // used in alert placeholder below
             showSavePresetAlert = true
           }
           .alert("Save Preset", isPresented: $showSavePresetAlert) {
             TextField(
-              "Preset \(StylingPresetStore.shared.presets.count + 1)",
+              "Preset \(StylingPresetStore.shared.nextAutoLabelIndex)",
               text: $savePresetNameField
             )
             Button("Save") {

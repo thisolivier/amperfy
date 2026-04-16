@@ -320,6 +320,13 @@ public final class StylingPresetStore: @unchecked Sendable {
     }
   }
 
+  /// Preview of the auto-label integer that would be assigned if a preset were
+  /// saved right now. Exposed so save-alert placeholders can stay consistent
+  /// with what `savePreset(name: nil)` will actually store.
+  public var nextAutoLabelIndex: Int {
+    computeNextAutoLabelIndex()
+  }
+
   private func computeNextAutoLabelIndex() -> Int {
     let existingIndices = presets.map { $0.autoLabelIndex }
     return (existingIndices.max() ?? 0) + 1
