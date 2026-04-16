@@ -1434,6 +1434,53 @@ Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
 
 ---
 
+## 19. PR 19 — Settings/Library: Background task status panel
+
+**Release target:** TBD.
+**Priority:** backlog. Added 2026-04-16 after Olivier noticed there was no way to know whether playlist sync, track adjacency, or complete-album scan had completed (or failed).
+
+**Intent:** Expose the readiness and recent health of three internal background processes under Settings → Library: playlist item sync, track adjacency calculation, complete-album-scan (remoteSongCount fix). Users should be able to glance at this screen and tell whether the features built on these (in-playlist lookup, related tracks, whole-album filtering) are ready to use or if something went wrong.
+
+### 19.1 Context
+
+Today these three processes run silently:
+- `BackgroundLibrarySyncer` (Phase 1 — complete-album/scan + more; `AmperfyKit/Api/BackgroundLibrarySyncer.swift`) has an internal `isRunning` flag but no external observer.
+- Playlist item sync (Phase 2) is **DISABLED** as of Build 30 hotfix (see comment `BackgroundLibrarySyncer.swift:153`). In-playlist lookups work via lazy on-demand sync triggered by tapping "in playlist" — which is why the feature seems to "come online" when first used. Any status panel needs to reflect this reality: Phase 2 is currently not running at all in the background. If this release reintroduces Phase 2, the status panel reports it live; if not, the panel flags Phase 2 as "on-demand only" so users understand why they see no background activity.
+- Track adjacency is managed by `DefaultTrackAdjacencyService` in `AmperfyKit/Storage/TrackAdjacency/`. No progress or error emission.
+
+### 19.2 Scope
+
+Status panel under Settings → Library, new section (e.g., "Background Tasks" or "Sync Status"). Three rows, one per feature:
+
+Each row shows:
+- **Feature name** + brief one-liner ("Supports the 'in playlist' view" / "Powers related tracks" / "Improves the Whole Albums filter")
+- **Current state:** one of `Idle / Running… / Completed / Failed / Disabled (on-demand only)`
+- **Last completed:** relative timestamp ("2 hours ago") or "Never"
+- **Last error:** if applicable, truncated one-liner + a disclosure button revealing details
+
+Tapping a row opens a detail view with fuller diagnostics: last run start/end, duration, item counts processed (where the underlying code tracks this), any last error text + stack trace breadcrumb.
+
+A **"Run now"** action on each row triggers that background task on demand (for user-initiated retry). Disabled for Phase 2 playlist sync if Phase 2 stays off — in that case the row explains the on-demand-on-tap model.
+
+### 19.3 Implementation shape
+
+- Add a `BackgroundTaskStatus` enum (`idle, running, completed(at: Date), failed(at: Date, error: String), disabledOnDemand`) and a lightweight `BackgroundTaskStatusStore` (UserDefaults-backed) that each of the three processes pokes on state transitions.
+- Instrument the three process sites to emit state transitions: start → `.running`; success → `.completed(Date())`; failure → `.failed(Date(), errorDescription)`.
+- For track adjacency: instrument `DefaultTrackAdjacencyService` to record the same state transitions.
+- For complete-album-scan: instrument `BackgroundLibrarySyncer` Phase 1.
+- **Phase 2 re-enable (confirmed 2026-04-16):** PR 19 reintroduces the disabled Phase 2 path. The implementer must first investigate why it was disabled in Build 30 (git blame `BackgroundLibrarySyncer.swift:153`, check Release Notes for Build 30, read any linked QA notes), validate that the underlying issue is addressed (or guard around it), then re-enable with a feature flag so we can disable quickly if regressions surface. Status panel reports live Phase 2 state once re-enabled. Keep on-demand sync fallback intact — in-playlist lookups should still trigger a lazy sync if background sync hasn't caught up yet.
+- New SwiftUI screen `BackgroundTasksSection` in Settings → Library area.
+- Observe status store via Combine/Published so the screen updates live while a sync is running.
+
+### 19.4 What's New entry
+
+> **See what's happening in the background.** Settings → Library now shows live status for playlist sync, related-tracks indexing, and the complete-album scan — with last-run times and a "Run now" button if you want to re-kick any of them.
+
+### 19.5 Ship Steps
+Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
+
+---
+
 **End of backlog.** The implementer should now:
 1. Read `PRIMER.md` and `IMPLEMENTATION.md` if not already.
 2. Run the test baseline per `IMPLEMENTATION.md` §5.2 to confirm green starting state.
