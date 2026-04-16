@@ -37,6 +37,36 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 39,
+      date: "2026-04-15",
+      title: "Build 39 — Album art borders + theme polish",
+      whatsNew: [
+        "Custom Theme: new 'Album Art' section adds an optional border (0–6 pt, any color) around all album artwork, including the 4-tile composites used for playlists and smart lists",
+        "Settings → Custom Theme is now a top-level row, no longer buried inside Display & Interaction",
+        "Custom Theme screen restructured: Light Mode and Dark Mode are now NavigationLink-pushed detail screens, and Gradient editing is its own screen with Start / End colors, a live preview strip, a direction picker, and a Previously Used carousel",
+        "Gradients are now 2-stop only (start colour, end colour); any saved 3- or 4-stop gradients are automatically reduced to their first and last colour on load",
+        "Fixed: the gradient picker no longer collapses the whole Settings sheet when any swatch is tapped",
+        "Settings modal now renders on top of your custom gradient / solid theme background (previously broke out into system grey at the modal edge)",
+        "Library tab now picks up the active gradient / solid theme background; cell backgrounds are transparent while any custom theme is active",
+        "Footer descriptor strings (Offline Mode, Haptic Feedback, Music Player Skip Buttons, Detailed Information, Disable Player Shuffle Button) are now inlined as secondary rows inside their parent section, instead of free-floating uppercase captions",
+      ],
+      testingFocus: [
+        "Settings → Custom Theme should now appear as a top-level Settings row (with a paint-palette icon), above Account",
+        "Settings → Custom Theme → Album Art → set Border Width to 3 pt and pick a bright colour — every album cover in Albums grid, Playlists, Home carousels, and the 4-tile composite should show that border, in both single and composite art",
+        "Set Border Width to 0 — borders should disappear everywhere",
+        "Now Playing screen: the album art should NOT have the border (by design — only browse surfaces are affected)",
+        "Settings → Custom Theme → Light Mode → tap Gradient → pick Start + End colours → adjust Direction — the Settings modal itself, Home, Library, and album detail should all preview the gradient live without dismissing back to Settings root",
+        "From the Gradient picker, tap a swatch in Previously Used — it should apply immediately without popping the screen",
+        "Tap 'Clear Gradient' inside the gradient picker — gradient should be removed and the solid background colour should return",
+        "Flip the system between Light and Dark at OS level — gradients and borders should swap to the mode-specific choices and repaint without app restart",
+        "Upgrade from Build 38 with a saved 3- or 4-stop gradient — on first launch it should render as a 2-stop gradient using the original first and last colours",
+        "Settings root: the Offline Mode description should now sit directly under the toggle inside the same rounded section, not as a floating uppercase caption below",
+        "Settings → Display & Interaction: Haptic Feedback, Music Player Skip Buttons, Detailed Information, and Disable Player Shuffle Button descriptors should all sit inside their respective sections",
+        "Library tab with a gradient active: the gradient should flow behind the library list; individual rows should not paint their own grey background over the gradient",
+        "Settings → Reset to Defaults → confirm — border width + colour should clear along with the rest of the custom theme state; any saved gradients and history should NOT be reset (kept intentionally)",
+      ]
+    ),
+    ReleaseNote(
       id: 38,
       date: "2026-04-15",
       title: "Build 38 — Custom background gradients",

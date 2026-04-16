@@ -551,6 +551,11 @@
 		A5D0D210000000000000070A0 /* GradientBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5D0D220000000000000070A0 /* GradientBackgroundView.swift */; };
 		A5D0D310000000000000070A0 /* GradientTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5D0D320000000000000070A0 /* GradientTest.swift */; };
 		A5D0D410000000000000070A0 /* GradientEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5D0D420000000000000070A0 /* GradientEditorView.swift */; };
+		A5E0E110000000000000080A0 /* CustomThemeRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E0E120000000000000080A0 /* CustomThemeRootView.swift */; };
+		A5E0E210000000000000080A0 /* ModeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E0E220000000000000080A0 /* ModeDetailView.swift */; };
+		A5E0E310000000000000080A0 /* GradientPickerScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E0E320000000000000080A0 /* GradientPickerScreen.swift */; };
+		A5E0E410000000000000080A0 /* InlineFooterRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E0E420000000000000080A0 /* InlineFooterRow.swift */; };
+		A5F0F110000000000000090A0 /* EntityImageViewTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F0F120000000000000090A0 /* EntityImageViewTest.swift */; };
 		A5B0C10000000000000050A0 /* ShareSongAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0C20000000000000050A0 /* ShareSongAction.swift */; };
 		A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */; };
 		A5B0E10000000000000050A0 /* PlaylistFolderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */; };
@@ -1203,6 +1208,11 @@
 		A5D0D220000000000000070A0 /* GradientBackgroundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientBackgroundView.swift; sourceTree = "<group>"; };
 		A5D0D320000000000000070A0 /* GradientTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientTest.swift; sourceTree = "<group>"; };
 		A5D0D420000000000000070A0 /* GradientEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientEditorView.swift; sourceTree = "<group>"; };
+		A5E0E120000000000000080A0 /* CustomThemeRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomThemeRootView.swift; sourceTree = "<group>"; };
+		A5E0E220000000000000080A0 /* ModeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeDetailView.swift; sourceTree = "<group>"; };
+		A5E0E320000000000000080A0 /* GradientPickerScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientPickerScreen.swift; sourceTree = "<group>"; };
+		A5E0E420000000000000080A0 /* InlineFooterRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlineFooterRow.swift; sourceTree = "<group>"; };
+		A5F0F120000000000000090A0 /* EntityImageViewTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityImageViewTest.swift; sourceTree = "<group>"; };
 		A5B0C20000000000000050A0 /* ShareSongAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSongAction.swift; sourceTree = "<group>"; };
 		A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistItemsSyncTracker.swift; sourceTree = "<group>"; };
 		A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderStore.swift; sourceTree = "<group>"; };
@@ -1475,6 +1485,7 @@
 				6333C8E02C6FDB5200CCA50A /* SecondaryText.swift */,
 				638920EF2C8C8E9000932EE8 /* SettingsList.swift */,
 				631C166E2C6D63510085F62E /* SettingsSection.swift */,
+				A5E0E420000000000000080A0 /* InlineFooterRow.swift */,
 				631C166A2C6D3D9A0085F62E /* SettingsRow.swift */,
 				50791E7E28D363F0006CE6E5 /* InfoBannerView.swift */,
 				504B442128D8EBB20033982C /* MailView.swift */,
@@ -1495,6 +1506,9 @@
 				5078AFB12B40CA5E0038FD17 /* DisplaySettingsView.swift */,
 				A5C0F20000000000000060B0 /* ThemeSettingsSection.swift */,
 				A5D0D420000000000000070A0 /* GradientEditorView.swift */,
+				A5E0E120000000000000080A0 /* CustomThemeRootView.swift */,
+				A5E0E220000000000000080A0 /* ModeDetailView.swift */,
+				A5E0E320000000000000080A0 /* GradientPickerScreen.swift */,
 				50AE79AB2C1CCBEC0085CBB3 /* DeveloperView.swift */,
 				50791E8428D36F1F006CE6E5 /* LibrarySettingsView.swift */,
 				504B441828D6F0920033982C /* LicenseSettingsView.swift */,
@@ -2222,6 +2236,7 @@
 				5095F98E23CA949C008B0805 /* Storage */,
 				50B798B323B8664700551E62 /* HelperTest.swift */,
 				A5D0D320000000000000070A0 /* GradientTest.swift */,
+				A5F0F120000000000000090A0 /* EntityImageViewTest.swift */,
 			);
 			path = Cases;
 			sourceTree = "<group>";
@@ -2605,6 +2620,10 @@
 				A5C0F10000000000000060B0 /* ThemeSettingsSection.swift in Sources */,
 				A5D0D210000000000000070A0 /* GradientBackgroundView.swift in Sources */,
 				A5D0D410000000000000070A0 /* GradientEditorView.swift in Sources */,
+				A5E0E110000000000000080A0 /* CustomThemeRootView.swift in Sources */,
+				A5E0E210000000000000080A0 /* ModeDetailView.swift in Sources */,
+				A5E0E310000000000000080A0 /* GradientPickerScreen.swift in Sources */,
+				A5E0E410000000000000080A0 /* InlineFooterRow.swift in Sources */,
 				50E77DB728D2163F00BDF882 /* SettingsView.swift in Sources */,
 				50C16C1A21E704EC00F086F0 /* ArtistDetailVC.swift in Sources */,
 				50DEEE04265E25A40073FF20 /* MusicFoldersVC.swift in Sources */,
@@ -2999,6 +3018,7 @@
 				50BE5D482850F4C900156FC6 /* PlaylistTest.swift in Sources */,
 				50BE5D522850F4D700156FC6 /* HelperTest.swift in Sources */,
 				A5D0D310000000000000070A0 /* GradientTest.swift in Sources */,
+				A5F0F110000000000000090A0 /* EntityImageViewTest.swift in Sources */,
 				50BE5D6B2850F4FB00156FC6 /* SsGenreParserTest.swift in Sources */,
 				50BE5D542850F4E700156FC6 /* SubsonicVersionTest.swift in Sources */,
 				50BE5D742850F4FB00156FC6 /* SsAlbumMultidiscExample1ParserTest.swift in Sources */,
@@ -3226,7 +3246,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 39;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3265,7 +3285,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 39;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3304,7 +3324,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 39;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3355,7 +3375,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 39;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3404,7 +3424,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 39;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
@@ -3436,7 +3456,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 39;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
