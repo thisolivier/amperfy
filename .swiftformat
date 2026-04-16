@@ -103,6 +103,6 @@ strongifiedSelf
 
 # Excluded folders
 
---exclude Pods,**/UNTESTED_TODO,vendor,fastlane
+--exclude Pods,**/UNTESTED_TODO,vendor,fastlane,build
 
 # https://github.com/NoemiRozpara/Google-SwiftFormat-Config
