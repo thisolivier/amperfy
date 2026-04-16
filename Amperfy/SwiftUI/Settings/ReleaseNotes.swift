@@ -37,6 +37,28 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 38,
+      date: "2026-04-15",
+      title: "Build 38 — Custom background gradients",
+      whatsNew: [
+        "Custom Theme: new 'Background Gradient' section lets you pick a multi-color gradient as the app background, independently for Light and Dark mode",
+        "Gradient editor supports 2–4 color stops, six directions, and a live preview before you commit",
+        "Previously Used gradient carousel keeps up to 20 of your recent designs — tap any swatch to reuse it for Light or Dark mode",
+        "Reset to Defaults now clears the active gradient selection but keeps your gradient history intact",
+      ],
+      testingFocus: [
+        "Settings → Custom Theme → toggle ON → 'Background Gradient' section should appear with rows for Light and Dark mode",
+        "Tap 'Light Mode Gradient' → editor sheet opens → pick two colors, adjust direction, tap 'Apply & Save' — Home tab background should adopt the gradient",
+        "In the editor, tap 'Add Color' up to 4 times; tap the minus on any row to remove (minimum 2 colors enforced)",
+        "Switch Light/Dark mode at the system level — the background should swap between your two gradient choices (or fall back to the solid background color for any mode without a gradient)",
+        "Tap a swatch under 'Previously Used' → action sheet prompts Light Mode / Dark Mode / Cancel → verify the chosen slot updates",
+        "Tap the × on the Light or Dark gradient row to clear it — the solid background color should return for that mode",
+        "Album detail screen should also render the gradient behind the track list; cell backgrounds should stay transparent while any gradient is active",
+        "Settings → Reset to Defaults → confirm — both gradients clear AND custom theme toggle goes off, but the Previously Used carousel should still list your earlier gradients",
+        "Quit and relaunch — gradient selection should persist through restarts",
+      ]
+    ),
+    ReleaseNote(
       id: 37,
       date: "2026-04-15",
       title: "Build 37 — Delete playlist folders",
