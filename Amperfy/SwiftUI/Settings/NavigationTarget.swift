@@ -24,6 +24,7 @@ import SwiftUI
 enum NavigationTarget: String, CaseIterable, @MainActor Identifiable {
   case general
   case account
+  case customTheme
   case displayAndInteraction
   case library
   case player
@@ -45,6 +46,7 @@ enum NavigationTarget: String, CaseIterable, @MainActor Identifiable {
     case .general: SettingsView()
     case .displayAndInteraction: DisplaySettingsView()
     case .account: AccountSettingsView()
+    case .customTheme: CustomThemeRootView()
     case .library: LibrarySettingsView()
     case .player: PlayerSettingsView()
     case .equalizer: EqualizerSettingsView()
@@ -65,6 +67,7 @@ enum NavigationTarget: String, CaseIterable, @MainActor Identifiable {
     case .general: "General"
     case .displayAndInteraction: "Display & Interaction"
     case .account: "Account"
+    case .customTheme: "Custom Theme"
     case .library: "Library"
     case .swipe: "Swipe"
     case .artwork: "Artwork"
@@ -86,6 +89,10 @@ enum NavigationTarget: String, CaseIterable, @MainActor Identifiable {
     case .general: .settings
     case .displayAndInteraction: .display
     case .account: .userPerson
+    // PR 20: Custom Theme is a new root row; reuse the system
+    // `paintpalette.fill` via a UIImage(systemName:) fallback since
+    // the asset catalog doesn't ship a `.paintpalette` entry yet.
+    case .customTheme: UIImage(systemName: "paintpalette.fill") ?? .settings
     case .library: .musicLibrary
     case .player: .playCircle
     case .equalizer: .equalizer
@@ -106,6 +113,7 @@ enum NavigationTarget: String, CaseIterable, @MainActor Identifiable {
     case .general: "gear"
     case .displayAndInteraction: "display"
     case .account: "person.fill"
+    case .customTheme: "paintpalette.fill"
     case .library: "music.note.house"
     case .player: "play.circle.fill"
     case .equalizer: "chart.bar.xaxis"
