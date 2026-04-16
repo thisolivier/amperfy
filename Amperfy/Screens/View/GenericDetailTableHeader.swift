@@ -110,6 +110,10 @@ class GenericDetailTableHeader: UIView {
     // Fix attributed text ignores tint
     subtitleLabel.textColor = .tintColor
     infoLabel.setContentCompressionResistancePriority(.required, for: .vertical)
+    // PR 17.1 + PR 17.4: detail title is a heading — apply the custom heading
+    // font (title1 text style) and the heading-tier color when the theme is
+    // active. Kept nil-safe so the XIB defaults apply otherwise.
+    applyHeadingTheme()
     layoutMargins = UIView.defaultMarginTopElement
     if let playShuffleInfoConfig = config?.playShuffleInfoConfig {
       playShuffleInfoView = ViewCreator<LibraryElementDetailTableHeaderView>.createFromNib()
@@ -132,6 +136,22 @@ class GenericDetailTableHeader: UIView {
         self.applyTraitCollectionChange()
       }
     )
+  }
+
+  /// PR 17.1 (font) + PR 17.4 (heading color): mirror the custom font and
+  /// heading-tier color to the detail-view title and the editable rename
+  /// field. Called from `prepare(configuration:)` so the theme is picked up
+  /// each time a detail page is shown, including after a theme change.
+  private func applyHeadingTheme() {
+    let themeStore = ThemeStore.shared
+    let headingColor = themeStore.dynamicHeadingText ?? .label
+    titleLabel.textColor = headingColor
+    nameTextField.textColor = headingColor
+    if themeStore.isEnabled, themeStore.fontFamily != nil {
+      let themedFont = UIFont.themed(style: .title1)
+      titleLabel.font = themedFont
+      nameTextField.font = themedFont
+    }
   }
 
   func refresh() {

@@ -534,7 +534,15 @@ final class SectionHeaderView: UICollectionReusableView {
   var title: String? {
     didSet {
       titleLabel.text = title
-      titleLabel.textColor = ThemeStore.shared.dynamicText ?? .label
+      titleLabel.textColor = ThemeStore.shared.dynamicHeadingText ?? .label
+      // PR 17.1: propagate the custom heading font (custom-font active loses
+      // the `.semibold` weight trait; that is an accepted Release 1 trade-off
+      // — see DESIGN_REVIEW_RELEASE_1.md Open Question 5).
+      if ThemeStore.shared.isEnabled, ThemeStore.shared.fontFamily != nil {
+        titleLabel.font = UIFont.themed(style: .title3)
+      } else {
+        titleLabel.font = UIFont.preferredFont(forTextStyle: .title3).withWeight(.semibold)
+      }
     }
   }
 
