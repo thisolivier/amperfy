@@ -49,6 +49,12 @@ final class ThemeStore: @unchecked Sendable {
     static let darkGradientActive = "amperfy.fork.theme.dark.gradient.active"
     static let gradientHistory = "amperfy.fork.theme.gradient.history"
     static let hasSeededGradientPresets = "amperfy.fork.theme.gradient.seeded"
+    // PR 17.3 — album art border. Single global (not per-mode) color +
+    // width applied to every thumbnail rendered through EntityImageView
+    // (single tile and each of the four quad tiles). Default: width 0
+    // (effectively off); color nil (falls back to `.separator`).
+    static let albumArtBorderWidth = "amperfy.fork.theme.albumArt.borderWidth"
+    static let albumArtBorderColor = "amperfy.fork.theme.albumArt.borderColor"
   }
 
   private let defaults: UserDefaults
@@ -119,6 +125,41 @@ final class ThemeStore: @unchecked Sendable {
     set { defaults.set(newValue, forKey: Key.fontFamily) }
   }
 
+  // MARK: - Album art border (PR 17.3)
+
+  /// Width in points for the album-artwork border. Clamped 0...6 at the
+  /// UI layer; the setter accepts any non-negative value (render sites
+  /// cope with zero by not drawing anything). Width 0 = no border.
+  var albumArtBorderWidth: CGFloat {
+    get { CGFloat(defaults.double(forKey: Key.albumArtBorderWidth)) }
+    set { defaults.set(Double(newValue), forKey: Key.albumArtBorderWidth) }
+  }
+
+  /// Optional border color; nil means "fall back to `.separator`", which
+  /// resolves dynamically for the active interface style. A non-nil color
+  /// is a fixed UIColor the user picked from the settings color well.
+  var albumArtBorderColor: UIColor? {
+    get { color(forKey: Key.albumArtBorderColor) }
+    set { setColor(newValue, forKey: Key.albumArtBorderColor) }
+  }
+
+  /// Effective border width honoured at render time: 0 whenever the
+  /// custom theme is disabled (user opted out globally); otherwise
+  /// whatever the user configured. Keeps the render sites from needing
+  /// to re-check `isEnabled` themselves.
+  var resolvedAlbumArtBorderWidth: CGFloat {
+    guard isEnabled else { return 0 }
+    return albumArtBorderWidth
+  }
+
+  /// Effective border color honoured at render time. Falls back to the
+  /// system `.separator` when the user has not picked a color, so the
+  /// first time they bump the width > 0 they see a sensible default
+  /// instead of a confusing transparent-black line.
+  var resolvedAlbumArtBorderColor: UIColor {
+    albumArtBorderColor ?? .separator
+  }
+
   // MARK: - Gradient backgrounds (PR 17.2)
 
   /// Active gradient for the given interface style, or nil if the user
@@ -128,7 +169,11 @@ final class ThemeStore: @unchecked Sendable {
   /// both checks and is the recommended call site for rendering code.
   func activeGradient(for style: UIUserInterfaceStyle) -> ThemeGradient? {
     let key = style == .dark ? Key.darkGradientActive : Key.lightGradientActive
-    return decodeGradient(forKey: key)
+    // PR 20: pre-PR-20 installs may hold a 3- or 4-stop gradient in
+    // UserDefaults. Collapse to start + end on read so renderers and
+    // the new 2-stop picker see a consistent shape without needing a
+    // one-shot migration write.
+    return decodeGradient(forKey: key)?.reducedToTwoStops()
   }
 
   /// Set the active gradient for the given style. Passing `nil` clears
@@ -166,7 +211,11 @@ final class ThemeStore: @unchecked Sendable {
   var gradientHistory: [ThemeGradient] {
     get {
       guard let data = defaults.data(forKey: Key.gradientHistory) else { return [] }
-      return (try? JSONDecoder().decode([ThemeGradient].self, from: data)) ?? []
+      let raw = (try? JSONDecoder().decode([ThemeGradient].self, from: data)) ?? []
+      // PR 20: same two-stop normalisation applied to active gradient —
+      // reduce every stored history entry so the Previously-Used
+      // carousel only shows 2-stop swatches.
+      return raw.map { $0.reducedToTwoStops() }
     }
     set {
       if newValue.isEmpty {
@@ -330,6 +379,10 @@ final class ThemeStore: @unchecked Sendable {
       Key.darkBackground, Key.darkText, Key.darkHeadingText, Key.darkTint,
       Key.fontFamily,
       Key.lightGradientActive, Key.darkGradientActive,
+      // PR 17.3: clear border config on reset. Same logic as the other
+      // user-picked theme state — a fresh reset should fall back to the
+      // no-border default.
+      Key.albumArtBorderWidth, Key.albumArtBorderColor,
     ]
     for key in allKeys {
       defaults.removeObject(forKey: key)

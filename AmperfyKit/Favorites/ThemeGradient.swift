@@ -47,9 +47,16 @@ public struct ThemeGradient: Codable, Equatable, Hashable, Sendable {
   }
 
   /// Minimum number of color stops per gradient (designer spec).
+  ///
+  /// PR 20: gradients are now exactly 2-stop (start + end). Both the
+  /// min and max collapse to 2. The struct still accepts any count at
+  /// init time for decode robustness (a stored pre-PR-20 install might
+  /// hold a 3- or 4-stop gradient); readers should call
+  /// `reducedToTwoStops()` before rendering.
   public static let minColorCount = 2
-  /// Maximum number of color stops per gradient (designer spec).
-  public static let maxColorCount = 4
+  /// Maximum number of color stops per gradient (designer spec). See
+  /// `minColorCount` — PR 20 collapsed both to the same value.
+  public static let maxColorCount = 2
   /// Soft cap on the persisted history list. Prevents unbounded growth
   /// in UserDefaults when a user experiments heavily in the editor.
   public static let historySoftCap = 20
@@ -73,6 +80,19 @@ public struct ThemeGradient: Codable, Equatable, Hashable, Sendable {
   /// dedup the Previously-Used history on insertion.
   public func matchesContent(of other: ThemeGradient) -> Bool {
     colors == other.colors && direction == other.direction
+  }
+
+  /// PR 20: normalise a stored gradient to exactly two stops. A decode
+  /// from a pre-PR-20 UserDefaults blob may deliver a 3- or 4-stop
+  /// gradient; rendering code and the 2-stop picker UI both want
+  /// exactly start+end. Keeps the first and last color, discards the
+  /// middle. No-op when the gradient is already 2-stop (or shorter,
+  /// which the decode tolerance allows but no UI path produces).
+  public func reducedToTwoStops() -> ThemeGradient {
+    guard colors.count > 2, let first = colors.first, let last = colors.last else {
+      return self
+    }
+    return ThemeGradient(colors: [first, last], direction: direction, id: id)
   }
 }
 
