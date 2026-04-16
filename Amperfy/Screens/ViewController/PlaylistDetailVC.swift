@@ -159,7 +159,8 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
     )
     optionsButton = UIBarButtonItem.createOptionsBarButton()
     optionsButton.menu = UIMenu.lazyMenu {
-      var actions = EntityPreviewActionBuilder(container: self.playlist, on: self).createMenuActions()
+      var actions = EntityPreviewActionBuilder(container: self.playlist, on: self)
+        .createMenuActions()
 
       // Add Favourite toggle and Edit into the overflow menu
       var favouriteActions = [UIMenuElement]()
@@ -172,7 +173,7 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
       }
       favouriteActions.append(favAction)
 
-      if self.appDelegate.storage.settings.user.isOnlineMode && !self.playlist.isSmartPlaylist {
+      if self.appDelegate.storage.settings.user.isOnlineMode, !self.playlist.isSmartPlaylist {
         let editAction = UIAction(title: "Edit", image: UIImage(systemName: "pencil")) { _ in
           self.openEditView(sender: self.optionsButton)
         }

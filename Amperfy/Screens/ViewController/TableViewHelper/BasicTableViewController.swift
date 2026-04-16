@@ -120,6 +120,34 @@ class BasicTableViewController: KeyCommandTableViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     tableView.keyboardDismissMode = .onDrag
+    // PR 17.2: centralize gradient-background wiring. Every descendant VC
+    // previously set `tableView.backgroundColor = .backgroundColor` in
+    // its own viewDidLoad; now the helper `applyBackgroundSurface(to:)`
+    // handles both the solid-color and gradient paths. Re-apply on every
+    // theme-change notification so toggling the gradient in Settings
+    // takes effect without a VC reload.
+    applyBackgroundSurface(to: tableView)
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleThemeChanged),
+      name: ThemeStore.didChangeNotification,
+      object: nil
+    )
+  }
+
+  @objc
+  private func handleThemeChanged() {
+    applyBackgroundSurface(to: tableView)
+  }
+
+  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    // When the user flips light↔dark system-wide, the active gradient
+    // may differ between modes — re-apply so the right gradient surface
+    // paints through.
+    if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
+      applyBackgroundSurface(to: tableView)
+    }
   }
 
   override func viewIsAppearing(_ animated: Bool) {

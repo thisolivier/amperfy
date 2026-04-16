@@ -308,7 +308,13 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     if let cached = cachedHeaderView { return cached }
 
     let headerView = UIView()
-    headerView.backgroundColor = .backgroundColor
+    // PR 17.2: when a gradient is active for this style, keep the header
+    // transparent so the gradient shows through. Otherwise retain the
+    // solid `.backgroundColor` so the filter header stays readable.
+    let style = traitCollection.userInterfaceStyle
+    headerView.backgroundColor = ThemeStore.shared.resolvedGradient(for: style) != nil
+      ? .clear
+      : .backgroundColor
 
     headerView.addSubview(modeControl)
     headerView.addSubview(stepperLabel)

@@ -112,9 +112,19 @@ final class HomeVC: UICollectionViewController {
 
   @objc
   private func handleThemeChanged() {
-    collectionView.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
+    // PR 17.2: route through the shared helper so a gradient surface is
+    // installed when the user has one enabled for the current mode, and
+    // the solid background is restored otherwise.
+    applyBackgroundSurface(to: collectionView)
     // reloadData refreshes cells AND supplementary views (section headers)
     collectionView.reloadData()
+  }
+
+  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
+      applyBackgroundSurface(to: collectionView)
+    }
   }
 
   override func viewWillAppear(_ animated: Bool) {
@@ -181,7 +191,7 @@ final class HomeVC: UICollectionViewController {
   // MARK: - CollectionView Setup
 
   private func configureCollectionView() {
-    collectionView.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
+    applyBackgroundSurface(to: collectionView)
     collectionView.register(
       UINib(nibName: AlbumCollectionCell.typeName, bundle: .main),
       forCellWithReuseIdentifier: AlbumCollectionCell.typeName

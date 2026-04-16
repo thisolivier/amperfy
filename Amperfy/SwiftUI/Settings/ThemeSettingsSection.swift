@@ -19,6 +19,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+import AmperfyKit
 import SwiftUI
 import UIKit
 
@@ -27,6 +28,18 @@ import UIKit
 struct ThemeSettingsSection: View {
   @State
   private var isEnabled: Bool = ThemeStore.shared.isEnabled
+  @State
+  private var lightGradient: ThemeGradient? = ThemeStore.shared.activeGradient(for: .light)
+  @State
+  private var darkGradient: ThemeGradient? = ThemeStore.shared.activeGradient(for: .dark)
+  @State
+  private var gradientHistory: [ThemeGradient] = ThemeStore.shared.gradientHistory
+  @State
+  private var editorTarget: EditorTarget?
+  @State
+  private var pendingHistoryGradient: ThemeGradient?
+  @State
+  private var showHistoryActionSheet = false
   @State
   private var lightBackground: Color = Self.loadColor(
     \.lightBackground,
@@ -98,6 +111,42 @@ struct ThemeSettingsSection: View {
   }
 
   var body: some View {
+    Group {
+      mainContent
+    }
+    .sheet(item: $editorTarget) { target in
+      GradientEditorView(
+        initialGradient: target.style == .dark ? darkGradient : lightGradient,
+        targetStyle: target.style
+      ) { edited in
+        applyGradient(edited, for: target.style)
+      }
+    }
+    .confirmationDialog(
+      "Use this gradient for…",
+      isPresented: $showHistoryActionSheet,
+      titleVisibility: .visible
+    ) {
+      Button("Light Mode") {
+        if let gradient = pendingHistoryGradient {
+          applyGradient(gradient, for: .light)
+        }
+        pendingHistoryGradient = nil
+      }
+      Button("Dark Mode") {
+        if let gradient = pendingHistoryGradient {
+          applyGradient(gradient, for: .dark)
+        }
+        pendingHistoryGradient = nil
+      }
+      Button("Cancel", role: .cancel) {
+        pendingHistoryGradient = nil
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var mainContent: some View {
     SettingsSection(content: {
       SettingsRow(title: "Custom Theme") {
         Toggle(isOn: $isEnabled) {}
@@ -106,6 +155,7 @@ struct ThemeSettingsSection: View {
             if newValue {
               ThemeStore.shared.populateDefaultsIfNeeded()
               reloadColorsFromStore()
+              reloadGradientsFromStore()
             }
             ThemeStore.shared.isEnabled = newValue
             applyTheme()
@@ -162,6 +212,22 @@ struct ThemeSettingsSection: View {
       }, header: "Dark Mode Colors")
 
       SettingsSection(content: {
+        gradientModeRow(
+          title: "Light Mode Gradient",
+          gradient: lightGradient,
+          style: .light
+        )
+        gradientModeRow(
+          title: "Dark Mode Gradient",
+          gradient: darkGradient,
+          style: .dark
+        )
+        if !gradientHistory.isEmpty {
+          previouslyUsedCarousel
+        }
+      }, header: "Background Gradient")
+
+      SettingsSection(content: {
         NavigationLink {
           FontPickerView(selectedFamily: $selectedFontFamily)
         } label: {
@@ -189,6 +255,7 @@ struct ThemeSettingsSection: View {
             isEnabled = false
             selectedFontFamily = "System Default"
             reloadColorsFromStore()
+            reloadGradientsFromStore()
             applyTheme()
           }
         } message: {
@@ -196,6 +263,124 @@ struct ThemeSettingsSection: View {
         }
       }
     }
+  }
+
+  // MARK: - Gradient UX
+
+  /// Identifier for the active gradient editor sheet. Encodes which mode
+  /// (light vs dark) the editor is targeting so the sheet knows where to
+  /// route the applied gradient.
+  private struct EditorTarget: Identifiable {
+    let style: UIUserInterfaceStyle
+    var id: Int { style == .dark ? 1 : 0 }
+  }
+
+  private func gradientModeRow(
+    title: String,
+    gradient: ThemeGradient?,
+    style: UIUserInterfaceStyle
+  )
+    -> some View {
+    Button {
+      editorTarget = EditorTarget(style: style)
+    } label: {
+      HStack(spacing: 12) {
+        gradientSwatch(gradient)
+          .frame(width: 40, height: 28)
+          .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+          .overlay(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+              .stroke(Color(.separator), lineWidth: 0.5)
+          )
+        VStack(alignment: .leading, spacing: 2) {
+          Text(title)
+            .foregroundColor(.primary)
+          Text(gradient == nil ? "Not set" : "\(gradient!.colors.count) colors")
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+        Spacer()
+        if gradient != nil {
+          Button(role: .destructive) {
+            applyGradient(nil, for: style)
+          } label: {
+            Image(systemName: "xmark.circle.fill")
+              .foregroundColor(.secondary)
+          }
+          .buttonStyle(.borderless)
+        }
+        Image(systemName: "chevron.right")
+          .font(.caption)
+          .foregroundColor(.secondary)
+      }
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+  }
+
+  @ViewBuilder
+  private func gradientSwatch(_ gradient: ThemeGradient?) -> some View {
+    if let gradient {
+      GradientPreviewSwiftUIView(
+        colors: gradient.swiftUIColors,
+        direction: gradient.direction
+      )
+    } else {
+      Rectangle()
+        .fill(Color(.secondarySystemBackground))
+    }
+  }
+
+  private var previouslyUsedCarousel: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text("Previously Used")
+        .font(.caption)
+        .foregroundColor(.secondary)
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 10) {
+          ForEach(gradientHistory, id: \.id) { gradient in
+            Button {
+              pendingHistoryGradient = gradient
+              showHistoryActionSheet = true
+            } label: {
+              GradientPreviewSwiftUIView(
+                colors: gradient.swiftUIColors,
+                direction: gradient.direction
+              )
+              .frame(width: 56, height: 40)
+              .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+              .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                  .stroke(Color(.separator), lineWidth: 0.5)
+              )
+            }
+            .buttonStyle(.plain)
+          }
+        }
+        .padding(.vertical, 2)
+      }
+    }
+    .padding(.vertical, 4)
+  }
+
+  private func applyGradient(
+    _ gradient: ThemeGradient?,
+    for style: UIUserInterfaceStyle
+  ) {
+    ThemeStore.shared.setActiveGradient(gradient, for: style)
+    if style == .dark {
+      darkGradient = gradient
+    } else {
+      lightGradient = gradient
+    }
+    gradientHistory = ThemeStore.shared.gradientHistory
+    applyTheme()
+  }
+
+  private func reloadGradientsFromStore() {
+    lightGradient = ThemeStore.shared.activeGradient(for: .light)
+    darkGradient = ThemeStore.shared.activeGradient(for: .dark)
+    gradientHistory = ThemeStore.shared.gradientHistory
   }
 
   // MARK: - Color row

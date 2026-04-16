@@ -152,6 +152,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UITableView.appearance().backgroundColor = nil
       UITableViewCell.appearance().backgroundColor = nil
       UICollectionView.appearance().backgroundColor = nil
+      UICollectionViewCell.appearance().backgroundColor = nil
       UISearchBar.appearance().tintColor = nil
       // Reset text color and font proxies
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewCell.self]).textColor = nil
@@ -173,6 +174,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UITableView.appearance().backgroundColor = backgroundColor
       UITableViewCell.appearance().backgroundColor = backgroundColor
       UICollectionView.appearance().backgroundColor = backgroundColor
+    }
+    // PR 17.2: when ANY gradient is enabled (either mode) we must clear
+    // the cell background proxy so the gradient is visible through the
+    // cells. Otherwise the solid `dynamicBackground` cells sit edge-to-
+    // edge on top of the gradient and hide it entirely. Overrides the
+    // just-set value above — intentional, in that order because the
+    // nav/tab/table bar tints still want the opaque background color.
+    if theme.isAnyGradientEnabled {
+      UITableViewCell.appearance().backgroundColor = .clear
+      UICollectionViewCell.appearance().backgroundColor = .clear
+    } else {
+      UICollectionViewCell.appearance().backgroundColor = nil
     }
     // PR 17.4: nav bar titles, large titles, and default UIKit section
     // headers render in the heading tier; cell body labels render in the
