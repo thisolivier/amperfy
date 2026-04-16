@@ -94,13 +94,17 @@ class PlaylistFolderStoreTest: XCTestCase {
     XCTAssertTrue(store.allFiledPlaylistIds.isEmpty)
   }
 
-  // MARK: - 6. Delete folder — playlists become unfiled
+  // MARK: - 6. Delete root folder — direct-child playlists become unfiled
 
-  func testDeleteFolderUnfilesPlaylists() {
+  //            (they pop up to the root level, which for playlists is "unfiled")
+
+  func testDeleteRootFolderUnfilesDirectPlaylists() {
     let folder = store.createFolder(name: "Delete Me", parent: nil)
     store.addPlaylists(["p1", "p2"], to: folder.id)
     XCTAssertEqual(store.allFiledPlaylistIds, ["p1", "p2"])
     store.deleteFolder(id: folder.id)
+    // Folder is gone, and its direct playlists are no longer filed in any
+    // folder — at root, "pop up one level" = become unfiled.
     XCTAssertTrue(store.folders.isEmpty)
     XCTAssertTrue(store.allFiledPlaylistIds.isEmpty)
   }
@@ -115,16 +119,95 @@ class PlaylistFolderStoreTest: XCTestCase {
     XCTAssertEqual(store.allFiledPlaylistIds, ["p1", "p2"])
   }
 
-  // MARK: - 8. Delete parent — subfolders and memberships removed
+  // MARK: - 8. Delete parent at root — subfolders pop up to root,
 
-  func testDeleteParentRemovesSubfoldersAndMemberships() {
-    let parent = store.createFolder(name: "Parent", parent: nil)
-    let child = store.createFolder(name: "Child", parent: parent.id)
-    store.addPlaylists(["p1"], to: parent.id)
-    store.addPlaylists(["p2"], to: child.id)
-    store.deleteFolder(id: parent.id)
-    XCTAssertTrue(store.folders.isEmpty)
-    XCTAssertTrue(store.allFiledPlaylistIds.isEmpty)
+  //            grandchildren stay inside their direct parent
+
+  func testDeleteRootFolderFlattensSubfoldersAndPreservesGrandchildren() {
+    // Seed: root folder "Rock" with 2 direct playlists + 1 sub-folder
+    // "Metal", which itself contains 1 grandchild playlist.
+    let rock = store.createFolder(name: "Rock", parent: nil)
+    let metal = store.createFolder(name: "Metal", parent: rock.id)
+    store.addPlaylists(["p1", "p2"], to: rock.id)
+    store.addPlaylists(["p3"], to: metal.id)
+
+    store.deleteFolder(id: rock.id)
+
+    // "Metal" has popped up to root.
+    XCTAssertEqual(store.folders.count, 1)
+    XCTAssertEqual(store.folders.first?.id, metal.id)
+    XCTAssertEqual(store.folders.first?.name, "Metal")
+    // Grandchild playlist is still inside "Metal".
+    XCTAssertEqual(store.folders.first?.playlistIds, ["p3"])
+    // The 2 direct playlists of "Rock" are now unfiled (root-level for
+    // playlists means "not in any folder"). Only the grandchild remains
+    // filed.
+    XCTAssertEqual(store.allFiledPlaylistIds, ["p3"])
+  }
+
+  // MARK: - 8b. Delete a nested folder — children pop to nested parent,
+
+  //             not to root.
+
+  func testDeleteNestedFolderFlattensToNestedParent() {
+    // Seed: root -> "Music" -> "Rock" (contains p1) -> "Metal" (contains p2).
+    let music = store.createFolder(name: "Music", parent: nil)
+    let rock = store.createFolder(name: "Rock", parent: music.id)
+    let metal = store.createFolder(name: "Metal", parent: rock.id)
+    store.addPlaylists(["p1"], to: rock.id)
+    store.addPlaylists(["p2"], to: metal.id)
+
+    store.deleteFolder(id: rock.id)
+
+    // Root is unchanged structurally — still only "Music".
+    XCTAssertEqual(store.folders.count, 1)
+    XCTAssertEqual(store.folders.first?.id, music.id)
+
+    // "Music" now contains "Metal" (popped up from inside "Rock") and
+    // playlist p1 (popped up from "Rock"'s direct playlistIds).
+    let musicAfter = store.folder(byId: music.id)
+    XCTAssertEqual(musicAfter?.subfolders.count, 1)
+    XCTAssertEqual(musicAfter?.subfolders.first?.id, metal.id)
+    XCTAssertEqual(musicAfter?.playlistIds, ["p1"])
+
+    // "Metal" still contains p2 (grandchild preserved).
+    XCTAssertEqual(store.folder(byId: metal.id)?.playlistIds, ["p2"])
+
+    // p1 and p2 both remain filed (under "Music" and "Metal" respectively).
+    XCTAssertEqual(store.allFiledPlaylistIds, ["p1", "p2"])
+  }
+
+  // MARK: - 8c. Delete an empty folder — no crash, folder just vanishes.
+
+  func testDeleteEmptyFolderSucceeds() {
+    _ = store.createFolder(name: "Keep", parent: nil)
+    let empty = store.createFolder(name: "Empty", parent: nil)
+    XCTAssertEqual(store.folders.count, 2)
+
+    store.deleteFolder(id: empty.id)
+
+    XCTAssertEqual(store.folders.count, 1)
+    XCTAssertEqual(store.folders.first?.name, "Keep")
+  }
+
+  // MARK: - 8d. Multi-filed playlist preserved — flatten-delete only unfiles
+
+  //             relative to the deleted folder.
+
+  func testDeleteFolderWithMultiFiledPlaylistPreservesOtherFiling() {
+    let jazz = store.createFolder(name: "Jazz", parent: nil)
+    let blues = store.createFolder(name: "Blues", parent: nil)
+    store.addPlaylists(["p1"], to: jazz.id)
+    store.addPlaylists(["p1"], to: blues.id)
+    XCTAssertEqual(store.allFiledPlaylistIds, ["p1"])
+
+    store.deleteFolder(id: jazz.id)
+
+    // Jazz is gone; p1 is still filed in Blues.
+    XCTAssertEqual(store.folders.count, 1)
+    XCTAssertEqual(store.folders.first?.id, blues.id)
+    XCTAssertEqual(store.folder(byId: blues.id)?.playlistIds, ["p1"])
+    XCTAssertTrue(store.allFiledPlaylistIds.contains("p1"))
   }
 
   // MARK: - 9. Rename persists across instances
