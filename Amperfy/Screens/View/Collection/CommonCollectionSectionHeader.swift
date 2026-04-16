@@ -34,6 +34,10 @@ class CommonCollectionSectionHeader: UICollectionReusableView {
     titleLabel.text = title
     titleLabel.isHidden = (title == nil)
     titleLabel.font = UIFont.themed(style: .headline)
+    // PR 17.4: collection section title is a heading — pull from the
+    // heading tier (falls through to body-tier + `.label` automatically
+    // for pre-migration stores).
+    titleLabel.textColor = ThemeStore.shared.dynamicHeadingText ?? .label
   }
 
   func displayPlayHeader(configuration: PlayShuffleInfoConfiguration) {

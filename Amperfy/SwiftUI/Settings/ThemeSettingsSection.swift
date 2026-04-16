@@ -34,6 +34,12 @@ struct ThemeSettingsSection: View {
     fallbackSystem: .systemBackground
   )
   @State
+  private var lightHeadingText: Color = Self.loadColor(
+    \.lightHeadingText,
+    fallbackStyle: .light,
+    fallbackSystem: .label
+  )
+  @State
   private var lightText: Color = Self.loadColor(
     \.lightText,
     fallbackStyle: .light,
@@ -50,6 +56,12 @@ struct ThemeSettingsSection: View {
     \.darkBackground,
     fallbackStyle: .dark,
     fallbackSystem: .systemBackground
+  )
+  @State
+  private var darkHeadingText: Color = Self.loadColor(
+    \.darkHeadingText,
+    fallbackStyle: .dark,
+    fallbackSystem: .label
   )
   @State
   private var darkText: Color = Self.loadColor(
@@ -116,7 +128,11 @@ struct ThemeSettingsSection: View {
           ThemeStore.shared.lightBackground = uiColor
           applyTheme()
         }
-        colorRow(title: "Text", color: $lightText) { uiColor in
+        colorRow(title: "Heading Color", color: $lightHeadingText) { uiColor in
+          ThemeStore.shared.lightHeadingText = uiColor
+          applyTheme()
+        }
+        colorRow(title: "Body Color", color: $lightText) { uiColor in
           ThemeStore.shared.lightText = uiColor
           applyTheme()
         }
@@ -131,7 +147,11 @@ struct ThemeSettingsSection: View {
           ThemeStore.shared.darkBackground = uiColor
           applyTheme()
         }
-        colorRow(title: "Text", color: $darkText) { uiColor in
+        colorRow(title: "Heading Color", color: $darkHeadingText) { uiColor in
+          ThemeStore.shared.darkHeadingText = uiColor
+          applyTheme()
+        }
+        colorRow(title: "Body Color", color: $darkText) { uiColor in
           ThemeStore.shared.darkText = uiColor
           applyTheme()
         }
@@ -209,12 +229,22 @@ struct ThemeSettingsSection: View {
       fallbackStyle: .light,
       fallbackSystem: .systemBackground
     )
+    lightHeadingText = Self.loadColor(
+      \.lightHeadingText,
+      fallbackStyle: .light,
+      fallbackSystem: .label
+    )
     lightText = Self.loadColor(\.lightText, fallbackStyle: .light, fallbackSystem: .label)
     lightTint = Self.loadColor(\.lightTint, fallbackStyle: .light, fallbackSystem: .systemBlue)
     darkBackground = Self.loadColor(
       \.darkBackground,
       fallbackStyle: .dark,
       fallbackSystem: .systemBackground
+    )
+    darkHeadingText = Self.loadColor(
+      \.darkHeadingText,
+      fallbackStyle: .dark,
+      fallbackSystem: .label
     )
     darkText = Self.loadColor(\.darkText, fallbackStyle: .dark, fallbackSystem: .label)
     darkTint = Self.loadColor(\.darkTint, fallbackStyle: .dark, fallbackSystem: .systemBlue)
@@ -226,10 +256,17 @@ struct ThemeSettingsSection: View {
     guard isEnabled else { contrastWarning = nil; return }
     var warnings = [String]()
 
+    // PR 17.4: check BOTH heading and body tiers against the background;
+    // surface independent warnings when both fall below WCAG AA 4.5.
+    if let lightBg = ThemeStore.shared.lightBackground,
+       let lightHd = ThemeStore.shared.lightHeadingText,
+       ThemeStore.contrastRatio(between: lightBg, and: lightHd) < 4.5 {
+      warnings.append("Light: low heading/background contrast")
+    }
     if let lightBg = ThemeStore.shared.lightBackground,
        let lightTx = ThemeStore.shared.lightText,
        ThemeStore.contrastRatio(between: lightBg, and: lightTx) < 4.5 {
-      warnings.append("Light: low text/background contrast")
+      warnings.append("Light: low body/background contrast")
     }
     if let lightBg = ThemeStore.shared.lightBackground,
        let lightTn = ThemeStore.shared.lightTint,
@@ -237,9 +274,14 @@ struct ThemeSettingsSection: View {
       warnings.append("Light: tint close to background")
     }
     if let darkBg = ThemeStore.shared.darkBackground,
+       let darkHd = ThemeStore.shared.darkHeadingText,
+       ThemeStore.contrastRatio(between: darkBg, and: darkHd) < 4.5 {
+      warnings.append("Dark: low heading/background contrast")
+    }
+    if let darkBg = ThemeStore.shared.darkBackground,
        let darkTx = ThemeStore.shared.darkText,
        ThemeStore.contrastRatio(between: darkBg, and: darkTx) < 4.5 {
-      warnings.append("Dark: low text/background contrast")
+      warnings.append("Dark: low body/background contrast")
     }
     if let darkBg = ThemeStore.shared.darkBackground,
        let darkTn = ThemeStore.shared.darkTint,

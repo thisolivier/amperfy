@@ -174,30 +174,32 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UITableViewCell.appearance().backgroundColor = backgroundColor
       UICollectionView.appearance().backgroundColor = backgroundColor
     }
-    if let textColor = theme.dynamicText {
-      var titleAttributes: [NSAttributedString.Key: Any] = [.foregroundColor: textColor]
-      var largeTitleAttributes: [NSAttributedString.Key: Any] = [.foregroundColor: textColor]
-      // Apply custom font to nav bar titles and large titles
+    // PR 17.4: nav bar titles, large titles, and default UIKit section
+    // headers render in the heading tier; cell body labels render in the
+    // body tier. Each tier is applied independently so one being nil does
+    // not suppress the other.
+    let bodyTextColor = theme.dynamicText
+    let headingTextColor = theme.dynamicHeadingText
+    if let headingTextColor {
+      var titleAttributes: [NSAttributedString.Key: Any] =
+        [.foregroundColor: headingTextColor]
+      var largeTitleAttributes: [NSAttributedString.Key: Any] =
+        [.foregroundColor: headingTextColor]
       if theme.fontFamily != nil {
         titleAttributes[.font] = UIFont.themed(style: .headline)
         largeTitleAttributes[.font] = UIFont.themed(style: .largeTitle)
       }
       UINavigationBar.appearance().titleTextAttributes = titleAttributes
       UINavigationBar.appearance().largeTitleTextAttributes = largeTitleAttributes
-      UITabBar.appearance().unselectedItemTintColor = textColor.withAlphaComponent(0.5)
-      // Theme cell body text and section headers
-      UILabel.appearance(whenContainedInInstancesOf: [UITableViewCell.self]).textColor = textColor
-      UILabel.appearance(whenContainedInInstancesOf: [UICollectionViewCell.self])
-        .textColor = textColor
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
-        .textColor = textColor
-      // Apply custom font to section headers
+        .textColor = headingTextColor
       if theme.fontFamily != nil {
         UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
           .font = UIFont.themed(style: .headline)
       }
     } else if theme.fontFamily != nil {
-      // Font-only (no custom text color) — still apply font to nav bar and headers
+      // Font-only (no custom heading color) — still apply font to nav bar
+      // titles and default section headers.
       UINavigationBar.appearance().titleTextAttributes = [
         .font: UIFont.themed(style: .headline),
       ]
@@ -206,6 +208,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       ]
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
         .font = UIFont.themed(style: .headline)
+    }
+    if let bodyTextColor {
+      UITabBar.appearance().unselectedItemTintColor = bodyTextColor.withAlphaComponent(0.5)
+      UILabel.appearance(whenContainedInInstancesOf: [UITableViewCell.self])
+        .textColor = bodyTextColor
+      UILabel.appearance(whenContainedInInstancesOf: [UICollectionViewCell.self])
+        .textColor = bodyTextColor
     }
     if let tintColor = theme.dynamicTint {
       UINavigationBar.appearance().tintColor = tintColor

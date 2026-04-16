@@ -34,9 +34,11 @@ final class ThemeStore: @unchecked Sendable {
     static let enabled = "amperfy.fork.theme.enabled"
     static let lightBackground = "amperfy.fork.theme.light.bg"
     static let lightText = "amperfy.fork.theme.light.text"
+    static let lightHeadingText = "amperfy.fork.theme.light.headingText"
     static let lightTint = "amperfy.fork.theme.light.tint"
     static let darkBackground = "amperfy.fork.theme.dark.bg"
     static let darkText = "amperfy.fork.theme.dark.text"
+    static let darkHeadingText = "amperfy.fork.theme.dark.headingText"
     static let darkTint = "amperfy.fork.theme.dark.tint"
     static let fontFamily = "amperfy.fork.theme.fontFamily"
   }
@@ -66,6 +68,16 @@ final class ThemeStore: @unchecked Sendable {
     set { setColor(newValue, forKey: Key.lightText) }
   }
 
+  /// PR 17.4 — heading-tier color for light mode. Drives nav bar titles,
+  /// Home section headers, and detail-view titles (see
+  /// `AppDelegate.applyCustomThemeAppearance` for the proxy-level apply
+  /// and `SectionHeaderView` / `GenericDetailTableHeader` /
+  /// `CommonCollectionSectionHeader` for the per-view applies).
+  var lightHeadingText: UIColor? {
+    get { color(forKey: Key.lightHeadingText) }
+    set { setColor(newValue, forKey: Key.lightHeadingText) }
+  }
+
   var lightTint: UIColor? {
     get { color(forKey: Key.lightTint) }
     set { setColor(newValue, forKey: Key.lightTint) }
@@ -79,6 +91,12 @@ final class ThemeStore: @unchecked Sendable {
   var darkText: UIColor? {
     get { color(forKey: Key.darkText) }
     set { setColor(newValue, forKey: Key.darkText) }
+  }
+
+  /// PR 17.4 — heading-tier color for dark mode. See `lightHeadingText`.
+  var darkHeadingText: UIColor? {
+    get { color(forKey: Key.darkHeadingText) }
+    set { setColor(newValue, forKey: Key.darkHeadingText) }
   }
 
   var darkTint: UIColor? {
@@ -105,6 +123,14 @@ final class ThemeStore: @unchecked Sendable {
     return style == .dark ? darkText : lightText
   }
 
+  /// PR 17.4 — heading-tier resolved color. Sibling to `textColor(for:)`.
+  /// Returns nil when the theme is disabled so callers fall back to the
+  /// system `.label`.
+  func headingTextColor(for style: UIUserInterfaceStyle) -> UIColor? {
+    guard isEnabled else { return nil }
+    return style == .dark ? darkHeadingText : lightHeadingText
+  }
+
   func tintColor(for style: UIUserInterfaceStyle) -> UIColor? {
     guard isEnabled else { return nil }
     return style == .dark ? darkTint : lightTint
@@ -123,6 +149,20 @@ final class ThemeStore: @unchecked Sendable {
     guard isEnabled else { return nil }
     return UIColor { [self] traits in
       (traits.userInterfaceStyle == .dark ? darkText : lightText) ?? .label
+    }
+  }
+
+  /// PR 17.4 — dynamic heading-tier color. Sibling to `dynamicText`. Used
+  /// by nav-bar title appearance, Home section headers, and detail-view
+  /// titles. Falls back through the body-tier color to `.label` so legacy
+  /// installs without a stored heading color still render correctly.
+  var dynamicHeadingText: UIColor? {
+    guard isEnabled else { return nil }
+    return UIColor { [self] traits in
+      let isDarkStyle = traits.userInterfaceStyle == .dark
+      let heading = isDarkStyle ? darkHeadingText : lightHeadingText
+      let body = isDarkStyle ? darkText : lightText
+      return heading ?? body ?? .label
     }
   }
 
@@ -154,6 +194,15 @@ final class ThemeStore: @unchecked Sendable {
         with: UITraitCollection(userInterfaceStyle: .light)
       )
     }
+    // PR 17.4 migration: a user who configured PR 7's single text color
+    // before 17.4 shipped should have that color adopted as the heading
+    // color too — otherwise they would see a default-label heading
+    // regression on first launch after the split.
+    if lightHeadingText == nil {
+      lightHeadingText = lightText ?? UIColor.label.resolvedColor(
+        with: UITraitCollection(userInterfaceStyle: .light)
+      )
+    }
     if lightTint == nil {
       lightTint = UIColor.systemBlue.resolvedColor(
         with: UITraitCollection(userInterfaceStyle: .light)
@@ -169,6 +218,11 @@ final class ThemeStore: @unchecked Sendable {
         with: UITraitCollection(userInterfaceStyle: .dark)
       )
     }
+    if darkHeadingText == nil {
+      darkHeadingText = darkText ?? UIColor.label.resolvedColor(
+        with: UITraitCollection(userInterfaceStyle: .dark)
+      )
+    }
     if darkTint == nil {
       darkTint = UIColor.systemBlue.resolvedColor(
         with: UITraitCollection(userInterfaceStyle: .dark)
@@ -180,8 +234,10 @@ final class ThemeStore: @unchecked Sendable {
 
   func resetToDefaults() {
     let allKeys = [
-      Key.enabled, Key.lightBackground, Key.lightText, Key.lightTint,
-      Key.darkBackground, Key.darkText, Key.darkTint, Key.fontFamily,
+      Key.enabled,
+      Key.lightBackground, Key.lightText, Key.lightHeadingText, Key.lightTint,
+      Key.darkBackground, Key.darkText, Key.darkHeadingText, Key.darkTint,
+      Key.fontFamily,
     ]
     for key in allKeys {
       defaults.removeObject(forKey: key)
