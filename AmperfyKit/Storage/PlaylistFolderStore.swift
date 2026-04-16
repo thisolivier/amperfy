@@ -112,8 +112,12 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     }
   }
 
+  /// Deletes the folder with the given id, lifting its direct `playlistIds` and
+  /// `subfolders` up one level into the containing array (root if the folder
+  /// was at root). Grandchildren remain inside their direct parent — the pop is
+  /// one level only. Playlists themselves are never deleted.
   public func deleteFolder(id: UUID) {
-    folders = Self.removingFolder(id: id, from: folders)
+    folders = Self.flatteningFolder(id: id, from: folders)
     persist()
   }
 
@@ -194,12 +198,67 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     }
   }
 
-  private static func removingFolder(id: UUID, from folders: [PlaylistFolder]) -> [PlaylistFolder] {
-    folders.compactMap { folder in
-      if folder.id == id { return nil }
-      var mutableFolder = folder
-      mutableFolder.subfolders = removingFolder(id: id, from: mutableFolder.subfolders)
-      return mutableFolder
+  /// Tree-walk splice: when a folder with the given id is found in `folders`,
+  /// replace it in-place with its direct `subfolders` (its direct `playlistIds`
+  /// are attached to the containing folder by the caller via a companion
+  /// walk). Since `playlistIds` live on the *parent* folder, the top-level
+  /// splice uses the overload below that returns both the new subfolder list
+  /// and the playlist IDs to lift.
+  private static func flatteningFolder(
+    id: UUID,
+    from folders: [PlaylistFolder]
+  )
+    -> [PlaylistFolder] {
+    var result = [PlaylistFolder]()
+    result.reserveCapacity(folders.count)
+    for folder in folders {
+      if folder.id == id {
+        // Splice: replace this folder with its direct children at this level.
+        // The playlistIds that were inside `folder` also lift to this level —
+        // but at the root there is no containing folder, so they become
+        // unfiled relative to the deleted folder and will be picked up by
+        // `fetchUnfiledPlaylists`. That is exactly the desired "pop up one
+        // level" semantic for root-level deletes.
+        result.append(contentsOf: folder.subfolders)
+      } else {
+        var mutableFolder = folder
+        if folder.subfolders.contains(where: { $0.id == id }) {
+          // The deletion target is a direct child of this folder — splice its
+          // children into this folder's direct arrays.
+          mutableFolder = spliceDirectChild(id: id, into: mutableFolder)
+        } else {
+          // Target is deeper or absent; recurse.
+          mutableFolder.subfolders = flatteningFolder(id: id, from: mutableFolder.subfolders)
+        }
+        result.append(mutableFolder)
+      }
     }
+    return result
+  }
+
+  /// Splice the direct-child folder `id` out of `parent`, lifting its
+  /// `playlistIds` into `parent.playlistIds` and its `subfolders` into
+  /// `parent.subfolders` at the deletion site.
+  private static func spliceDirectChild(
+    id: UUID,
+    into parent: PlaylistFolder
+  )
+    -> PlaylistFolder {
+    guard let index = parent.subfolders.firstIndex(where: { $0.id == id }) else {
+      return parent
+    }
+    var mutableParent = parent
+    let target = mutableParent.subfolders[index]
+    mutableParent.subfolders.remove(at: index)
+    // Lift the deleted folder's direct subfolders into the parent at the
+    // deletion index (preserves local ordering where possible).
+    mutableParent.subfolders.insert(contentsOf: target.subfolders, at: index)
+    // Lift the deleted folder's direct playlistIds, deduping against what the
+    // parent already has.
+    for playlistId in target.playlistIds
+      where !mutableParent.playlistIds.contains(playlistId) {
+      mutableParent.playlistIds.append(playlistId)
+    }
+    return mutableParent
   }
 }

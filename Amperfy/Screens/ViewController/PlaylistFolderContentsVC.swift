@@ -142,11 +142,11 @@ class PlaylistFolderContentsVC: UITableViewController {
         guard let self else { return [] }
 
         let selectItemsAction = UIAction(
-          title: self.isEditing ? "Done" : "Select Items",
+          title: isEditing ? "Done" : "Select Items",
           image: UIImage(systemName: "checkmark.circle")
         ) { [weak self] _ in
           guard let self else { return }
-          self.setEditing(!self.isEditing, animated: true)
+          setEditing(!isEditing, animated: true)
         }
 
         let addFolderAction = UIAction(
@@ -156,7 +156,7 @@ class PlaylistFolderContentsVC: UITableViewController {
           self?.promptCreateFolder()
         }
 
-        return [selectItemsAction, addFolderAction, self.createSortMenu()]
+        return [selectItemsAction, addFolderAction, createSortMenu()]
       }
     )
 
@@ -344,7 +344,14 @@ class PlaylistFolderContentsVC: UITableViewController {
   // MARK: - Data loading
 
   private func reloadContent() {
-    if let parentFolderId, let folder = folderStore.folder(byId: parentFolderId) {
+    if let parentFolderId {
+      guard let folder = folderStore.folder(byId: parentFolderId) else {
+        // The folder we were viewing has been deleted (e.g. via the
+        // flatten-on-delete path from elsewhere). Pop back to the parent view
+        // rather than silently rendering an empty list.
+        navigationController?.popViewController(animated: true)
+        return
+      }
       displayedFolders = folder.subfolders
       displayedPlaylists = fetchPlaylists(ids: folder.playlistIds)
     } else {
@@ -523,7 +530,50 @@ class PlaylistFolderContentsVC: UITableViewController {
   override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
     switch Section(rawValue: indexPath.section) {
     case .playlists: return true
-    default: return false
+    case .folders: return true
+    case .none: return false
+    }
+  }
+
+  override func tableView(
+    _ tableView: UITableView,
+    commit editingStyle: UITableViewCell.EditingStyle,
+    forRowAt indexPath: IndexPath
+  ) {
+    guard editingStyle == .delete,
+          Section(rawValue: indexPath.section) == .folders,
+          let folder = displayedFolders[safe: indexPath.row]
+    else { return }
+    handleFolderDelete(folder)
+  }
+
+  override func tableView(
+    _ tableView: UITableView,
+    trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+  )
+    -> UISwipeActionsConfiguration? {
+    guard Section(rawValue: indexPath.section) == .folders,
+          let folder = displayedFolders[safe: indexPath.row]
+    else { return nil }
+    let deleteAction = UIContextualAction(
+      style: .destructive,
+      title: "Delete"
+    ) { [weak self] _, _, completion in
+      self?.handleFolderDelete(folder)
+      completion(true)
+    }
+    deleteAction.image = UIImage(systemName: "trash")
+    return UISwipeActionsConfiguration(actions: [deleteAction])
+  }
+
+  /// Entry point shared by swipe, edit-mode commit, and context menu.
+  /// Empty folders delete immediately; non-empty folders go through
+  /// `confirmDeleteFolder`.
+  private func handleFolderDelete(_ folder: PlaylistFolder) {
+    if folder.playlistIds.isEmpty, folder.subfolders.isEmpty {
+      folderStore.deleteFolder(id: folder.id)
+    } else {
+      confirmDeleteFolder(folder)
     }
   }
 
@@ -559,7 +609,7 @@ class PlaylistFolderContentsVC: UITableViewController {
         image: UIImage(systemName: "trash"),
         attributes: .destructive
       ) { [weak self] _ in
-        self?.confirmDeleteFolder(folder)
+        self?.handleFolderDelete(folder)
       }
       return UIMenu(children: [renameAction, deleteAction])
     }
@@ -647,20 +697,53 @@ class PlaylistFolderContentsVC: UITableViewController {
   }
 
   private func confirmDeleteFolder(_ folder: PlaylistFolder) {
+    let playlistCount = folder.playlistIds.count
     let subfolderCount = folder.subfolders.count
-    let message: String
-    if subfolderCount > 0 {
-      message =
-        "Delete \"\(folder.name)\" and its \(subfolderCount) subfolder\(subfolderCount == 1 ? "" : "s")? Playlists inside will become unfiled."
-    } else {
-      message = "Delete \"\(folder.name)\"? Playlists inside will become unfiled."
-    }
+    let message = deleteFolderConfirmationMessage(
+      folderName: folder.name,
+      playlistCount: playlistCount,
+      subfolderCount: subfolderCount
+    )
     let alert = UIAlertController(title: "Delete Folder", message: message, preferredStyle: .alert)
     alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-    alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+    alert.addAction(UIAlertAction(title: "Delete Folder", style: .destructive) { [weak self] _ in
       self?.folderStore.deleteFolder(id: folder.id)
     })
     present(alert, animated: true)
+  }
+
+  /// Copy for the flatten-on-delete confirmation alert. Handles singular/plural
+  /// for both playlists and sub-folders, and trims either half when the count
+  /// is zero. Counts reflect *direct* children only (grandchildren stay inside
+  /// their direct parent, which itself pops up one level).
+  private func deleteFolderConfirmationMessage(
+    folderName: String,
+    playlistCount: Int,
+    subfolderCount: Int
+  )
+    -> String {
+    let playlistFragment = playlistCount == 1
+      ? "1 playlist"
+      : "\(playlistCount) playlists"
+    let subfolderFragment = subfolderCount == 1
+      ? "1 sub-folder"
+      : "\(subfolderCount) sub-folders"
+
+    let childrenPhrase: String
+    switch (playlistCount, subfolderCount) {
+    case (0, 0):
+      // Empty folders skip confirmation entirely (handled in
+      // `handleFolderDelete`) — this branch is defensive only.
+      return "Delete folder '\(folderName)'?"
+    case (_, 0):
+      childrenPhrase = "The \(playlistFragment) inside will move to the parent level."
+    case (0, _):
+      childrenPhrase = "The \(subfolderFragment) inside will move to the parent level."
+    default:
+      childrenPhrase =
+        "The \(playlistFragment) and \(subfolderFragment) inside will move to the parent level."
+    }
+    return "Delete folder '\(folderName)'? \(childrenPhrase)"
   }
 
   // MARK: - Folder picker
