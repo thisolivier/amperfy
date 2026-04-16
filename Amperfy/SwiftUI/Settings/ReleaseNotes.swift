@@ -37,6 +37,26 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 37,
+      date: "2026-04-15",
+      title: "Build 37 — Delete playlist folders",
+      whatsNew: [
+        "Delete playlist folders. Swipe left on any folder (or use edit mode) to delete it. The playlists and sub-folders inside pop up one level — nothing inside the folder is lost",
+      ],
+      testingFocus: [
+        "Playlists tab → long-left-swipe on a folder row → red 'Delete' button appears → tap it → confirmation alert appears (unless folder is empty)",
+        "Playlists tab → … menu → 'Select Items' → red minus circle appears on folder rows — tap it, then tap 'Delete' on the right → same confirmation",
+        "Long-press a folder → 'Delete Folder' still works from context menu",
+        "Confirmation copy: for folder 'Rock' with 3 playlists and 1 subfolder, reads 'Delete folder \\'Rock\\'? The 3 playlists and 1 sub-folder inside will move to the parent level.' Singular/plural should be correct",
+        "Create an empty folder, swipe-delete it — should vanish immediately with no alert",
+        "Set up: root folder 'Rock' with playlists A, B and subfolder 'Metal' (containing C). Delete 'Rock'. Verify A, B, and 'Metal' are now at root; C still inside 'Metal'",
+        "Nested: folder 'Music' contains 'Rock' which contains playlist A and subfolder 'Metal'. Delete 'Rock'. Verify 'Music' now contains 'Metal' + A; 'Metal' still contains its own playlist",
+        "After any delete, tap each surviving playlist — it should open and play normally (no playlists were lost)",
+        "Start a delete, tap 'Cancel' — folder and contents unchanged",
+        "Offline mode: toggle on, delete a folder — should still work (local-only operation)",
+      ]
+    ),
+    ReleaseNote(
       id: 36,
       date: "2026-04-15",
       title: "Build 36 — Whole-album randomizer + heading theme tier",
