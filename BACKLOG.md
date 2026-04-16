@@ -1486,6 +1486,72 @@ Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
 
 ---
 
+## 20. PR 20 — Theme settings restructure + gradient picker bug fix
+
+**Release target:** Release 4 (bundled). Added 2026-04-16 after Olivier reviewed Build 38.
+
+**Intent:** Fix the gradient picker bug, simplify gradients to 2-stop, restructure theme settings into a mode-nested navigation, and promote Custom Theme to a top-level Settings row.
+
+### 20.1 Gradient picker bug (blocker)
+
+In Build 38, tapping the gradient row opens the picker momentarily then closes it AND dismisses the parent Settings modal. Likely a `.confirmationDialog` / `.sheet` presentation conflict in `ThemeSettingsSection.swift` or in `GradientEditorView`. Investigate and fix.
+
+### 20.2 Navigation restructure
+
+Replace the current "Light Mode Colors" / "Dark Mode Colors" flat sections with two top-level rows:
+- **Light Mode** → pushes to Light Mode detail screen
+- **Dark Mode** → pushes to Dark Mode detail screen
+
+Each mode detail screen contains the per-mode settings (Background / Heading / Body / Tint colors), and includes a **Gradient** row that pushes to a gradient picker screen. The gradient picker screen has two color pickers (Start, End) and a Previously-Used carousel below.
+
+### 20.3 Two-stop gradients
+
+Simplify the gradient data model to **exactly 2 colors** (start + end). Drop the 2-4 range. Migration: if existing stored gradients have >2 colors (from Build 38), keep first + last, discard the middle (or just ignore and let user re-pick). Built-in presets: ensure all 5 are 2-stop (they already are if first + last of each).
+
+### 20.4 Custom Theme top-level
+
+Move Custom Theme from "Display & Interaction" (or wherever it currently sits) to a **top-level row** in the Settings root screen. Label: "Custom Theme". Disclosure indicator. Pushes to the existing theme configuration screen.
+
+### 20.5 What's New entry
+
+> **Custom Theme, refined.** Custom Theme now lives at the top of Settings. Light and Dark each get their own screen, and the gradient picker is now a dedicated push with Start + End color pickers and your recent gradients below.
+>
+> **Fixed:** the gradient picker no longer closes itself the moment it opens.
+
+---
+
+## 21. PR 21 — Settings UI cleanup (gradient coverage + row grouping + transparency)
+
+**Release target:** Release 4 (bundled). Added 2026-04-16 after Olivier's Build 38 review.
+
+**Intent:** Fix several UI polish issues that surfaced once the gradient background was applied — settings modal doesn't pick up the gradient, inconsistent row rounding, opaque Library rows clash with custom backgrounds.
+
+### 21.1 Settings modal picks up gradient background
+
+The Settings modal currently renders on a default-background surface even when a gradient is active on the main app. Extend the gradient injection so it reaches the Settings presentation. Likely site: the `UINavigationController` presented for Settings, or the SwiftUI `NavigationStack` root.
+
+### 21.2 Row grouping + rounded corners
+
+Mixed rounded/non-rounded rows adjacent to each other look broken. Audit the Settings list:
+- **Offline mode toggle** has a janky "Songs, podcasts, and artworks…" descriptor row styled separately — join into the same section with unified rounded corners.
+- Audit every adjacency where a plain row sits next to a grouped-inset row. Fix each: promote both into one grouped section.
+- Generally: rows that are semantically related should be in the same `Section`, and the whole section should render with rounded corners (grouped-inset list style).
+
+### 21.3 Library rows transparent backgrounds
+
+Library tab line items currently render with opaque black/default backgrounds. On a custom solid-colour or gradient background, the opaque rows look harsh. Make the Library line-item backgrounds transparent (or match the themed surface) so the custom background flows behind them.
+
+Note: the cell-clear appearance work in PR 17.2 already did this globally when a gradient is active. PR 21.3 needs to confirm it covers Library rows specifically, and extend to the non-gradient-but-custom-background case (solid themed color) if that's the bug surface Olivier saw.
+
+### 21.4 What's New entry
+
+> **Settings and Library now embrace your theme.** The settings screen picks up your gradient background, related rows group into unified rounded sections, and Library rows go transparent so your chosen colour or gradient flows through.
+
+### 21.5 Ship Steps
+Bundled into Release 4 with PR 17.3 and PR 20. Monotonic bump.
+
+---
+
 **End of backlog.** The implementer should now:
 1. Read `PRIMER.md` and `IMPLEMENTATION.md` if not already.
 2. Run the test baseline per `IMPLEMENTATION.md` §5.2 to confirm green starting state.
