@@ -146,10 +146,19 @@ class LibraryNavigatorConfigurator: NSObject {
   @objc
   func handleThemeChanged() {
     guard let collectionView else { return }
-    // Update layout config background
-    layoutConfig.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
+    // PR 21.3: mirror LibraryVC's layoutConfig branching — when any
+    // gradient is active we must clear the list's backgroundColor so
+    // the gradient installed on the collection view's backgroundView
+    // flows through. Solid custom backgrounds fall through to the
+    // stock dynamic color.
+    if ThemeStore.shared.isAnyGradientEnabled {
+      layoutConfig.backgroundColor = .clear
+    } else {
+      layoutConfig.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
+    }
     collectionView.collectionViewLayout = createLayout()
     // Reconfigure all visible cells to pick up new text/tint colors
+    // and, when themed, their transparent background configuration.
     var snapshot = dataSource.snapshot()
     snapshot.reconfigureItems(snapshot.itemIdentifiers)
     dataSource.apply(snapshot, animatingDifferences: false)
@@ -329,6 +338,15 @@ class LibraryNavigatorConfigurator: NSObject {
       UICollectionViewListCell,
       LibraryNavigatorItem
     > { cell, indexPath, item in
+      // PR 21.3: when a custom theme is active, make the sidebar list
+      // cell background transparent so the themed gradient / solid
+      // surface shows through instead of the stock grouped grey. When
+      // no theme is active fall back to the stock sidebar appearance.
+      if ThemeStore.shared.isEnabled {
+        var bg = UIBackgroundConfiguration.listSidebarCell()
+        bg.backgroundColor = .clear
+        cell.backgroundConfiguration = bg
+      }
       if !item.isInteractable {
         var content = cell.defaultContentConfiguration()
         content.text = item.title

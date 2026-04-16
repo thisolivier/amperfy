@@ -28,10 +28,17 @@ class LibraryVC: KeyCommandCollectionViewController {
   private var userBarButtonItem: UIBarButtonItem?
   private let account: Account!
   private var accountNotificationHandler: AccountNotificationHandler?
-
   init(collectionViewLayout: UICollectionViewLayout, account: Account) {
     self.account = account
     super.init(collectionViewLayout: collectionViewLayout)
+  }
+
+  deinit {
+    // PR 21.3: use `removeObserver(self)` rather than keeping an
+    // `NSObjectProtocol` token — the token path trips Swift 6's
+    // non-Sendable guard on `deinit`. We observe as a selector target
+    // below, so `self` is the right handle to unregister with.
+    NotificationCenter.default.removeObserver(self)
   }
 
   required init?(coder: NSCoder) {
@@ -45,7 +52,16 @@ class LibraryVC: KeyCommandCollectionViewController {
 
   lazy var layoutConfig = {
     var config = UICollectionLayoutListConfiguration(appearance: .sidebarPlain)
-    config.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
+    // PR 21.3: when a gradient is active the solid `dynamicBackground`
+    // fill would paint over the gradient and hide it. Clear the list
+    // config's backgroundColor so the gradient installed on the
+    // collection view's backgroundView shows through. Solid custom
+    // backgrounds fall through to the stock dynamic color.
+    if ThemeStore.shared.isAnyGradientEnabled {
+      config.backgroundColor = .clear
+    } else {
+      config.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
+    }
     return config
   }()
 
@@ -65,6 +81,15 @@ class LibraryVC: KeyCommandCollectionViewController {
       navigationItem: navigationItem,
       collectionView: collectionView
     )
+    // PR 21.3: install the themed background surface (gradient view
+    // or solid color) so the Library tab picks up the custom theme.
+    applyBackgroundSurface(to: collectionView)
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleThemeChangedForBackground),
+      name: ThemeStore.didChangeNotification,
+      object: nil
+    )
     accountNotificationHandler = AccountNotificationHandler(
       storage: appDelegate.storage,
       notificationHandler: appDelegate.notificationHandler
@@ -82,6 +107,23 @@ class LibraryVC: KeyCommandCollectionViewController {
   override func viewIsAppearing(_ animated: Bool) {
     super.viewIsAppearing(animated)
     navigationController?.navigationBar.prefersLargeTitles = true
+  }
+
+  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
+      // PR 21.3: re-resolve gradient (light/dark may differ) on style flip.
+      applyBackgroundSurface(to: collectionView)
+    }
+  }
+
+  /// PR 21.3: selector-based observer for `ThemeStore.didChangeNotification`.
+  /// Re-installs the themed background on the library collection view so
+  /// gradient / solid surface changes made from Settings flow through
+  /// without needing a tab re-entry.
+  @objc
+  private func handleThemeChangedForBackground() {
+    applyBackgroundSurface(to: collectionView)
   }
 
   public func pushedOn(selectedItem: LibraryNavigatorItem) {
