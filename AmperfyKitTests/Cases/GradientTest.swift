@@ -188,13 +188,69 @@ final class GradientTest: XCTestCase {
   /// Sanity check on the five curated starter gradients seeded on first
   /// launch. Any change here is a user-facing visual change and should
   /// be intentional.
+  ///
+  /// PR 20: presets are now 2-stop exactly. Both `minColorCount` and
+  /// `maxColorCount` were collapsed to `2`, so an exact equality assert
+  /// catches any future regression that accidentally adds a 3rd stop
+  /// (which the new picker can't edit and the reducer would silently
+  /// trim on load).
   func testBuiltInPresetsShape() {
     let presets = ThemeGradient.builtInPresets
     XCTAssertEqual(presets.count, 5)
     for preset in presets {
-      XCTAssertGreaterThanOrEqual(preset.colors.count, ThemeGradient.minColorCount)
-      XCTAssertLessThanOrEqual(preset.colors.count, ThemeGradient.maxColorCount)
+      XCTAssertEqual(preset.colors.count, 2)
+      XCTAssertEqual(ThemeGradient.minColorCount, 2)
+      XCTAssertEqual(ThemeGradient.maxColorCount, 2)
     }
+  }
+
+  // MARK: - PR 20 two-stop reducer (migration)
+
+  /// Pre-PR-20 installs may have persisted 3- or 4-stop gradients. The
+  /// reducer collapses them to exactly the first + last color so the new
+  /// 2-stop picker and the render path see a consistent shape.
+  func testReducedToTwoStopsDropsMiddleColors() {
+    let original = ThemeGradient(
+      colors: ["#FF0000", "#00FF00", "#0000FF", "#FFFFFF"],
+      direction: .topLeftToBottomRight
+    )
+    let reduced = original.reducedToTwoStops()
+    XCTAssertEqual(reduced.colors, ["#FF0000", "#FFFFFF"])
+    XCTAssertEqual(reduced.direction, original.direction)
+    // Identity is preserved so history dedup still recognises the gradient.
+    XCTAssertEqual(reduced.id, original.id)
+  }
+
+  /// Reducer is a no-op on a gradient that's already 2-stop. Prevents
+  /// unnecessary rewrites at decode time.
+  func testReducedToTwoStopsNoOpOn2Stop() {
+    let original = ThemeGradient(
+      colors: ["#AAAAAA", "#BBBBBB"],
+      direction: .topToBottom
+    )
+    let reduced = original.reducedToTwoStops()
+    XCTAssertEqual(reduced.colors, original.colors)
+    XCTAssertEqual(reduced.direction, original.direction)
+    XCTAssertEqual(reduced.id, original.id)
+    XCTAssertEqual(reduced, original)
+  }
+
+  /// Migration smoke test: a 4-stop gradient encoded and decoded via the
+  /// exact JSON path used by ThemeStore, then reduced to 2 stops. Models
+  /// the upgrade from a Build-38 UserDefaults blob.
+  func testMigrationFromPrePR20Encoding() throws {
+    let legacy = ThemeGradient(
+      colors: ["#112233", "#445566", "#778899", "#AABBCC"],
+      direction: .bottomToTop
+    )
+    let data = try JSONEncoder().encode(legacy)
+    let decoded = try JSONDecoder().decode(ThemeGradient.self, from: data)
+    // Pre-PR-20 shape survives the decode...
+    XCTAssertEqual(decoded.colors.count, 4)
+    // ...and the reducer normalises to exactly the start + end color.
+    let reduced = decoded.reducedToTwoStops()
+    XCTAssertEqual(reduced.colors, ["#112233", "#AABBCC"])
+    XCTAssertEqual(reduced.direction, .bottomToTop)
   }
 
   /// Each built-in preset has a fixed UUID so the history-dedup logic can
