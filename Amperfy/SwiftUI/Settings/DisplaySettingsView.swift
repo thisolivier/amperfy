@@ -55,16 +55,17 @@ struct DisplaySettingsView: View {
           }
         }
 
-        ThemeSettingsSection()
+        // PR 20: Custom Theme moved to a top-level Settings row. Refer
+        // users here so they don't hunt for it. Also fixes the gradient
+        // picker dismiss cascade — see CustomThemeRootView.
 
         #if !targetEnvironment(macCatalyst)
-          SettingsSection(
-            content: {
-              SettingsCheckBoxRow(title: "Haptic Feedback", isOn: $settings.isHapticsEnabled)
-            },
-            footer:
-            "Certain interactions provide haptic feedback. Long pressing to display the details menu will always trigger haptic feedback."
-          )
+          SettingsSection {
+            SettingsCheckBoxRow(title: "Haptic Feedback", isOn: $settings.isHapticsEnabled)
+            InlineFooterRow(
+              text: "Certain interactions provide haptic feedback. Long pressing to display the details menu will always trigger haptic feedback."
+            )
+          }
         #endif
 
         #if targetEnvironment(macCatalyst)
@@ -80,16 +81,15 @@ struct DisplaySettingsView: View {
           )
         #endif
 
-        SettingsSection(
-          content: {
-            SettingsCheckBoxRow(
-              title: "Music Player Skip Buttons",
-              isOn: $settings.isShowMusicPlayerSkipButtons
-            )
-          },
-          footer:
-          "Add skip forward and skip backward buttons to the music player, along with the previous/next buttons."
-        )
+        SettingsSection {
+          SettingsCheckBoxRow(
+            title: "Music Player Skip Buttons",
+            isOn: $settings.isShowMusicPlayerSkipButtons
+          )
+          InlineFooterRow(
+            text: "Add skip forward and skip backward buttons to the music player, along with the previous/next buttons."
+          )
+        }
 
         if let activeAccountInfo = settings.activeAccountInfo,
            let credentials = appDelegate.storage.settings.accounts.getSetting(activeAccountInfo)
@@ -107,16 +107,15 @@ struct DisplaySettingsView: View {
           )
         }
 
-        SettingsSection(
-          content: {
-            SettingsCheckBoxRow(
-              title: "Detailed Information",
-              isOn: $settings.isShowDetailedInfo
-            )
-          },
-          footer:
-          "Display detailed information (bitrate, ID) and button \"Copy ID to Clipboard\"."
-        )
+        SettingsSection {
+          SettingsCheckBoxRow(
+            title: "Detailed Information",
+            isOn: $settings.isShowDetailedInfo
+          )
+          InlineFooterRow(
+            text: "Display detailed information (bitrate, ID) and button \"Copy ID to Clipboard\"."
+          )
+        }
 
         SettingsSection(
           content: {
@@ -150,22 +149,21 @@ struct DisplaySettingsView: View {
           "Display star rating in song cells and the currently playing view."
         )
 
-        SettingsSection(
-          content: {
-            SettingsCheckBoxRow(
-              title: "Disable Player Shuffle Button",
-              isOn: Binding<Bool>(
-                get: { !settings.isPlayerShuffleButtonEnabled },
-                set: {
-                  settings.isPlayerShuffleButtonEnabled = !$0
-                  UIMenuSystem.main.setNeedsRebuild()
-                }
-              )
+        SettingsSection {
+          SettingsCheckBoxRow(
+            title: "Disable Player Shuffle Button",
+            isOn: Binding<Bool>(
+              get: { !settings.isPlayerShuffleButtonEnabled },
+              set: {
+                settings.isPlayerShuffleButtonEnabled = !$0
+                UIMenuSystem.main.setNeedsRebuild()
+              }
             )
-          },
-          footer:
-          "The player shuffle button is displayed but non-interactive."
-        )
+          )
+          InlineFooterRow(
+            text: "The player shuffle button is displayed but non-interactive."
+          )
+        }
       }
     }
     .navigationTitle("Display")

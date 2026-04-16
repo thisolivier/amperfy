@@ -89,13 +89,16 @@ struct SettingsView: View {
           }
         }
 
-        SettingsSection(
-          content: {
-            SettingsCheckBoxRow(title: "Offline Mode", isOn: $settings.isOfflineMode)
-          },
-          footer:
-          "Songs, podcasts, and artworks won’t download offline. Searches are limited to the device, and playlists won’t sync with the server."
-        )
+        SettingsSection {
+          SettingsCheckBoxRow(title: "Offline Mode", isOn: $settings.isOfflineMode)
+          // PR 21: inline descriptor INSIDE the same rounded-inset
+          // section as the toggle so the pair reads as one unified
+          // grouped container. Replaces the janky free-floating
+          // uppercase `footer:` caption that used to sit below.
+          InlineFooterRow(
+            text: "Songs, podcasts, and artworks won’t download offline. Searches are limited to the device, and playlists won’t sync with the server."
+          )
+        }
 
         SettingsSection {
           SettingsRow(title: "Prevent Screen Lock") {
@@ -122,6 +125,10 @@ struct SettingsView: View {
           }
 
           SettingsSection {
+            // PR 20.4: Custom Theme promoted to a top-level Settings
+            // row. Placed as the first entry of the existing nav-link
+            // cluster for visual prominence (above Account).
+            navigationLink(.customTheme)
             navigationLink(.account)
             navigationLink(.displayAndInteraction)
             navigationLink(.library)

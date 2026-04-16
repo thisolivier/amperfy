@@ -30,9 +30,15 @@ struct SettingsList<Content: View>: View {
   }
 
   var body: some View {
+    // PR 21: hide the default SwiftUI List grouped-grey surface when a
+    // custom theme is active so the gradient / solid themed background
+    // flows through the Settings modal. Kept on for the vanilla-OS
+    // look when Custom Theme is off (avoids gratuitous appearance
+    // changes for users who never opt in).
     List {
       content()
     }
     .background(Color.clear)
+    .scrollContentBackground(ThemeStore.shared.isEnabled ? .hidden : .automatic)
   }
 }
