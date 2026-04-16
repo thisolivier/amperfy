@@ -125,6 +125,28 @@ struct ModeDetailView: View {
           }
         }
       }, header: "Gradient")
+
+      SettingsSection(content: {
+        NavigationLink {
+          PresetPickerView(scope: style == .dark ? .darkSlice : .lightSlice)
+            .onDisappear {
+              // Re-sync local state in case the picker applied a slice
+              // while this screen was in the nav stack.
+              activeGradient = ThemeStore.shared.activeGradient(for: style)
+            }
+        } label: {
+          VStack(alignment: .leading, spacing: 2) {
+            Text("Load From Preset")
+            Text(
+              style == .dark
+                ? "Applies dark-mode colors + gradient only"
+                : "Applies light-mode colors + gradient only"
+            )
+            .font(.caption)
+            .foregroundColor(.secondary)
+          }
+        }
+      }, header: "Presets")
     }
     .navigationTitle(style == .dark ? "Dark Mode" : "Light Mode")
     .navigationBarTitleDisplayMode(.inline)

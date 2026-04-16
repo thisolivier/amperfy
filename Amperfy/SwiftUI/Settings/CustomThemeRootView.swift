@@ -43,6 +43,10 @@ struct CustomThemeRootView: View {
   private var hasCustomBorderColor: Bool = ThemeStore.shared.albumArtBorderColor != nil
   @State
   private var showResetAlert = false
+  @State
+  private var showSavePresetAlert = false
+  @State
+  private var savePresetNameField = ""
 
   private static func initialBorderColor() -> Color {
     if let stored = ThemeStore.shared.albumArtBorderColor {
@@ -124,6 +128,37 @@ struct CustomThemeRootView: View {
             applyTheme()
           }
         }, header: "Album Art")
+
+        SettingsSection(content: {
+          SettingsButtonRow(title: "Save Current as Preset") {
+            let nextAutoLabelIndex = StylingPresetStore.shared.presets.count + 1
+            savePresetNameField = ""
+            // Trigger the alert — placeholder shows next auto-label index.
+            _ = nextAutoLabelIndex // used in alert placeholder below
+            showSavePresetAlert = true
+          }
+          .alert("Save Preset", isPresented: $showSavePresetAlert) {
+            TextField(
+              "Preset \(StylingPresetStore.shared.presets.count + 1)",
+              text: $savePresetNameField
+            )
+            Button("Save") {
+              StylingPresetStore.shared.savePreset(
+                name: savePresetNameField.trimmingCharacters(in: .whitespaces).isEmpty
+                  ? nil
+                  : savePresetNameField
+              )
+            }
+            Button("Cancel", role: .cancel) {}
+          } message: {
+            Text("Name your theme snapshot, or leave blank for an auto-label.")
+          }
+          NavigationLink {
+            PresetPickerView(scope: .full)
+          } label: {
+            Text("Load Preset")
+          }
+        }, header: "Presets")
 
         SettingsSection {
           SettingsButtonRow(title: "Reset to Defaults", actionType: .destructive) {
