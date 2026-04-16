@@ -549,6 +549,7 @@
 		A5B0B30000000000000050A0 /* PinnedPlaylistStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */; };
 		A5D0D110000000000000070A0 /* ThemeGradient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5D0D120000000000000070A0 /* ThemeGradient.swift */; };
 		A5D0D210000000000000070A0 /* GradientBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5D0D220000000000000070A0 /* GradientBackgroundView.swift */; };
+		A5D0D310000000000000070A0 /* GradientTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5D0D320000000000000070A0 /* GradientTest.swift */; };
 		A5D0D410000000000000070A0 /* GradientEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5D0D420000000000000070A0 /* GradientEditorView.swift */; };
 		A5B0C10000000000000050A0 /* ShareSongAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0C20000000000000050A0 /* ShareSongAction.swift */; };
 		A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */; };
@@ -1200,6 +1201,7 @@
 		A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedPlaylistStoreTest.swift; sourceTree = "<group>"; };
 		A5D0D120000000000000070A0 /* ThemeGradient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeGradient.swift; sourceTree = "<group>"; };
 		A5D0D220000000000000070A0 /* GradientBackgroundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientBackgroundView.swift; sourceTree = "<group>"; };
+		A5D0D320000000000000070A0 /* GradientTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientTest.swift; sourceTree = "<group>"; };
 		A5D0D420000000000000070A0 /* GradientEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradientEditorView.swift; sourceTree = "<group>"; };
 		A5B0C20000000000000050A0 /* ShareSongAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSongAction.swift; sourceTree = "<group>"; };
 		A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistItemsSyncTracker.swift; sourceTree = "<group>"; };
@@ -2219,6 +2221,7 @@
 				5095F98D23CA948A008B0805 /* Player */,
 				5095F98E23CA949C008B0805 /* Storage */,
 				50B798B323B8664700551E62 /* HelperTest.swift */,
+				A5D0D320000000000000070A0 /* GradientTest.swift */,
 			);
 			path = Cases;
 			sourceTree = "<group>";
@@ -2995,6 +2998,7 @@
 				50BE5D892850F50F00156FC6 /* AuthParserTest.swift in Sources */,
 				50BE5D482850F4C900156FC6 /* PlaylistTest.swift in Sources */,
 				50BE5D522850F4D700156FC6 /* HelperTest.swift in Sources */,
+				A5D0D310000000000000070A0 /* GradientTest.swift in Sources */,
 				50BE5D6B2850F4FB00156FC6 /* SsGenreParserTest.swift in Sources */,
 				50BE5D542850F4E700156FC6 /* SubsonicVersionTest.swift in Sources */,
 				50BE5D742850F4FB00156FC6 /* SsAlbumMultidiscExample1ParserTest.swift in Sources */,
