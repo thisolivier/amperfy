@@ -365,7 +365,7 @@ class HomeManager: NSObject {
   }
 
   func updateRandomAlbums(isOfflineMode: Bool) async {
-    let randomAlbums = storage.main.library.getRandomAlbums(
+    let randomAlbums = storage.main.library.getRandomWholeAlbums(
       for: account,
       count: Self.sectionMaxItemCount,
       onlyCached: isOfflineMode

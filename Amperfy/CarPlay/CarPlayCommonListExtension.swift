@@ -685,7 +685,7 @@ extension CarPlaySceneDelegate {
   }
 
   func triggerPlayRandomAlbums(onlyCached: Bool) {
-    let randomAlbums = appDelegate.storage.main.library.getRandomAlbums(
+    let randomAlbums = appDelegate.storage.main.library.getRandomWholeAlbums(
       for: activeAccount,
       count: 5,
       onlyCached: onlyCached || isOfflineMode

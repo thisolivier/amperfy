@@ -1407,6 +1407,79 @@ public class LibraryStorage: PlayableFileCachable {
     return albums ?? [Album]()
   }
 
+  /// Returns up to `count` random *whole* albums (see
+  /// `WholeAlbumPredicates.wholeAlbum(minSongCount: 3)`), with a soft bias
+  /// toward albums that have more than half of their tracks unplayed.
+  ///
+  /// Weighting shape (see `spike/amperfy/BACKLOG.md` §16):
+  /// * every matching album enters the candidate pool once;
+  /// * albums whose `unplayedCount > remoteSongCount / 2` (strict ">")
+  ///   enter the pool a second time, making them roughly 2× as likely to
+  ///   be picked;
+  /// * the weighted pool is shuffled, deduplicated by album identifier
+  ///   (first occurrence wins), and the first `count` results are
+  ///   returned.
+  ///
+  /// Partial libraries (fewer than `count` whole albums) return what is
+  /// available — the predicate is never relaxed.
+  public func getRandomWholeAlbums(
+    for account: Account,
+    count: Int,
+    onlyCached: Bool
+  )
+    -> [Album] {
+    let fetchRequest = AlbumMO.identifierSortedFetchRequest
+    let wholeAlbumPredicate = WholeAlbumPredicates.wholeAlbum(minSongCount: 3)
+    if onlyCached {
+      fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+        getFetchPredicate(forAccount: account),
+        getFetchPredicate(onlyCachedAlbums: true),
+        wholeAlbumPredicate,
+      ])
+    } else {
+      fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+        getFetchPredicate(forAccount: account),
+        NSCompoundPredicate(orPredicateWithSubpredicates: [
+          AbstractLibraryEntityMO.excludeRemoteDeleteFetchPredicate,
+          getFetchPredicate(onlyCachedAlbums: true),
+        ]),
+        wholeAlbumPredicate,
+      ])
+    }
+    guard let foundAlbums = try? context.fetch(fetchRequest), !foundAlbums.isEmpty else {
+      return [Album]()
+    }
+
+    var weightedPool = [Album]()
+    weightedPool.reserveCapacity(foundAlbums.count * 2)
+    for albumManagedObject in foundAlbums {
+      let album = Album(managedObject: albumManagedObject)
+      weightedPool.append(album)
+      let remoteSongCount = album.remoteSongCount
+      guard remoteSongCount > 0 else { continue }
+      let unplayedCount = album.songs.reduce(into: 0) { accumulator, song in
+        if song.playCount == 0 { accumulator += 1 }
+      }
+      if unplayedCount > remoteSongCount / 2 {
+        weightedPool.append(album)
+      }
+    }
+
+    weightedPool.shuffle()
+
+    var seenIdentifiers = Set<String>()
+    var deduplicatedResult = [Album]()
+    deduplicatedResult.reserveCapacity(count)
+    for album in weightedPool {
+      let identifier = album.identifier
+      if seenIdentifiers.insert(identifier).inserted {
+        deduplicatedResult.append(album)
+        if deduplicatedResult.count >= count { break }
+      }
+    }
+    return deduplicatedResult
+  }
+
   public func getFavoriteAlbums(for account: Account) -> [Album] {
     let fetchRequest: NSFetchRequest<AlbumMO> = AlbumMO.identifierSortedFetchRequest
     fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
