@@ -1386,6 +1386,54 @@ Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
 
 ---
 
+## 18. PR 18 — Delete playlist folder (flatten children)
+
+**Release target:** TBD.
+**Priority:** backlog. Added 2026-04-16 after Olivier noted the PR 9 folder feature is missing a delete path.
+
+**Intent:** The Playlists tab gains a way to delete a playlist folder. Playlists already support delete today (swipe-to-delete and edit-mode row deletion, see `PlaylistsVC.swift:54` / `:161`). Folder delete must match that UX. **Folder delete is non-destructive to playlists** — deleting a folder must NOT delete the playlists or sub-folders inside it. Instead, all children pop up one level (usually to the root).
+
+### 18.1 Semantics
+
+- Deleting a folder at the root moves all direct-child playlists and sub-folders to the root (they become root-level siblings of where the folder used to be).
+- Deleting a nested folder moves all direct-child playlists and sub-folders to that folder's parent.
+- The pop is **one level only** — grand-children stay inside their direct parent folder, which itself popped up a level.
+- No playlist or sub-folder is deleted as a side effect.
+- Operation is local-first: adjust `PlaylistFolderStore` parent pointers, save context. No server sync needed (folders are a local construct from PR 9).
+
+### 18.2 UX
+
+- **Primary entry: left-swipe-to-delete** on folder rows in `PlaylistsVC`. Matches existing playlist delete ergonomics — users already know the gesture.
+- **Secondary entry: edit mode** — tapping the red minus control on a folder row in edit mode triggers the same flow.
+- **Confirmation:** one-tap confirmation alert: *"Delete folder '<name>'? The <N> playlists and <M> sub-folders inside will move to the parent level."* — two buttons: "Delete Folder" (destructive) and "Cancel". Counts computed at confirm time.
+- No confirmation if the folder is empty.
+
+### 18.3 Implementation shape
+
+- Add `deleteFolder(_ folder: PlaylistFolder)` to `PlaylistFolderStore`:
+  1. Re-parent every direct-child playlist to `folder.parent` (nil if folder was at root).
+  2. Re-parent every direct-child sub-folder to `folder.parent`.
+  3. Delete the folder entity.
+  4. Save context.
+- Wire `PlaylistsVC` swipe action on folder rows → confirmation alert → `deleteFolder(folder)` → table reload (or diff apply if using `UITableViewDiffableDataSource`).
+- Same flow for `tableView(_:commit:forRowAt:)` when `editingStyle == .delete` and the row is a folder.
+- Unit test `deleteFolder`: seed root folder with 2 playlists + 1 sub-folder (with its own 1 playlist grandchild), delete the root folder, verify both playlists + sub-folder are now at root, and the sub-folder's inner playlist is still inside the sub-folder.
+
+### 18.4 Edge cases
+
+- **Empty folder:** skip confirmation, delete immediately.
+- **Currently-open folder:** if the user is viewing the folder's contents (`PlaylistFolderContentsVC`) when it's deleted from elsewhere, pop the VC. Low-probability but guard it.
+- **Selected playlist inside the folder is now playing:** no impact — delete of the folder does not touch the playlist or its queue.
+
+### 18.5 What's New entry
+
+> **Delete playlist folders.** Swipe left on any folder (or use edit mode) to delete it. The playlists and sub-folders inside pop up one level — nothing inside the folder is lost.
+
+### 18.6 Ship Steps
+Same monotonic bump pattern as §2.6. Ship with `scripts/ship.sh`.
+
+---
+
 **End of backlog.** The implementer should now:
 1. Read `PRIMER.md` and `IMPLEMENTATION.md` if not already.
 2. Run the test baseline per `IMPLEMENTATION.md` §5.2 to confirm green starting state.
