@@ -179,6 +179,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // (every mutation is nil-gated). Also seeds the PR 17.2 gradient
     // presets on first launch.
     theme.populateDefaultsIfNeeded()
+    // PR 17.5: one-shot auto-capture of the current theme state on the
+    // first Release-5 launch. Gated by a UserDefaults flag so it runs
+    // exactly once. Must run after populateDefaultsIfNeeded so the theme
+    // state is fully initialised before we snapshot it.
+    StylingPresetStore.shared.performAutoCaptureIfNeeded()
     if let backgroundColor = theme.dynamicBackground {
       UINavigationBar.appearance().barTintColor = backgroundColor
       UITabBar.appearance().barTintColor = backgroundColor
