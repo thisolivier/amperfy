@@ -37,6 +37,24 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 41,
+      date: "2026-04-17",
+      title: "Build 41 — Border fix + playlist cleanup",
+      whatsNew: [
+        "Album art borders now wrap around the rounded corners cleanly, instead of being clipped inside",
+        "Composite album art (playlists, smart lists) shows a single border around the whole tile, not four internal borders",
+        "Playlist list view is now a cleaner text-only layout without artwork thumbnails",
+        "Playlist list content is now aligned with the navigation title and search bar (no extra inset padding)",
+      ],
+      testingFocus: [
+        "Set a border (Settings → Custom Theme → Album Art → Border Width 3pt, bright color) — borders should follow the rounded corners on all album art everywhere",
+        "Check playlist art, smart list art, or any 4-tile composite — should show ONE border around the whole tile, not four",
+        "Playlists tab — rows should show text only (name + info) without artwork thumbnails",
+        "Playlists tab — text content should be aligned to the same left margin as the 'Playlists' title and search bar",
+        "Inside a folder — same text-only layout, same alignment",
+      ]
+    ),
+    ReleaseNote(
       id: 40,
       date: "2026-04-16",
       title: "Build 40 — Styling presets",
@@ -128,28 +146,6 @@ enum ReleaseNotes {
         "After any delete, tap each surviving playlist — it should open and play normally (no playlists were lost)",
         "Start a delete, tap 'Cancel' — folder and contents unchanged",
         "Offline mode: toggle on, delete a folder — should still work (local-only operation)",
-      ]
-    ),
-    ReleaseNote(
-      id: 36,
-      date: "2026-04-15",
-      title: "Build 36 — Whole-album randomizer + heading theme tier",
-      whatsNew: [
-        "Home 'Random Albums' and CarPlay Play Random now serve whole albums only (min 3 tracks) and weight albums with mostly-unplayed tracks 2× higher",
-        "Custom Theme: new 'Heading Color' row per mode separates heading text from body text; existing installs migrate their old text color into both tiers",
-        "Custom Theme: selected font family now flows through Home section headers and album/artist/playlist detail titles",
-        "Contrast warning in Settings now checks heading and body colors against the background independently",
-      ],
-      testingFocus: [
-        "Home tab → pull to refresh 'Random Albums' a few times: all entries should be full albums (3+ tracks), no singles/EPs, with visible variety",
-        "Play a handful of tracks on one album, refresh Random Albums repeatedly — the unplayed album should show up notably more often than the fully-played one",
-        "CarPlay → Play Random should likewise surface only whole albums",
-        "Settings → Custom Theme: toggle ON — 'Heading Color' and 'Body Color' rows should appear under each mode",
-        "Pick a distinct heading color vs body color — Home section headers, nav bar titles, and album detail title should use heading color; table/collection cell labels should use body color",
-        "Pick a custom font — Home section headers and album/artist detail title should adopt the font (weight may look lighter, that is expected)",
-        "Set heading color very close to background — a 'low heading/background contrast' warning should appear; set body too close — a separate 'low body/background contrast' warning should appear",
-        "Upgrade from Build 35 with a custom text color already set — heading and body should both adopt that color on first launch (no default-label regression)",
-        "Settings → Reset to Defaults → confirm — both heading and body colors should clear",
       ]
     ),
   ]
