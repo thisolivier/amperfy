@@ -37,6 +37,25 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 42,
+      date: "2026-04-16",
+      title: "Build 42 — Background task runner skeleton",
+      whatsNew: [
+        "Settings → Library now has a 'Background Tasks' section showing the live status of Album Scan, Playlist Sync, and Track Adjacency",
+        "Album Scan and Track Adjacency rows show completion time and duration after the first launch (e.g. 'Completed 2 min. ago (8s)')",
+        "Playlist Sync row shows 'Disabled' — Phase 2 will be re-enabled once its memory profile is validated",
+        "Status survives app restarts — completed states with timestamps are persisted to UserDefaults",
+        "Added BackgroundTaskRunner infrastructure for the upcoming unified background compute pipeline (PR 19b/c/d)",
+      ],
+      testingFocus: [
+        "Settings → Library — verify 'Background Tasks' section appears between 'Background song sync' and 'Cache'",
+        "Fresh launch: Album Scan and Track Adjacency show 'Not yet run' initially, then 'Completed X ago (Ys)' after sync runs",
+        "Playlist Sync row always shows 'Disabled' with a gray minus icon",
+        "Force-quit and relaunch — completed statuses should persist with updated relative times",
+        "No buttons, toggles, or interactive controls in the Background Tasks section",
+      ]
+    ),
+    ReleaseNote(
       id: 41,
       date: "2026-04-17",
       title: "Build 41 — Border fix + playlist cleanup",

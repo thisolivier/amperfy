@@ -573,6 +573,15 @@
 		AE61916CA3697B2E077A30D0 /* DefaultTrackAdjacencyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5039C99A8B8AE31EB36D1BE9 /* DefaultTrackAdjacencyService.swift */; };
 		C0A1B0032EEE000000000003 /* MacWindowHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A1B0022EEE000000000002 /* MacWindowHelper.swift */; };
 		DF4E1154B7ECE2AFA1BF3A00 /* LocalTrackAdjacencyComputer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2E3B058E28C8D26D7E496FE /* LocalTrackAdjacencyComputer.swift */; };
+		A519A010000000000001901A /* TaskKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519A020000000000001901A /* TaskKind.swift */; };
+		A519A030000000000001901A /* TaskDescriptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519A040000000000001901A /* TaskDescriptor.swift */; };
+		A519A050000000000001901A /* BackgroundTaskWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519A060000000000001901A /* BackgroundTaskWorker.swift */; };
+		A519A070000000000001901A /* BackgroundTaskStatusStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519A080000000000001901A /* BackgroundTaskStatusStore.swift */; };
+		A519A090000000000001901A /* BackgroundRunnerFeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519A0A0000000000001901A /* BackgroundRunnerFeatureFlags.swift */; };
+		A519A0B0000000000001901A /* BackgroundTaskRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519A0C0000000000001901A /* BackgroundTaskRunner.swift */; };
+		A519B010000000000001901A /* BackgroundTasksSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519B020000000000001901A /* BackgroundTasksSection.swift */; };
+		A519C010000000000001901A /* BackgroundTaskStatusStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519C020000000000001901A /* BackgroundTaskStatusStoreTest.swift */; };
+		A519C030000000000001901A /* BackgroundTaskRunnerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519C040000000000001901A /* BackgroundTaskRunnerTest.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1233,6 +1242,15 @@
 		C0A1B0022EEE000000000002 /* MacWindowHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWindowHelper.swift; sourceTree = "<group>"; };
 		C1441B264B22F86ED2ADF326 /* TrackAdjacencyProtocols.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrackAdjacencyProtocols.swift; sourceTree = "<group>"; };
 		E63A9F9C82A0199DC6B62B08 /* RelatedTracksVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelatedTracksVC.swift; sourceTree = "<group>"; };
+		A519A020000000000001901A /* TaskKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskKind.swift; sourceTree = "<group>"; };
+		A519A040000000000001901A /* TaskDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDescriptor.swift; sourceTree = "<group>"; };
+		A519A060000000000001901A /* BackgroundTaskWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskWorker.swift; sourceTree = "<group>"; };
+		A519A080000000000001901A /* BackgroundTaskStatusStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskStatusStore.swift; sourceTree = "<group>"; };
+		A519A0A0000000000001901A /* BackgroundRunnerFeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRunnerFeatureFlags.swift; sourceTree = "<group>"; };
+		A519A0C0000000000001901A /* BackgroundTaskRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskRunner.swift; sourceTree = "<group>"; };
+		A519B020000000000001901A /* BackgroundTasksSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTasksSection.swift; sourceTree = "<group>"; };
+		A519C020000000000001901A /* BackgroundTaskStatusStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskStatusStoreTest.swift; sourceTree = "<group>"; };
+		A519C040000000000001901A /* BackgroundTaskRunnerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskRunnerTest.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1518,6 +1536,7 @@
 				A517500300000000000001A0 /* PresetPickerView.swift */,
 				50AE79AB2C1CCBEC0085CBB3 /* DeveloperView.swift */,
 				50791E8428D36F1F006CE6E5 /* LibrarySettingsView.swift */,
+				A519B020000000000001901A /* BackgroundTasksSection.swift */,
 				504B441828D6F0920033982C /* LicenseSettingsView.swift */,
 				504B441C28D7A6330033982C /* XCallbackURLsSetttingsView.swift */,
 				502041962E2A37D6003CE29A /* Player */,
@@ -2018,6 +2037,7 @@
 				50F8CA2B21FA48770084F8D8 /* Player */,
 				50C9D6E7284FAC9D007F18D0 /* Screens */,
 				50BA92F221CC26BE00E5901D /* Storage */,
+				A519A000000000000001901A /* BackgroundRunner */,
 				50C9D6EF28506EBC007F18D0 /* AmperfyKit.swift */,
 				5087DE382EF0437F00644893 /* MetaManager.swift */,
 				50C9D607284FA847007F18D0 /* AmperfyKit.h */,
@@ -2026,6 +2046,21 @@
 			path = AmperfyKit;
 			sourceTree = "<group>";
 		};
+
+		A519A000000000000001901A /* BackgroundRunner */ = {
+			isa = PBXGroup;
+			children = (
+				A519A020000000000001901A /* TaskKind.swift */,
+				A519A040000000000001901A /* TaskDescriptor.swift */,
+				A519A060000000000001901A /* BackgroundTaskWorker.swift */,
+				A519A080000000000001901A /* BackgroundTaskStatusStore.swift */,
+				A519A0A0000000000001901A /* BackgroundRunnerFeatureFlags.swift */,
+				A519A0C0000000000001901A /* BackgroundTaskRunner.swift */,
+			);
+			path = BackgroundRunner;
+			sourceTree = "<group>";
+		};
+
 		50C9D614284FA847007F18D0 /* AmperfyKitTests */ = {
 			isa = PBXGroup;
 			children = (
@@ -2243,11 +2278,22 @@
 				50E964AD25E8E23D00E3210F /* API */,
 				5095F98D23CA948A008B0805 /* Player */,
 				5095F98E23CA949C008B0805 /* Storage */,
+				A519C000000000000001901A /* BackgroundRunner */,
 				50B798B323B8664700551E62 /* HelperTest.swift */,
 				A5D0D320000000000000070A0 /* GradientTest.swift */,
 				A5F0F120000000000000090A0 /* EntityImageViewTest.swift */,
 			);
 			path = Cases;
+			sourceTree = "<group>";
+		};
+
+		A519C000000000000001901A /* BackgroundRunner */ = {
+			isa = PBXGroup;
+			children = (
+				A519C020000000000001901A /* BackgroundTaskStatusStoreTest.swift */,
+				A519C040000000000001901A /* BackgroundTaskRunnerTest.swift */,
+			);
+			path = BackgroundRunner;
 			sourceTree = "<group>";
 		};
 		50E77DB528D2160800BDF882 /* SwiftUI */ = {
@@ -2748,6 +2794,7 @@
 				50A30E542B7408DB00722894 /* ContextQueueNextSectionHeader.swift in Sources */,
 				50CEC64B2D1F4C0A00D0E696 /* RadiosVC.swift in Sources */,
 				50791E8528D36F1F006CE6E5 /* LibrarySettingsView.swift in Sources */,
+				A519B010000000000001901A /* BackgroundTasksSection.swift in Sources */,
 				50DE29ED2B8FCFC500ABA78E /* LibraryDisplayType+Extension.swift in Sources */,
 				5019441D2B7ACB0800082D2E /* PopupPlayer+Animations.swift in Sources */,
 				50BA92F821CC318D00E5901D /* PlayableTableCell.swift in Sources */,
@@ -2902,6 +2949,12 @@
 				50C9D6B7284FAA87007F18D0 /* UserStatistics.swift in Sources */,
 				50AE79B02C1F58C60085CBB3 /* SsLyricsParserDelegate.swift in Sources */,
 				50C9D69D284FAA6C007F18D0 /* AbstractPlayableMO+CoreDataClass.swift in Sources */,
+				A519A010000000000001901A /* TaskKind.swift in Sources */,
+				A519A030000000000001901A /* TaskDescriptor.swift in Sources */,
+				A519A050000000000001901A /* BackgroundTaskWorker.swift in Sources */,
+				A519A070000000000001901A /* BackgroundTaskStatusStore.swift in Sources */,
+				A519A090000000000001901A /* BackgroundRunnerFeatureFlags.swift in Sources */,
+				A519A0B0000000000001901A /* BackgroundTaskRunner.swift in Sources */,
 				50C9D63E284FA9C7007F18D0 /* BackgroundLibrarySyncer.swift in Sources */,
 				50C9D67E284FAA6C007F18D0 /* UserStatisticsMO+CoreDataClass.swift in Sources */,
 				50C9D6AE284FAA87007F18D0 /* PlayerData.swift in Sources */,
@@ -3028,6 +3081,8 @@
 				50BE5D892850F50F00156FC6 /* AuthParserTest.swift in Sources */,
 				50BE5D482850F4C900156FC6 /* PlaylistTest.swift in Sources */,
 				50BE5D522850F4D700156FC6 /* HelperTest.swift in Sources */,
+				A519C010000000000001901A /* BackgroundTaskStatusStoreTest.swift in Sources */,
+				A519C030000000000001901A /* BackgroundTaskRunnerTest.swift in Sources */,
 				A5D0D310000000000000070A0 /* GradientTest.swift in Sources */,
 				A5F0F110000000000000090A0 /* EntityImageViewTest.swift in Sources */,
 				50BE5D6B2850F4FB00156FC6 /* SsGenreParserTest.swift in Sources */,
@@ -3258,7 +3313,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 41;
+				CURRENT_PROJECT_VERSION = 42;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3297,7 +3352,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amperfy/Amperfy.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 41;
+				CURRENT_PROJECT_VERSION = 42;
 				INFOPLIST_FILE = Amperfy/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -3336,7 +3391,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 41;
+				CURRENT_PROJECT_VERSION = 42;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3387,7 +3442,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 41;
+				CURRENT_PROJECT_VERSION = 42;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -3436,7 +3491,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 41;
+				CURRENT_PROJECT_VERSION = 42;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
@@ -3468,7 +3523,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 41;
+				CURRENT_PROJECT_VERSION = 42;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
