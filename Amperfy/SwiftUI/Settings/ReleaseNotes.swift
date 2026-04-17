@@ -37,22 +37,23 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
-      id: 42,
-      date: "2026-04-16",
-      title: "Build 42 — Background task runner skeleton",
+      id: 43,
+      date: "2026-04-17",
+      title: "Build 43 — Unified background task runner",
       whatsNew: [
-        "Settings → Library now has a 'Background Tasks' section showing the live status of Album Scan, Playlist Sync, and Track Adjacency",
-        "Album Scan and Track Adjacency rows show completion time and duration after the first launch (e.g. 'Completed 2 min. ago (8s)')",
-        "Playlist Sync row shows 'Disabled' — Phase 2 will be re-enabled once its memory profile is validated",
-        "Status survives app restarts — completed states with timestamps are persisted to UserDefaults",
-        "Added BackgroundTaskRunner infrastructure for the upcoming unified background compute pipeline (PR 19b/c/d)",
+        "All three background processes (Album Scan, Playlist Sync, Track Adjacency) now run through a unified serial runner that prevents races and enforces memory budgets",
+        "Settings → Library has a new 'Background Tasks' section showing live status, last synced time, and duration for each process",
+        "Playlist Sync can be re-enabled via developer settings — it now uses batched Core Data context resets every 5 playlists to prevent the Build 30 memory crash (~2.1 GB Jetsam kill)",
+        "Track Adjacency automatically recomputes after a broad playlist sync completes",
+        "The runner catches stuck tasks via watchdog timers and recovers interrupted states on app relaunch",
       ],
       testingFocus: [
-        "Settings → Library — verify 'Background Tasks' section appears between 'Background song sync' and 'Cache'",
-        "Fresh launch: Album Scan and Track Adjacency show 'Not yet run' initially, then 'Completed X ago (Ys)' after sync runs",
-        "Playlist Sync row always shows 'Disabled' with a gray minus icon",
-        "Force-quit and relaunch — completed statuses should persist with updated relative times",
-        "No buttons, toggles, or interactive controls in the Background Tasks section",
+        "Settings → Library → Background Tasks section: Album Scan and Track Adjacency should show 'Completed X ago (Ys)' after first launch with a connected account",
+        "Playlist Sync row shows 'Disabled' by default — enable via Settings → Developer → Phase 2 Playlist Sync toggle, then verify it runs and shows progress",
+        "With Phase 2 enabled: monitor memory in Instruments during playlist sync on a large library — should NOT exceed ~500 MB peak (the batched reset discipline)",
+        "Force-quit mid-sync and relaunch — interrupted tasks should show 'Failed (interrupted)' in the status panel, then re-run",
+        "No buttons or controls in Background Tasks — it's read-only status only",
+        "Verify the existing 'Show in Playlists' lazy-sync path still works independently of the runner",
       ]
     ),
     ReleaseNote(
@@ -145,26 +146,6 @@ enum ReleaseNotes {
         "Album detail screen should also render the gradient behind the track list; cell backgrounds should stay transparent while any gradient is active",
         "Settings → Reset to Defaults → confirm — both gradients clear AND custom theme toggle goes off, but the Previously Used carousel should still list your earlier gradients",
         "Quit and relaunch — gradient selection should persist through restarts",
-      ]
-    ),
-    ReleaseNote(
-      id: 37,
-      date: "2026-04-15",
-      title: "Build 37 — Delete playlist folders",
-      whatsNew: [
-        "Delete playlist folders. Swipe left on any folder (or use edit mode) to delete it. The playlists and sub-folders inside pop up one level — nothing inside the folder is lost",
-      ],
-      testingFocus: [
-        "Playlists tab → long-left-swipe on a folder row → red 'Delete' button appears → tap it → confirmation alert appears (unless folder is empty)",
-        "Playlists tab → … menu → 'Select Items' → red minus circle appears on folder rows — tap it, then tap 'Delete' on the right → same confirmation",
-        "Long-press a folder → 'Delete Folder' still works from context menu",
-        "Confirmation copy: for folder 'Rock' with 3 playlists and 1 subfolder, reads 'Delete folder \\'Rock\\'? The 3 playlists and 1 sub-folder inside will move to the parent level.' Singular/plural should be correct",
-        "Create an empty folder, swipe-delete it — should vanish immediately with no alert",
-        "Set up: root folder 'Rock' with playlists A, B and subfolder 'Metal' (containing C). Delete 'Rock'. Verify A, B, and 'Metal' are now at root; C still inside 'Metal'",
-        "Nested: folder 'Music' contains 'Rock' which contains playlist A and subfolder 'Metal'. Delete 'Rock'. Verify 'Music' now contains 'Metal' + A; 'Metal' still contains its own playlist",
-        "After any delete, tap each surviving playlist — it should open and play normally (no playlists were lost)",
-        "Start a delete, tap 'Cancel' — folder and contents unchanged",
-        "Offline mode: toggle on, delete a folder — should still work (local-only operation)",
       ]
     ),
   ]
