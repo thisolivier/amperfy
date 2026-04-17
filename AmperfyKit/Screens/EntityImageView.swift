@@ -155,12 +155,8 @@ open class EntityImageView: UIView {
       storedColorHex.flatMap { UIColor(borderHex: $0) } ?? UIColor.separator
     let resolvedCGColor = baseColor.resolvedColor(with: traitCollection).cgColor
 
-    let targets: [UIView?] = [singleImage, quadImage1, quadImage2, quadImage3, quadImage4]
-    for target in targets {
-      guard let target else { continue }
-      target.layer.borderWidth = width
-      target.layer.borderColor = resolvedCGColor
-    }
+    self.layer.borderWidth = width
+    self.layer.borderColor = resolvedCGColor
   }
 
   public func display(
