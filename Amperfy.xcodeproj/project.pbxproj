@@ -579,6 +579,9 @@
 		A519A070000000000001901A /* BackgroundTaskStatusStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519A080000000000001901A /* BackgroundTaskStatusStore.swift */; };
 		A519A090000000000001901A /* BackgroundRunnerFeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519A0A0000000000001901A /* BackgroundRunnerFeatureFlags.swift */; };
 		A519A0B0000000000001901A /* BackgroundTaskRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519A0C0000000000001901A /* BackgroundTaskRunner.swift */; };
+		A519D010000000000001901B /* AlbumScanWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519D020000000000001901B /* AlbumScanWorker.swift */; };
+		A519D030000000000001901B /* AdjacencyWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519D040000000000001901B /* AdjacencyWorker.swift */; };
+		A519D050000000000001901B /* PlaylistSyncWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519D060000000000001901B /* PlaylistSyncWorker.swift */; };
 		A519B010000000000001901A /* BackgroundTasksSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519B020000000000001901A /* BackgroundTasksSection.swift */; };
 		A519C010000000000001901A /* BackgroundTaskStatusStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519C020000000000001901A /* BackgroundTaskStatusStoreTest.swift */; };
 		A519C030000000000001901A /* BackgroundTaskRunnerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519C040000000000001901A /* BackgroundTaskRunnerTest.swift */; };
@@ -1248,6 +1251,9 @@
 		A519A080000000000001901A /* BackgroundTaskStatusStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskStatusStore.swift; sourceTree = "<group>"; };
 		A519A0A0000000000001901A /* BackgroundRunnerFeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRunnerFeatureFlags.swift; sourceTree = "<group>"; };
 		A519A0C0000000000001901A /* BackgroundTaskRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskRunner.swift; sourceTree = "<group>"; };
+		A519D020000000000001901B /* AlbumScanWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumScanWorker.swift; sourceTree = "<group>"; };
+		A519D040000000000001901B /* AdjacencyWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjacencyWorker.swift; sourceTree = "<group>"; };
+		A519D060000000000001901B /* PlaylistSyncWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistSyncWorker.swift; sourceTree = "<group>"; };
 		A519B020000000000001901A /* BackgroundTasksSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTasksSection.swift; sourceTree = "<group>"; };
 		A519C020000000000001901A /* BackgroundTaskStatusStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskStatusStoreTest.swift; sourceTree = "<group>"; };
 		A519C040000000000001901A /* BackgroundTaskRunnerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskRunnerTest.swift; sourceTree = "<group>"; };
@@ -2056,6 +2062,9 @@
 				A519A080000000000001901A /* BackgroundTaskStatusStore.swift */,
 				A519A0A0000000000001901A /* BackgroundRunnerFeatureFlags.swift */,
 				A519A0C0000000000001901A /* BackgroundTaskRunner.swift */,
+				A519D020000000000001901B /* AlbumScanWorker.swift */,
+				A519D040000000000001901B /* AdjacencyWorker.swift */,
+				A519D060000000000001901B /* PlaylistSyncWorker.swift */,
 			);
 			path = BackgroundRunner;
 			sourceTree = "<group>";
@@ -2955,6 +2964,9 @@
 				A519A070000000000001901A /* BackgroundTaskStatusStore.swift in Sources */,
 				A519A090000000000001901A /* BackgroundRunnerFeatureFlags.swift in Sources */,
 				A519A0B0000000000001901A /* BackgroundTaskRunner.swift in Sources */,
+				A519D010000000000001901B /* AlbumScanWorker.swift in Sources */,
+				A519D030000000000001901B /* AdjacencyWorker.swift in Sources */,
+				A519D050000000000001901B /* PlaylistSyncWorker.swift in Sources */,
 				50C9D63E284FA9C7007F18D0 /* BackgroundLibrarySyncer.swift in Sources */,
 				50C9D67E284FAA6C007F18D0 /* UserStatisticsMO+CoreDataClass.swift in Sources */,
 				50C9D6AE284FAA87007F18D0 /* PlayerData.swift in Sources */,

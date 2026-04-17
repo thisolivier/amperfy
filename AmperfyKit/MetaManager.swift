@@ -278,6 +278,7 @@ public class MetaManager {
 
   public func startManagerAfterSync(player: PlayerFacade) {
     os_log("Start background manager after sync", log: self.log, type: .info)
+    registerRunnerWorkers()
     playableDownloadManager.start()
     artworkDownloadManager.start()
     backgroundLibrarySyncer.start()
@@ -287,6 +288,7 @@ public class MetaManager {
 
   public func startManagerForNormalOperation(player: PlayerFacade) {
     os_log("Start background manager for normal operation", log: self.log, type: .info)
+    registerRunnerWorkers()
     duplicateEntitiesResolver.start()
     artworkDownloadManager.start()
     playableDownloadManager.start()
@@ -294,6 +296,34 @@ public class MetaManager {
     let scrobbler = createScrobbleSyncer(player: player)
     player.addNotifier(notifier: scrobbler)
     scrobbler.start()
+  }
+
+  /// Register all background task workers with the shared runner.
+  /// Called once per session from either startManagerAfterSync or startManagerForNormalOperation.
+  /// Must be called on the main actor because some workers capture mainStorage.
+  private func registerRunnerWorkers() {
+    let albumScanWorker = AlbumScanWorker(
+      storage: asyncStorage,
+      mainStorage: storage.main,
+      librarySyncer: librarySyncer,
+      settings: storage.settings,
+      networkMonitor: networkMonitor,
+      eventLogger: eventLogger
+    )
+    BackgroundTaskRunner.shared.register(worker: albumScanWorker)
+
+    let adjacencyWorker = AdjacencyWorker()
+    BackgroundTaskRunner.shared.register(worker: adjacencyWorker)
+
+    let playlistSyncWorker = PlaylistSyncWorker(
+      mainStorage: storage.main,
+      librarySyncer: librarySyncer,
+      settings: storage.settings,
+      networkMonitor: networkMonitor,
+      eventLogger: eventLogger,
+      account: account
+    )
+    BackgroundTaskRunner.shared.register(worker: playlistSyncWorker)
   }
 
   public func stopManager() {
