@@ -78,7 +78,7 @@ class PlaylistFolderContentsVC: UITableViewController {
   init(account: Account, parentFolderId: UUID? = nil) {
     self.account = account
     self.parentFolderId = parentFolderId
-    super.init(style: .insetGrouped)
+    super.init(style: .grouped)
   }
 
   @available(*, unavailable)
@@ -104,9 +104,8 @@ class PlaylistFolderContentsVC: UITableViewController {
       navigationItem.largeTitleDisplayMode = .always
     }
 
-    tableView.register(nibName: PlaylistTableCell.typeName)
     tableView.rowHeight = UITableView.automaticDimension
-    tableView.estimatedRowHeight = PlaylistTableCell.rowHeight
+    tableView.estimatedRowHeight = UITableView.automaticDimension
     tableView.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemGroupedBackground
     tableView.allowsMultipleSelectionDuringEditing = true
 
@@ -491,11 +490,19 @@ class PlaylistFolderContentsVC: UITableViewController {
 
   private func playlistCell(for indexPath: IndexPath) -> UITableViewCell {
     let playlist = displayedPlaylists[indexPath.row]
-    let cell: PlaylistTableCell = tableView.dequeueReusableCell(
-      withIdentifier: PlaylistTableCell.typeName,
-      for: indexPath
-    ) as! PlaylistTableCell
-    cell.display(playlist: playlist, rootView: self)
+    let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "PlaylistCell")
+    cell.textLabel?.text = playlist.name
+    cell.textLabel?.textColor = ThemeStore.shared.dynamicText ?? .label
+    let infoText = playlist.info(
+      for: playlist.account?.apiType.asServerApiType,
+      details: DetailInfoType(type: .short, settings: appDelegate.storage.settings)
+    )
+    cell.detailTextLabel?.text = infoText
+    cell.detailTextLabel?.textColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6)
+      ?? .secondaryLabel
+    cell.accessoryType = .disclosureIndicator
+    cell.tintColor = ThemeStore.shared.dynamicTint ?? .systemBlue
+    cell.backgroundColor = ThemeStore.shared.dynamicBackground ?? .secondarySystemGroupedBackground
     return cell
   }
 
