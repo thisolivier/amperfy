@@ -52,27 +52,9 @@ final class BackgroundTaskRunnerTest: XCTestCase {
     BackgroundTaskRunner(featureFlags: testFeatureFlags, statusStore: testStatusStore)
   }
 
-  // MARK: - Feature flag: runner disabled
-
-  func testEnqueue_whenRunnerDisabled_returnsFalseAndDoesNotPoke() {
-    testFeatureFlags.runnerEnabled = false
-    let runner = makeRunner()
-    let descriptor = TaskDescriptor(kind: .albumScan)
-
-    let enqueueResult = runner.enqueue(descriptor)
-
-    XCTAssertFalse(enqueueResult, "enqueue should return false when runner is disabled")
-    XCTAssertEqual(
-      testStatusStore.status(for: .albumScan),
-      .idle,
-      "Status store should not be poked when runner is disabled"
-    )
-  }
-
   // MARK: - Feature flag: phase 2 disabled
 
   func testEnqueue_whenPhase2Disabled_playlistSyncReturnsDisabled() {
-    testFeatureFlags.runnerEnabled = true
     testFeatureFlags.phase2Enabled = false
     let runner = makeRunner()
     let descriptor = TaskDescriptor(kind: .playlistItemSync)
@@ -96,21 +78,19 @@ final class BackgroundTaskRunnerTest: XCTestCase {
 
   // MARK: - Feature flag default values
 
-  func testFeatureFlagDefaults_runnerEnabledAndPhase2Disabled() {
+  func testFeatureFlagDefaults_phase2DisabledByDefault() {
     // Use a completely fresh UserDefaults suite that has never been written to.
     let freshSuiteName = "test.defaults.\(UUID().uuidString)"
     let freshDefaults = UserDefaults(suiteName: freshSuiteName)!
     defer { freshDefaults.removePersistentDomain(forName: freshSuiteName) }
 
     let freshFlags = BackgroundRunnerFeatureFlags(defaults: freshDefaults)
-    XCTAssertTrue(freshFlags.runnerEnabled, "runnerEnabled should default to true")
     XCTAssertFalse(freshFlags.phase2Enabled, "phase2Enabled should default to false")
   }
 
   // MARK: - Enqueue with no registered worker
 
   func testEnqueue_withNoRegisteredWorker_completesWithFailed() {
-    testFeatureFlags.runnerEnabled = true
     let runner = makeRunner()
     // No workers registered — runner should handle gracefully.
     let descriptor = TaskDescriptor(kind: .albumScan)

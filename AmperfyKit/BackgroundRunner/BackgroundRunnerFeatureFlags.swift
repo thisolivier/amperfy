@@ -31,7 +31,6 @@ public final class BackgroundRunnerFeatureFlags: @unchecked Sendable {
   private let defaults: UserDefaults
 
   private enum Key {
-    static let runnerEnabled = "amperfy.fork.runner.enabled"
     static let phase2Enabled = "amperfy.fork.runner.phase2Enabled"
   }
 
@@ -39,25 +38,9 @@ public final class BackgroundRunnerFeatureFlags: @unchecked Sendable {
     self.defaults = defaults
   }
 
-  /// Kill-switch for the entire runner. Default ON.
-  /// If false, `runner.enqueue()` is a no-op and existing code paths run
-  /// unmodified. The status panel shows "Disabled" for all task kinds.
-  ///
-  /// Uses `object(forKey:) == nil` check so a missing key defaults to true,
-  /// since `bool(forKey:)` returns `false` for missing keys.
-  public var runnerEnabled: Bool {
-    get {
-      defaults.object(forKey: Key.runnerEnabled) == nil
-        ? true
-        : defaults.bool(forKey: Key.runnerEnabled)
-    }
-    set {
-      defaults.set(newValue, forKey: Key.runnerEnabled)
-    }
-  }
-
   /// Phase 2 (playlist item sync). Default OFF.
   /// When false, `.playlistItemSync` tasks are rejected with `.disabled` status.
+  /// Stays off until Olivier validates memory profile on a large device library.
   public var phase2Enabled: Bool {
     get { defaults.bool(forKey: Key.phase2Enabled) }
     set { defaults.set(newValue, forKey: Key.phase2Enabled) }

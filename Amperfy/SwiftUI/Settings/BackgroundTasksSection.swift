@@ -66,12 +66,8 @@ struct BackgroundTasksSection: View {
     }
   }
 
-  /// If the runner kill-switch is off, override all rows to show disabled.
   private func effectiveStatusForDisplay(kind: TaskKind) -> TaskStatus {
-    guard BackgroundRunnerFeatureFlags.shared.runnerEnabled else {
-      return .disabled(reason: "Runner disabled")
-    }
-    return currentStatuses[kind] ?? .idle
+    currentStatuses[kind] ?? .idle
   }
 
   // MARK: - Status icon

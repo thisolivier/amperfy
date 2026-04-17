@@ -82,14 +82,10 @@ public final class BackgroundTaskRunner: @unchecked Sendable {
     }
   }
 
-  /// Enqueue a task. Returns `false` and is a no-op when the runner or the
-  /// relevant phase flag is disabled.
+  /// Enqueue a task. Returns `false` and is a no-op when the relevant
+  /// phase flag is disabled.
   @discardableResult
   public func enqueue(_ descriptor: TaskDescriptor) -> Bool {
-    guard featureFlags.runnerEnabled else {
-      return false
-    }
-
     if descriptor.kind == .playlistItemSync, !featureFlags.phase2Enabled {
       statusStore.transition(
         .playlistItemSync,
