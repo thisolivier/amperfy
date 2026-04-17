@@ -47,6 +47,10 @@ private struct TestModeSlice: Codable {
   var headingHex: String?
   var bodyHex: String?
   var tintHex: String?
+  // PR 24: per-mode font + border
+  var fontFamily: String?
+  var borderWidthPoints: Double?
+  var borderColorHex: String?
 }
 
 // MARK: - TestPresetConfig

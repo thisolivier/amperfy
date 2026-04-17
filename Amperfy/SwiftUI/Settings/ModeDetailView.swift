@@ -42,10 +42,17 @@ struct ModeDetailView: View {
   private var tint: Color
   @State
   private var activeGradient: ThemeGradient?
+  @State
+  private var selectedFontFamily: String
+  @State
+  private var borderWidth: Double
+  @State
+  private var borderColor: Color
 
   init(style: UIUserInterfaceStyle) {
     self.style = style
     let isDark = style == .dark
+    let theme = ThemeStore.shared
     _background = State(initialValue: Self.loadColor(
       isDark ? \.darkBackground : \.lightBackground,
       fallbackStyle: style,
@@ -66,7 +73,13 @@ struct ModeDetailView: View {
       fallbackStyle: style,
       fallbackSystem: .systemBlue
     ))
-    _activeGradient = State(initialValue: ThemeStore.shared.activeGradient(for: style))
+    _activeGradient = State(initialValue: theme.activeGradient(for: style))
+    let modeFont = isDark ? theme.darkFontFamily : theme.lightFontFamily
+    _selectedFontFamily = State(initialValue: modeFont ?? "System Default")
+    let modeBorderWidth = isDark ? theme.darkAlbumArtBorderWidth : theme.lightAlbumArtBorderWidth
+    _borderWidth = State(initialValue: Double(modeBorderWidth))
+    let modeBorderColor = isDark ? theme.darkAlbumArtBorderColor : theme.lightAlbumArtBorderColor
+    _borderColor = State(initialValue: Color(modeBorderColor ?? UIColor.separator))
   }
 
   var body: some View {
@@ -128,11 +141,74 @@ struct ModeDetailView: View {
 
       SettingsSection(content: {
         NavigationLink {
+          FontPickerView(selectedFamily: $selectedFontFamily)
+        } label: {
+          HStack {
+            Text("Font Family")
+            Spacer()
+            Text(selectedFontFamily)
+              .foregroundColor(.secondary)
+          }
+        }
+        .onChange(of: selectedFontFamily) { newValue in
+          let family = newValue == "System Default" ? nil : newValue
+          if style == .dark {
+            ThemeStore.shared.darkFontFamily = family
+          } else {
+            ThemeStore.shared.lightFontFamily = family
+          }
+          applyTheme()
+        }
+      }, header: "Typography")
+
+      SettingsSection(content: {
+        SettingsRow(title: "Border Width") {
+          HStack(spacing: 8) {
+            Text("\(Int(borderWidth)) pt")
+              .foregroundColor(.secondary)
+              .monospacedDigit()
+            Stepper("", value: $borderWidth, in: 0 ... 6, step: 1)
+              .labelsHidden()
+              .onChange(of: borderWidth) { newValue in
+                if style == .dark {
+                  ThemeStore.shared.darkAlbumArtBorderWidth = CGFloat(newValue)
+                } else {
+                  ThemeStore.shared.lightAlbumArtBorderWidth = CGFloat(newValue)
+                }
+                applyTheme()
+              }
+          }
+        }
+        ColorPicker(selection: $borderColor, supportsOpacity: false) {
+          Text("Border Color")
+        }
+        .onChange(of: borderColor) { newValue in
+          if style == .dark {
+            ThemeStore.shared.darkAlbumArtBorderColor = UIColor(newValue)
+          } else {
+            ThemeStore.shared.lightAlbumArtBorderColor = UIColor(newValue)
+          }
+          applyTheme()
+        }
+      }, header: "Album Art")
+
+      SettingsSection(content: {
+        NavigationLink {
           PresetPickerView(scope: style == .dark ? .darkSlice : .lightSlice)
             .onDisappear {
               // Re-sync local state in case the picker applied a slice
               // while this screen was in the nav stack.
               activeGradient = ThemeStore.shared.activeGradient(for: style)
+              let isDark = style == .dark
+              let modeFont = isDark ? ThemeStore.shared.darkFontFamily : ThemeStore.shared
+                .lightFontFamily
+              selectedFontFamily = modeFont ?? "System Default"
+              let modeBorderWidth = isDark ? ThemeStore.shared.darkAlbumArtBorderWidth : ThemeStore
+                .shared.lightAlbumArtBorderWidth
+              borderWidth = Double(modeBorderWidth)
+              let modeBorderColor = isDark ? ThemeStore.shared.darkAlbumArtBorderColor : ThemeStore
+                .shared.lightAlbumArtBorderColor
+              borderColor = Color(modeBorderColor ?? UIColor.separator)
             }
         } label: {
           VStack(alignment: .leading, spacing: 2) {

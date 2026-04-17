@@ -38,14 +38,27 @@ struct SettingsSection<Content: View>: View {
   }
 
   var body: some View {
-    if let footer = footer, let header = header {
-      Section(content: content, header: { Text(header) }, footer: { Text(footer) })
-    } else if let header = header {
-      Section(content: content, header: { Text(header) })
-    } else if let footer = footer {
-      Section(content: content, footer: { Text(footer) })
+    if let footer = footer {
+      Section(content: {
+        headerRowIfNeeded
+        content()
+      }, footer: { Text(footer) })
     } else {
-      Section(content: content)
+      Section {
+        headerRowIfNeeded
+        content()
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var headerRowIfNeeded: some View {
+    if let header = header {
+      Text(header)
+        .font(.subheadline.weight(.semibold))
+        .foregroundColor(.secondary)
+        .textCase(.uppercase)
+        .listRowSeparator(.hidden, edges: .bottom)
     }
   }
 }

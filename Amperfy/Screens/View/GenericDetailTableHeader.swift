@@ -147,7 +147,8 @@ class GenericDetailTableHeader: UIView {
     let headingColor = themeStore.dynamicHeadingText ?? .label
     titleLabel.textColor = headingColor
     nameTextField.textColor = headingColor
-    if themeStore.isEnabled, themeStore.fontFamily != nil {
+    if themeStore.isEnabled,
+       themeStore.fontFamily(for: UIScreen.main.traitCollection.userInterfaceStyle) != nil {
       let themedFont = UIFont.themed(style: .title1)
       titleLabel.font = themedFont
       nameTextField.font = themedFont

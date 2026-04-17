@@ -214,7 +214,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         [.foregroundColor: headingTextColor]
       var largeTitleAttributes: [NSAttributedString.Key: Any] =
         [.foregroundColor: headingTextColor]
-      if theme.fontFamily != nil {
+      let hasAnyFont = theme.lightFontFamily != nil || theme.darkFontFamily != nil
+      if hasAnyFont {
         titleAttributes[.font] = UIFont.themed(style: .headline)
         largeTitleAttributes[.font] = UIFont.themed(style: .largeTitle)
       }
@@ -222,11 +223,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       UINavigationBar.appearance().largeTitleTextAttributes = largeTitleAttributes
       UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
         .textColor = headingTextColor
-      if theme.fontFamily != nil {
+      if hasAnyFont {
         UILabel.appearance(whenContainedInInstancesOf: [UITableViewHeaderFooterView.self])
           .font = UIFont.themed(style: .headline)
       }
-    } else if theme.fontFamily != nil {
+    } else if theme.lightFontFamily != nil || theme.darkFontFamily != nil {
       // Font-only (no custom heading color) — still apply font to nav bar
       // titles and default section headers.
       UINavigationBar.appearance().titleTextAttributes = [

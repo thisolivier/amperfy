@@ -548,7 +548,9 @@ final class SectionHeaderView: UICollectionReusableView {
       // PR 17.1: propagate the custom heading font (custom-font active loses
       // the `.semibold` weight trait; that is an accepted Release 1 trade-off
       // — see DESIGN_REVIEW_RELEASE_1.md Open Question 5).
-      if ThemeStore.shared.isEnabled, ThemeStore.shared.fontFamily != nil {
+      if ThemeStore.shared.isEnabled,
+         ThemeStore.shared.fontFamily(for: UIScreen.main.traitCollection.userInterfaceStyle) != nil
+      {
         titleLabel.font = UIFont.themed(style: .title3)
       } else {
         titleLabel.font = UIFont.preferredFont(forTextStyle: .title3).withWeight(.semibold)

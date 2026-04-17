@@ -36,8 +36,13 @@ open class EntityImageView: UIView {
   // "no border" (width 0) — matching the designer brief default.
   private enum BorderDefaultsKey {
     static let enabled = "amperfy.fork.theme.enabled"
-    static let width = "amperfy.fork.theme.albumArt.borderWidth"
-    static let color = "amperfy.fork.theme.albumArt.borderColor"
+    // PR 24: per-mode keys. Legacy global keys used as fallback.
+    static let lightWidth = "amperfy.fork.theme.light.albumArt.borderWidth"
+    static let darkWidth = "amperfy.fork.theme.dark.albumArt.borderWidth"
+    static let lightColor = "amperfy.fork.theme.light.albumArt.borderColor"
+    static let darkColor = "amperfy.fork.theme.dark.albumArt.borderColor"
+    static let widthLegacy = "amperfy.fork.theme.albumArt.borderWidth"
+    static let colorLegacy = "amperfy.fork.theme.albumArt.borderColor"
   }
 
   /// Notification name mirrored from `ThemeStore.didChangeNotification`.
@@ -147,16 +152,25 @@ open class EntityImageView: UIView {
   public func applyArtworkBorder() {
     let defaults = UserDefaults.standard
     let isThemeEnabled = defaults.bool(forKey: BorderDefaultsKey.enabled)
-    let storedWidth = defaults.double(forKey: BorderDefaultsKey.width)
+    let isDark = traitCollection.userInterfaceStyle == .dark
+
+    // PR 24: read per-mode key, fall back to legacy global key.
+    let widthKey = isDark ? BorderDefaultsKey.darkWidth : BorderDefaultsKey.lightWidth
+    let perModeWidth = defaults.object(forKey: widthKey)
+    let storedWidth = perModeWidth != nil
+      ? defaults.double(forKey: widthKey)
+      : defaults.double(forKey: BorderDefaultsKey.widthLegacy)
     let width: CGFloat = isThemeEnabled ? CGFloat(storedWidth) : 0
 
-    let storedColorHex = defaults.string(forKey: BorderDefaultsKey.color)
+    let colorKey = isDark ? BorderDefaultsKey.darkColor : BorderDefaultsKey.lightColor
+    let storedColorHex = defaults.string(forKey: colorKey)
+      ?? defaults.string(forKey: BorderDefaultsKey.colorLegacy)
     let baseColor: UIColor =
       storedColorHex.flatMap { UIColor(borderHex: $0) } ?? UIColor.separator
     let resolvedCGColor = baseColor.resolvedColor(with: traitCollection).cgColor
 
-    self.layer.borderWidth = width
-    self.layer.borderColor = resolvedCGColor
+    layer.borderWidth = width
+    layer.borderColor = resolvedCGColor
   }
 
   public func display(

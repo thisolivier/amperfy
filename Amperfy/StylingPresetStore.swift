@@ -33,19 +33,29 @@ public struct ModeSlice: Codable, Equatable, Sendable {
   public var tintHex: String?
   /// Active gradient for this mode, or nil for a solid background.
   public var gradient: ThemeGradient?
+  /// PR 24: per-mode font family and album art border.
+  public var fontFamily: String?
+  public var borderWidthPoints: Double?
+  public var borderColorHex: String?
 
   public init(
     backgroundHex: String? = nil,
     headingHex: String? = nil,
     bodyHex: String? = nil,
     tintHex: String? = nil,
-    gradient: ThemeGradient? = nil
+    gradient: ThemeGradient? = nil,
+    fontFamily: String? = nil,
+    borderWidthPoints: Double? = nil,
+    borderColorHex: String? = nil
   ) {
     self.backgroundHex = backgroundHex
     self.headingHex = headingHex
     self.bodyHex = bodyHex
     self.tintHex = tintHex
     self.gradient = gradient
+    self.fontFamily = fontFamily
+    self.borderWidthPoints = borderWidthPoints
+    self.borderColorHex = borderColorHex
   }
 }
 
@@ -267,19 +277,27 @@ public final class StylingPresetStore: @unchecked Sendable {
       headingHex: themeStore.lightHeadingText?.hexString,
       bodyHex: themeStore.lightText?.hexString,
       tintHex: themeStore.lightTint?.hexString,
-      gradient: themeStore.activeGradient(for: .light)
+      gradient: themeStore.activeGradient(for: .light),
+      fontFamily: themeStore.lightFontFamily,
+      borderWidthPoints: Double(themeStore.lightAlbumArtBorderWidth),
+      borderColorHex: themeStore.lightAlbumArtBorderColor?.hexString
     )
     let darkSlice = ModeSlice(
       backgroundHex: themeStore.darkBackground?.hexString,
       headingHex: themeStore.darkHeadingText?.hexString,
       bodyHex: themeStore.darkText?.hexString,
       tintHex: themeStore.darkTint?.hexString,
-      gradient: themeStore.activeGradient(for: .dark)
+      gradient: themeStore.activeGradient(for: .dark),
+      fontFamily: themeStore.darkFontFamily,
+      borderWidthPoints: Double(themeStore.darkAlbumArtBorderWidth),
+      borderColorHex: themeStore.darkAlbumArtBorderColor?.hexString
     )
+    // PR 24: global fields kept for backward compat (old clients decode
+    // them). On load, per-mode fields in the slice take precedence.
     return StylingPresetConfig(
-      fontFamily: themeStore.fontFamily,
-      borderWidthPoints: Double(themeStore.albumArtBorderWidth),
-      borderColorHex: themeStore.albumArtBorderColor?.hexString,
+      fontFamily: themeStore.lightFontFamily,
+      borderWidthPoints: Double(themeStore.lightAlbumArtBorderWidth),
+      borderColorHex: themeStore.lightAlbumArtBorderColor?.hexString,
       light: lightSlice,
       dark: darkSlice
     )
@@ -308,15 +326,45 @@ public final class StylingPresetStore: @unchecked Sendable {
       else { themeStore.lightTint = UIColor(hex: hexValue) }
     }
     themeStore.setActiveGradient(modeSlice.gradient, for: style)
+    // PR 24: per-mode font and border. Fall back to global config fields
+    // for presets saved before PR 24 (ModeSlice fields will be nil).
+    if isDark {
+      themeStore.darkFontFamily = modeSlice.fontFamily
+      if let borderWidth = modeSlice.borderWidthPoints {
+        themeStore.darkAlbumArtBorderWidth = CGFloat(borderWidth)
+      }
+      themeStore.darkAlbumArtBorderColor = modeSlice.borderColorHex.flatMap { UIColor(hex: $0) }
+    } else {
+      themeStore.lightFontFamily = modeSlice.fontFamily
+      if let borderWidth = modeSlice.borderWidthPoints {
+        themeStore.lightAlbumArtBorderWidth = CGFloat(borderWidth)
+      }
+      themeStore.lightAlbumArtBorderColor = modeSlice.borderColorHex.flatMap { UIColor(hex: $0) }
+    }
   }
 
   private func applyGlobals(_ config: StylingPresetConfig, toThemeStore themeStore: ThemeStore) {
-    themeStore.fontFamily = config.fontFamily
-    themeStore.albumArtBorderWidth = CGFloat(config.borderWidthPoints)
-    if let hexValue = config.borderColorHex {
-      themeStore.albumArtBorderColor = UIColor(hex: hexValue)
-    } else {
-      themeStore.albumArtBorderColor = nil
+    // PR 24: per-mode font/border are now in ModeSlice and applied by
+    // applyModeSlice(). For pre-PR-24 presets where ModeSlice fields are
+    // nil, the global config values are the only source — propagate them
+    // to both modes as a migration path.
+    let lightHasFont = config.light.fontFamily != nil
+    let darkHasFont = config.dark.fontFamily != nil
+    if !lightHasFont, let globalFont = config.fontFamily {
+      themeStore.lightFontFamily = globalFont
+    }
+    if !darkHasFont, let globalFont = config.fontFamily {
+      themeStore.darkFontFamily = globalFont
+    }
+    let lightHasBorder = config.light.borderWidthPoints != nil
+    let darkHasBorder = config.dark.borderWidthPoints != nil
+    if !lightHasBorder {
+      themeStore.lightAlbumArtBorderWidth = CGFloat(config.borderWidthPoints)
+      themeStore.lightAlbumArtBorderColor = config.borderColorHex.flatMap { UIColor(hex: $0) }
+    }
+    if !darkHasBorder {
+      themeStore.darkAlbumArtBorderWidth = CGFloat(config.borderWidthPoints)
+      themeStore.darkAlbumArtBorderColor = config.borderColorHex.flatMap { UIColor(hex: $0) }
     }
   }
 

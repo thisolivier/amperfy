@@ -41,7 +41,11 @@ final class ThemeStore: @unchecked Sendable {
     static let darkText = "amperfy.fork.theme.dark.text"
     static let darkHeadingText = "amperfy.fork.theme.dark.headingText"
     static let darkTint = "amperfy.fork.theme.dark.tint"
-    static let fontFamily = "amperfy.fork.theme.fontFamily"
+    // PR 24: legacy global key — kept for migration only. New installs
+    // write per-mode keys below.
+    static let fontFamilyLegacy = "amperfy.fork.theme.fontFamily"
+    static let lightFontFamily = "amperfy.fork.theme.light.fontFamily"
+    static let darkFontFamily = "amperfy.fork.theme.dark.fontFamily"
     // PR 17.2 — gradient backgrounds. `*.gradient.active` stores the
     // JSON-encoded active Gradient per style; `gradient.history` stores a
     // shared JSON-encoded [Gradient] palette across both modes.
@@ -49,12 +53,14 @@ final class ThemeStore: @unchecked Sendable {
     static let darkGradientActive = "amperfy.fork.theme.dark.gradient.active"
     static let gradientHistory = "amperfy.fork.theme.gradient.history"
     static let hasSeededGradientPresets = "amperfy.fork.theme.gradient.seeded"
-    // PR 17.3 — album art border. Single global (not per-mode) color +
-    // width applied to every thumbnail rendered through EntityImageView
-    // (single tile and each of the four quad tiles). Default: width 0
-    // (effectively off); color nil (falls back to `.separator`).
-    static let albumArtBorderWidth = "amperfy.fork.theme.albumArt.borderWidth"
-    static let albumArtBorderColor = "amperfy.fork.theme.albumArt.borderColor"
+    // PR 24: per-mode album art border. Legacy global keys kept for
+    // migration from pre-PR-24 installs.
+    static let albumArtBorderWidthLegacy = "amperfy.fork.theme.albumArt.borderWidth"
+    static let albumArtBorderColorLegacy = "amperfy.fork.theme.albumArt.borderColor"
+    static let lightAlbumArtBorderWidth = "amperfy.fork.theme.light.albumArt.borderWidth"
+    static let lightAlbumArtBorderColor = "amperfy.fork.theme.light.albumArt.borderColor"
+    static let darkAlbumArtBorderWidth = "amperfy.fork.theme.dark.albumArt.borderWidth"
+    static let darkAlbumArtBorderColor = "amperfy.fork.theme.dark.albumArt.borderColor"
   }
 
   private let defaults: UserDefaults
@@ -118,46 +124,108 @@ final class ThemeStore: @unchecked Sendable {
     set { setColor(newValue, forKey: Key.darkTint) }
   }
 
-  // MARK: - Font
+  // MARK: - Font (per-mode, PR 24)
 
+  var lightFontFamily: String? {
+    get {
+      defaults.string(forKey: Key.lightFontFamily) ?? defaults.string(forKey: Key.fontFamilyLegacy)
+    }
+    set { defaults.set(newValue, forKey: Key.lightFontFamily) }
+  }
+
+  var darkFontFamily: String? {
+    get {
+      defaults.string(forKey: Key.darkFontFamily) ?? defaults.string(forKey: Key.fontFamilyLegacy)
+    }
+    set { defaults.set(newValue, forKey: Key.darkFontFamily) }
+  }
+
+  /// Legacy global accessor — reads light mode font for backward compat.
   var fontFamily: String? {
-    get { defaults.string(forKey: Key.fontFamily) }
-    set { defaults.set(newValue, forKey: Key.fontFamily) }
+    get { lightFontFamily }
+    set {
+      lightFontFamily = newValue
+      darkFontFamily = newValue
+    }
   }
 
-  // MARK: - Album art border (PR 17.3)
+  /// Resolved font family for the given interface style, or nil for system.
+  func fontFamily(for style: UIUserInterfaceStyle) -> String? {
+    guard isEnabled else { return nil }
+    return style == .dark ? darkFontFamily : lightFontFamily
+  }
 
-  /// Width in points for the album-artwork border. Clamped 0...6 at the
-  /// UI layer; the setter accepts any non-negative value (render sites
-  /// cope with zero by not drawing anything). Width 0 = no border.
+  // MARK: - Album art border (per-mode, PR 24)
+
+  var lightAlbumArtBorderWidth: CGFloat {
+    get {
+      let perMode = defaults.object(forKey: Key.lightAlbumArtBorderWidth)
+      if let perMode { return CGFloat(perMode as? Double ?? 0) }
+      return CGFloat(defaults.double(forKey: Key.albumArtBorderWidthLegacy))
+    }
+    set { defaults.set(Double(newValue), forKey: Key.lightAlbumArtBorderWidth) }
+  }
+
+  var darkAlbumArtBorderWidth: CGFloat {
+    get {
+      let perMode = defaults.object(forKey: Key.darkAlbumArtBorderWidth)
+      if let perMode { return CGFloat(perMode as? Double ?? 0) }
+      return CGFloat(defaults.double(forKey: Key.albumArtBorderWidthLegacy))
+    }
+    set { defaults.set(Double(newValue), forKey: Key.darkAlbumArtBorderWidth) }
+  }
+
+  var lightAlbumArtBorderColor: UIColor? {
+    get {
+      color(forKey: Key.lightAlbumArtBorderColor) ?? color(forKey: Key.albumArtBorderColorLegacy)
+    }
+    set { setColor(newValue, forKey: Key.lightAlbumArtBorderColor) }
+  }
+
+  var darkAlbumArtBorderColor: UIColor? {
+    get {
+      color(forKey: Key.darkAlbumArtBorderColor) ?? color(forKey: Key.albumArtBorderColorLegacy)
+    }
+    set { setColor(newValue, forKey: Key.darkAlbumArtBorderColor) }
+  }
+
+  /// Legacy global accessors — read/write light mode for backward compat.
   var albumArtBorderWidth: CGFloat {
-    get { CGFloat(defaults.double(forKey: Key.albumArtBorderWidth)) }
-    set { defaults.set(Double(newValue), forKey: Key.albumArtBorderWidth) }
+    get { lightAlbumArtBorderWidth }
+    set {
+      lightAlbumArtBorderWidth = newValue
+      darkAlbumArtBorderWidth = newValue
+    }
   }
 
-  /// Optional border color; nil means "fall back to `.separator`", which
-  /// resolves dynamically for the active interface style. A non-nil color
-  /// is a fixed UIColor the user picked from the settings color well.
   var albumArtBorderColor: UIColor? {
-    get { color(forKey: Key.albumArtBorderColor) }
-    set { setColor(newValue, forKey: Key.albumArtBorderColor) }
+    get { lightAlbumArtBorderColor }
+    set {
+      lightAlbumArtBorderColor = newValue
+      darkAlbumArtBorderColor = newValue
+    }
   }
 
-  /// Effective border width honoured at render time: 0 whenever the
-  /// custom theme is disabled (user opted out globally); otherwise
-  /// whatever the user configured. Keeps the render sites from needing
-  /// to re-check `isEnabled` themselves.
+  /// Resolved border width for a given interface style.
+  func albumArtBorderWidth(for style: UIUserInterfaceStyle) -> CGFloat {
+    guard isEnabled else { return 0 }
+    return style == .dark ? darkAlbumArtBorderWidth : lightAlbumArtBorderWidth
+  }
+
+  /// Resolved border color for a given interface style.
+  func albumArtBorderColor(for style: UIUserInterfaceStyle) -> UIColor {
+    let modeColor = style == .dark ? darkAlbumArtBorderColor : lightAlbumArtBorderColor
+    return modeColor ?? .separator
+  }
+
+  /// Legacy resolved accessors — kept for any remaining call sites.
   var resolvedAlbumArtBorderWidth: CGFloat {
     guard isEnabled else { return 0 }
-    return albumArtBorderWidth
+    return lightAlbumArtBorderWidth
   }
 
-  /// Effective border color honoured at render time. Falls back to the
-  /// system `.separator` when the user has not picked a color, so the
-  /// first time they bump the width > 0 they see a sensible default
-  /// instead of a confusing transparent-black line.
   var resolvedAlbumArtBorderColor: UIColor {
-    albumArtBorderColor ?? .separator
+    lightAlbumArtBorderColor ?? .separator
   }
 
   // MARK: - Gradient backgrounds (PR 17.2)
@@ -377,12 +445,11 @@ final class ThemeStore: @unchecked Sendable {
       Key.enabled,
       Key.lightBackground, Key.lightText, Key.lightHeadingText, Key.lightTint,
       Key.darkBackground, Key.darkText, Key.darkHeadingText, Key.darkTint,
-      Key.fontFamily,
+      Key.fontFamilyLegacy, Key.lightFontFamily, Key.darkFontFamily,
       Key.lightGradientActive, Key.darkGradientActive,
-      // PR 17.3: clear border config on reset. Same logic as the other
-      // user-picked theme state — a fresh reset should fall back to the
-      // no-border default.
-      Key.albumArtBorderWidth, Key.albumArtBorderColor,
+      Key.albumArtBorderWidthLegacy, Key.albumArtBorderColorLegacy,
+      Key.lightAlbumArtBorderWidth, Key.lightAlbumArtBorderColor,
+      Key.darkAlbumArtBorderWidth, Key.darkAlbumArtBorderColor,
     ]
     for key in allKeys {
       defaults.removeObject(forKey: key)
@@ -482,15 +549,23 @@ extension UIColor {
 // MARK: - UIFont theming helper
 
 extension UIFont {
-  static func themed(style: UIFont.TextStyle) -> UIFont {
-    guard let family = ThemeStore.shared.fontFamily,
+  /// Returns the themed font for the given text style and interface style.
+  /// When `interfaceStyle` is `.unspecified` (default), resolves using the
+  /// current screen trait collection — suitable for per-view call sites.
+  static func themed(
+    style: UIFont.TextStyle,
+    interfaceStyle: UIUserInterfaceStyle = .unspecified
+  )
+    -> UIFont {
+    let resolvedStyle = interfaceStyle == .unspecified
+      ? (UIScreen.main.traitCollection.userInterfaceStyle)
+      : interfaceStyle
+    guard let family = ThemeStore.shared.fontFamily(for: resolvedStyle),
           ThemeStore.shared.isEnabled
     else {
       return UIFont.preferredFont(forTextStyle: style)
     }
     let systemFont = UIFont.preferredFont(forTextStyle: style)
-    // UIFont(name:) needs a specific font name, not a family name.
-    // Look up the first available font name for this family.
     guard let fontName = UIFont.fontNames(forFamilyName: family).first,
           let customFont = UIFont(name: fontName, size: systemFont.pointSize)
     else {

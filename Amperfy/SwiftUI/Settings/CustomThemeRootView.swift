@@ -34,26 +34,11 @@ struct CustomThemeRootView: View {
   @State
   private var isEnabled: Bool = ThemeStore.shared.isEnabled
   @State
-  private var selectedFontFamily: String = ThemeStore.shared.fontFamily ?? "System Default"
-  @State
-  private var borderWidth: Double = .init(ThemeStore.shared.albumArtBorderWidth)
-  @State
-  private var borderColor: Color = CustomThemeRootView.initialBorderColor()
-  @State
-  private var hasCustomBorderColor: Bool = ThemeStore.shared.albumArtBorderColor != nil
-  @State
   private var showResetAlert = false
   @State
   private var showSavePresetAlert = false
   @State
   private var savePresetNameField = ""
-
-  private static func initialBorderColor() -> Color {
-    if let stored = ThemeStore.shared.albumArtBorderColor {
-      return Color(stored)
-    }
-    return Color(UIColor.separator)
-  }
 
   var body: some View {
     SettingsList {
@@ -84,50 +69,6 @@ struct CustomThemeRootView: View {
             Text("Dark Mode")
           }
         }
-
-        SettingsSection(content: {
-          NavigationLink {
-            FontPickerView(selectedFamily: $selectedFontFamily)
-          } label: {
-            HStack {
-              Text("Font Family")
-              Spacer()
-              Text(selectedFontFamily)
-                .foregroundColor(.secondary)
-            }
-          }
-          .onChange(of: selectedFontFamily) { newValue in
-            ThemeStore.shared.fontFamily = newValue == "System Default" ? nil : newValue
-            applyTheme()
-          }
-        }, header: "Typography")
-
-        SettingsSection(content: {
-          SettingsRow(title: "Border Width") {
-            // Stepper: cheap, clamps naturally on 0...6, gives a discrete
-            // value for the preview. Slider would be fiddly inside a
-            // grouped-inset row and wouldn't snap nicely to integers.
-            HStack(spacing: 8) {
-              Text("\(Int(borderWidth)) pt")
-                .foregroundColor(.secondary)
-                .monospacedDigit()
-              Stepper("", value: $borderWidth, in: 0 ... 6, step: 1)
-                .labelsHidden()
-                .onChange(of: borderWidth) { newValue in
-                  ThemeStore.shared.albumArtBorderWidth = CGFloat(newValue)
-                  applyTheme()
-                }
-            }
-          }
-          ColorPicker(selection: $borderColor, supportsOpacity: false) {
-            Text("Border Color")
-          }
-          .onChange(of: borderColor) { newValue in
-            hasCustomBorderColor = true
-            ThemeStore.shared.albumArtBorderColor = UIColor(newValue)
-            applyTheme()
-          }
-        }, header: "Album Art")
 
         SettingsSection(content: {
           SettingsButtonRow(title: "Save Current as Preset") {
@@ -166,10 +107,6 @@ struct CustomThemeRootView: View {
             Button("Reset", role: .destructive) {
               ThemeStore.shared.resetToDefaults()
               isEnabled = false
-              selectedFontFamily = "System Default"
-              borderWidth = 0
-              borderColor = Color(UIColor.separator)
-              hasCustomBorderColor = false
               applyTheme()
             }
           } message: {
