@@ -177,6 +177,9 @@ struct LibrarySettingsView: View {
           }
         }, header: "Background song sync")
 
+        // PR 19a: background task status panel.
+        BackgroundTasksSection()
+
         SettingsSection(content: {
           let changeHandler: ([String], [String]) -> () = { oldCacheString, newCacheString in
             if newCacheString[1] == "" {
