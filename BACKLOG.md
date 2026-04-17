@@ -1550,6 +1550,65 @@ Note: the cell-clear appearance work in PR 17.2 already did this globally when a
 ### 21.5 Ship Steps
 Bundled into Release 4 with PR 17.3 and PR 20. Monotonic bump.
 
+## 22. PR 22 — Border rendering fix (rounded corners + composite)
+
+**Release target:** Release 6 (bundled with PR 23). Added 2026-04-17 after Olivier's Build 40 review.
+
+**Intent:** Fix two border rendering bugs from PR 17.3.
+
+### 22.1 Border goes around rounded corners, not clipped inside
+
+Currently, borders are applied to each individual child image view (`singleImage`, `quadImage1-4`) via `CALayer.borderWidth`. Each child has `masksToBounds = true` and its own `cornerRadius`. The result: the border is drawn at the edge of each child's clipped bounds, creating an odd look where a rounded border sits on top of a square album image that's been partially clipped.
+
+**Fix:** Apply the border to the parent `EntityImageView.layer` instead of individual child layers. The parent already has `layer.cornerRadius` and `layer.masksToBounds = true` set. The border will follow the rounded corners correctly: one continuous border around the whole art view, drawn on top of (but not clipped by) the mask.
+
+### 22.2 Composite art shows one border, not four
+
+In playlist views and smart lists, the 4-tile composite album art currently renders a border around EACH sub-tile. It should show a single border around the outer edge of the composite.
+
+**Fix:** Same as §22.1 — when the border is on the parent `EntityImageView.layer`, only one border is drawn regardless of whether the view is showing a single image or a quad composite.
+
+### 22.3 Implementation site
+
+`AmperfyKit/Screens/EntityImageView.swift`, specifically `applyArtworkBorder()`. Replace the per-child loop with a single `self.layer.borderWidth = width; self.layer.borderColor = resolvedCGColor`.
+
+---
+
+## 23. PR 23 — Playlist list view cleanup (hide art, align margins)
+
+**Release target:** Release 6 (bundled with PR 22). Added 2026-04-17.
+
+**Intent:** Clean up the `PlaylistFolderContentsVC` playlist list — remove artwork thumbnails, align text content with navigation title and search bar, remove inset padding.
+
+### 23.1 Hide album art in playlist rows
+
+Replace the nib-based `PlaylistTableCell` (which shows the `EntityImageView` composite artwork) with a simple `UITableViewCell(style: .subtitle)` for playlist rows in `PlaylistFolderContentsVC`. The folder rows already use this pattern — playlist rows should match.
+
+The cell should show:
+- Playlist name as `textLabel`
+- Playlist info (count, duration) as `detailTextLabel`
+- `disclosureIndicator` accessory
+- Themed text colors matching folder cells
+
+**Scope:** only `PlaylistFolderContentsVC.playlistCell(for:)`. Do NOT change `PlaylistTableCell` itself or its usage in other VCs (SearchVC, PlaylistSelectorVC, PlaylistMembershipVC, etc.).
+
+### 23.2 Left-align to match VC title and search bar
+
+Change the table view style from `.insetGrouped` to `.grouped`. The `.insetGrouped` style adds ~20pt horizontal card insets that push cell content further right than the navigation title and search bar. `.grouped` gives full-width sections with text content aligned to the standard `layoutMargins`, matching the navigation title.
+
+### 23.3 Implementation sites
+
+- `PlaylistFolderContentsVC.swift`:
+  - `init`: change `super.init(style: .insetGrouped)` → `super.init(style: .grouped)`
+  - `playlistCell(for:)`: replace `PlaylistTableCell` with `UITableViewCell(style: .subtitle)` (match the `folderCell` pattern)
+  - Remove `tableView.register(nibName: PlaylistTableCell.typeName)` from `viewDidLoad`
+  - Remove `tableView.estimatedRowHeight = PlaylistTableCell.rowHeight` or set to automatic
+  - The folder cell background should also be updated: use `.secondarySystemGroupedBackground` as default (not `.systemGroupedBackground`) since `.grouped` style uses a different default
+
+### 23.4 What's New entry (shared with PR 22)
+
+> **Album art borders fixed:** borders now wrap around the rounded corners cleanly, and composite playlist art shows a single border around the whole tile instead of four internal borders. Playlist list view is now a cleaner text-only layout aligned with the navigation bar.
+
 ---
 
 **End of backlog.** The implementer should now:
