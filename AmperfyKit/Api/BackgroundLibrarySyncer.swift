@@ -62,6 +62,8 @@ public final class BackgroundLibrarySyncer: AbstractBackgroundLibrarySyncer, Sen
   private let isCurrentlyActive = Atomic<Bool>(wrappedValue: false)
   private let backgroundTask = Atomic<Task<(), Never>?>(wrappedValue: nil)
   private let taskQueue: OperationQueue
+  /// Tracks when the album scan phase started, for duration reporting to the status store.
+  private let albumScanStartTime = Atomic<Date?>(wrappedValue: nil)
 
   @MainActor
   init(
@@ -108,6 +110,10 @@ public final class BackgroundLibrarySyncer: AbstractBackgroundLibrarySyncer, Sen
     backgroundTask.wrappedValue = Task {
       os_log("start", log: self.log, type: .info)
       MemoryReporter.logMemory(label: "sync start")
+      // PR 19a: instrument album scan entry for status panel.
+      let scanStartDate = Date()
+      self.albumScanStartTime.wrappedValue = scanStartDate
+      BackgroundTaskStatusStore.shared.transition(.albumScan, to: .running(since: scanStartDate))
 
       if self.isRunning.wrappedValue, self.settings.user.isOnlineMode,
          self.networkMonitor.isConnectedToNetwork {
@@ -218,6 +224,18 @@ public final class BackgroundLibrarySyncer: AbstractBackgroundLibrarySyncer, Sen
     taskQueue.addBarrierBlock {
       self.isRunning.wrappedValue = false
       os_log("stopped", log: self.log, type: .info)
+      // PR 19a: instrument album scan completion for status panel.
+      let completionDate = Date()
+      let elapsedSeconds: TimeInterval
+      if let startTime = self.albumScanStartTime.wrappedValue {
+        elapsedSeconds = completionDate.timeIntervalSince(startTime)
+      } else {
+        elapsedSeconds = 0
+      }
+      BackgroundTaskStatusStore.shared.transition(
+        .albumScan,
+        to: .completed(at: completionDate, durationSeconds: elapsedSeconds)
+      )
     }
   }
 }

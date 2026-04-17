@@ -393,6 +393,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     MemoryReporter.clearLog()
     MemoryReporter.logMemory(label: "app-launch-start")
 
+    // PR 19a: sweep any .running statuses left over from a prior terminated session.
+    BackgroundTaskRunner.shared.performLaunchSweep()
+
     storage.applyMultiAccountSettingsUpdateIfNeeded()
     libraryUpdater.performAccountCleanUpIfNeccessaryInBackground()
 
@@ -440,12 +443,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       computeTrackAdjacencyInBackground()
     }
 
+    // PR 19a: mark playlist item sync as disabled (Phase 2 is off by default).
+    if !BackgroundRunnerFeatureFlags.shared.phase2Enabled {
+      BackgroundTaskStatusStore.shared.transition(
+        .playlistItemSync,
+        to: .disabled(reason: "Phase 2 disabled")
+      )
+    }
+
     return true
   }
 
   private func computeTrackAdjacencyInBackground() {
+    // PR 19a: instrument adjacency compute for status panel.
+    BackgroundTaskStatusStore.shared.transition(.adjacencyCompute, to: .running(since: Date()))
+    let adjacencyStartTime = Date()
     DispatchQueue.global(qos: .utility).async {
       DefaultTrackAdjacencyService.shared.computeIfNeeded()
+      let elapsedSeconds = Date().timeIntervalSince(adjacencyStartTime)
+      BackgroundTaskStatusStore.shared.transition(
+        .adjacencyCompute,
+        to: .completed(at: Date(), durationSeconds: elapsedSeconds)
+      )
     }
   }
 
