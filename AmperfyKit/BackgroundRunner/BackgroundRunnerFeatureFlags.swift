@@ -38,11 +38,17 @@ public final class BackgroundRunnerFeatureFlags: @unchecked Sendable {
     self.defaults = defaults
   }
 
-  /// Phase 2 (playlist item sync). Default OFF.
+  /// Phase 2 (playlist item sync). Default ON (PR 25).
   /// When false, `.playlistItemSync` tasks are rejected with `.disabled` status.
-  /// Stays off until Olivier validates memory profile on a large device library.
+  /// Memory safety: syncDown() runs on an async context (per-playlist bounded),
+  /// main context resets every 5 playlists to prevent accumulated faults.
   public var phase2Enabled: Bool {
-    get { defaults.bool(forKey: Key.phase2Enabled) }
+    get {
+      // New installs default to ON; existing installs that never touched
+      // the flag also default to ON after the PR 25 flip.
+      guard defaults.object(forKey: Key.phase2Enabled) != nil else { return true }
+      return defaults.bool(forKey: Key.phase2Enabled)
+    }
     set { defaults.set(newValue, forKey: Key.phase2Enabled) }
   }
 }
