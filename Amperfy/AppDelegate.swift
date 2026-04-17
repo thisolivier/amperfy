@@ -440,10 +440,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     })
 
     if storage.settings.app.isLibrarySynced {
-      computeTrackAdjacencyInBackground()
+      // Adjacency runs through the unified runner (AdjacencyWorker).
+      // Worker registration happens in MetaManager.registerRunnerWorkers() which is
+      // called from startManagerForNormalOperation above. Enqueue after that.
+      BackgroundTaskRunner.shared.enqueue(
+        TaskDescriptor(kind: .adjacencyCompute, triggerReason: .scheduled)
+      )
     }
 
-    // PR 19a: mark playlist item sync as disabled (Phase 2 is off by default).
+    // Mark playlist item sync as disabled if Phase 2 is off.
     if !BackgroundRunnerFeatureFlags.shared.phase2Enabled {
       BackgroundTaskStatusStore.shared.transition(
         .playlistItemSync,
@@ -452,20 +457,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     return true
-  }
-
-  private func computeTrackAdjacencyInBackground() {
-    // PR 19a: instrument adjacency compute for status panel.
-    BackgroundTaskStatusStore.shared.transition(.adjacencyCompute, to: .running(since: Date()))
-    let adjacencyStartTime = Date()
-    DispatchQueue.global(qos: .utility).async {
-      DefaultTrackAdjacencyService.shared.computeIfNeeded()
-      let elapsedSeconds = Date().timeIntervalSince(adjacencyStartTime)
-      BackgroundTaskStatusStore.shared.transition(
-        .adjacencyCompute,
-        to: .completed(at: Date(), durationSeconds: elapsedSeconds)
-      )
-    }
   }
 
   private var isAlreadyRegisteredToPlayer = false
