@@ -1,8 +1,40 @@
 # PR 19 — Unified Background Task Runner (Architecture Proposal)
 
-Status: draft, awaiting sign-off
-Author: architect agent, 2026-04-15
-Scope: architecture only (no code). Settings UI design is a follow-up pass after sign-off.
+Status: APPROVED 2026-04-17 — all open questions approved, major reframes below
+Author: architect agent, 2026-04-15; updated 2026-04-17 with Olivier's sign-off
+Scope: architecture only (no code). Settings UI design is a follow-up pass.
+
+---
+
+## Olivier's sign-off notes (2026-04-17)
+
+**All 5 open questions (§8) approved as proposed.**
+
+**Major reframe — server-side model:** The future is NOT "app triggers
+compute on server." It's "server owns when to run calculations (adjacency,
+is-complete-album, is-in-playlist), and the **app receives/requests/syncs
+the computed state**." While the task lives on device, the runner
+orchestration is needed as spec'd. But this reframes what matters most:
+
+- The **data store interface** is the critical artifact — how it responds
+  to calls when data is stale or not yet available. This interface must
+  work identically whether the backing data was computed locally or synced
+  from a server.
+- The runner/orchestration is scaffolding for the local-compute phase.
+  The store abstraction is permanent.
+
+**UI for stale/unavailable data:** Features that depend on background-
+computed data (Related Tracks, In Playlist, Complete Albums filter) must
+never silently hide when the data isn't ready. The UI should communicate
+status — e.g. "data is syncing, check back later" — so users understand
+why a feature isn't available yet.
+
+**Settings panel is read-only:** No run/cancel controls. Just sync status
+and last-synced timestamp. Debug/observability capacity, not a control
+surface.
+
+**Break into chunks:** PR 19 should be split into multiple focused sub-PRs
+for more manageable planning and review.
 
 ---
 
@@ -197,22 +229,56 @@ Two flavors, both preserved:
 
 ---
 
-## 4. Server-side seam
+## 4. Server-side seam (REFRAMED per Olivier 2026-04-17)
 
-The `TaskExecutor` protocol is the seam. The runner/status/enqueue layer never looks inside it.
+**Original proposal:** `TaskExecutor` protocol as the seam — app triggers
+compute on server via POST, server streams progress events back.
 
-**Contract for a future `RemoteTaskExecutor`:**
-- Accepts the same `TaskDescriptor` (already designed as a serializable value type).
-- POSTs the descriptor to a server-side endpoint (`/api/v1/tasks`), receives a job ID.
-- Streams progress events via SSE or long-poll (`/api/v1/tasks/{id}/events`), mapping server events onto the same `TaskEventSink` the runner hands in. From the runner's perspective, a remote executor is indistinguishable from a slow local one.
-- On completion, the server writes results directly to a shared store (e.g. pushes adjacency pairs to the device's `TrackAdjacencySQLiteStore` via a blob download, or writes playlist items via a scoped sync endpoint).
+**Olivier's actual model:** The server owns when to run calculations
+(adjacency scoring, is-complete-album, is-in-playlist). The app
+**receives/requests/syncs the computed state** — it does NOT trigger the
+compute. This is fundamentally a sync model, not a remote-execution model.
 
-**Why this is tractable for the three current workers:**
-- **Adjacency** is the easiest win. `PlaylistDataProvider` and `ScoredRelationSink` already exist (PR 12 groundwork, see `TrackAdjacencyProtocols.swift`). A server impl would swap the Core-Data-backed provider for a server-side playlist index, and the sink would become a binary blob the server returns for the client to import into SQLite. No device-side graph computation needed.
-- **Playlist item sync** — partially server-side today (server is authoritative for playlist contents). A future optimization: server batches all per-playlist fetches into a single bulk response instead of N round-trips. This is a `RemoteTaskExecutor` concern, invisible to the runner.
-- **Album scan** — least amenable to server-side offload (the data already comes from the server; the "scan" is just "fetch songs for albums we haven't yet fetched"). A remote executor here mainly means "let the server decide which albums need refresh and stream them back", i.e. inverting the `getAlbumWithoutSyncedSongs()` query. Plausible but lowest priority.
+**Revised seam: the data store interface, not the executor.**
 
-**What we do NOT commit to in PR 19:** any network schema, any SSE vs long-poll choice, any server-side implementation. We only commit to `TaskDescriptor` being serializable and `TaskExecutor` being swappable. The future PR can redesign the wire format freely.
+The critical abstraction is how the data store responds when queried:
+
+```
+enum ComputedDataState<T> {
+    case available(T, lastUpdated: Date)
+    case stale(T, lastUpdated: Date)     // have data but it's old
+    case syncing(progress: Double?)      // in-flight, no data yet
+    case unavailable(reason: String)     // not computed / not synced
+}
+```
+
+Each feature's data store (adjacency scores, playlist membership flags,
+album completeness flags) exposes this interface. The consumer (UI, query
+builder) decides how to present each state. Whether the data was computed
+locally by the runner or synced from a server endpoint is invisible to the
+consumer.
+
+**What the runner provides (local-compute phase):** While the task lives
+on device, the runner fills these stores by running the local algorithms.
+The runner transitions the store from `.syncing` → `.available` on success,
+or `.unavailable` on failure. When a future server-side implementation
+exists, a sync adapter replaces the runner for that data kind — the store
+interface and UI remain unchanged.
+
+**What we do NOT commit to in PR 19:** any server API schema. We commit
+to the data store interface being the contract, and the runner being a
+swappable implementation detail behind it.
+
+**Why this is tractable for the three current stores:**
+- **Adjacency** — `TrackAdjacencySQLiteStore` already exists. Wrap it in
+  a `ComputedDataState`-aware accessor. Server-side: endpoint returns
+  adjacency pairs, client imports into SQLite; store interface identical.
+- **Playlist membership** — today built by `syncDown(playlist:)`. Store
+  is Core Data. Server-side: Navidrome could expose a bulk "which playlists
+  contain track X?" endpoint; client writes same Core Data relationships.
+- **Album completeness** — today computed by `remoteSongCount` predicate.
+  Server-side: Navidrome marks albums as complete/incomplete; client syncs
+  flag. Simplest of the three.
 
 ---
 
@@ -231,30 +297,27 @@ This is the minimum PR 19. Rejected because (1) Olivier explicitly asked for the
 
 ## 6. Migration plan
 
-Each step ships on its own. Each step leaves the app working.
+Superseded by §9 (chunked implementation plan). The original 7-step plan
+is preserved below for reference but §9 is authoritative.
 
-**Step 1 — Status store only (flag-gated, no runner yet).**
-Add `BackgroundTaskStatus` enum and `BackgroundTaskStatusStore`. Instrument the three existing call sites to poke the store on start/success/failure. Wire the Settings panel to read from the store. Phase 2 stays disabled; its row shows `.disabled(reason: "Phase 2 off — in-playlist lookup triggers on tap")`. Ships the visible PR 19 feature end-to-end. Exactly the BACKLOG.md §19.3 shape.
+<details>
+<summary>Original 7-step plan (pre-approval)</summary>
 
-**Step 2 — Introduce `TaskDescriptor` / `TaskExecutor` / `BackgroundTaskRunner` skeleton.**
-Define the types, add `LocalTaskExecutor` with a stub registry. Do not wire anything to it yet. Unit tests for descriptor equality, queue serialization, status transitions. Zero behaviour change in the app.
+**Step 1 — Status store only.** Add `BackgroundTaskStatusStore`, instrument existing call sites, wire Settings panel. Phase 2 stays disabled.
+
+**Step 2 — `TaskDescriptor` / `TaskExecutor` / `BackgroundTaskRunner` skeleton.** Define types, unit tests. Zero behaviour change.
 
 **Step 3 — Migrate Phase 1 (album scan) behind `runnerEnabled` flag.**
-Extract the Phase 1 body from `syncAlbumSongsInBackground()` into `AlbumScanWorker`. The existing `BackgroundLibrarySyncer.start()` entry point now calls `BackgroundTaskRunner.shared.enqueue(.albumScan(scope: .all, trigger: .scheduled))`. The old code path stays reachable behind `runnerEnabled = false` for rollback. Ship, watch metrics. One kind is now through the runner.
 
 **Step 4 — Migrate adjacency.**
-Extract `AppDelegate.computeTrackAdjacencyInBackground()` into `AdjacencyWorker`. Enqueue from the same launch point. Remove the `DispatchQueue.global` call. Status panel now reports adjacency live. Ship.
 
 **Step 5 — Re-enable Phase 2 behind `phase2Enabled` flag (default OFF).**
-Add `PlaylistSyncWorker` with per-playlist-batch context reset. Internal dogfood on Olivier's device with flag on. Measure peak memory vs Build 32. Do not enable for QA until profiled. Once clean, flip flag default to ON in a subsequent build.
 
-**Step 6 — "Run now" triggers + lazy-path status tracking.**
-Wire the Settings row buttons to `runNow(kind:)`. Instrument `EntityPreviewVC` and `PlaylistDetailVC` lazy-sync sites to fire status-tracking descriptors (but keep their direct `syncDown(playlist:)` calls untouched per §3.7).
+**Step 6 — "Run now" triggers + lazy-path status tracking.** (Note: Olivier's sign-off removed "Run now" controls — Settings is status-only.)
 
-**Step 7 — Cleanup.**
-Delete the pre-runner code path behind `runnerEnabled`. Runner is the only way in. `BackgroundLibrarySyncer` shrinks to a thin compat shell or is renamed / folded into the runner module.
+**Step 7 — Cleanup.** Delete pre-runner code paths.
 
-Steps 1, 3, 4, 5, 6 are each user-visible ship increments. Steps 2 and 7 are pure refactors.
+</details>
 
 ---
 
@@ -272,14 +335,75 @@ Steps 1, 3, 4, 5, 6 are each user-visible ship increments. Steps 2 and 7 are pur
 
 ---
 
-## 8. Open questions for Olivier
+## 8. Open questions — RESOLVED (2026-04-17)
 
-1. **Should the runner live in `AmperfyKit` or in the app target?** BACKLOG §19.3 says `BackgroundTaskStatusStore` is UserDefaults-backed (kit-appropriate), but `UIApplication.beginBackgroundTask` is app-target-only. Proposal: runner **core** in AmperfyKit, **UIKit lifecycle bridge** in the app target, injected into the runner at launch. Confirm this split is acceptable.
+All 5 approved as proposed. Additionally:
+- **No run/cancel controls in Settings.** Status + last-synced only.
+- **Break into chunks** for focused planning (see §9).
 
-2. **Do we want cross-account runner state or per-account?** Today `MetaManager` holds a per-account `backgroundLibrarySyncer`. If you switch accounts, does each account have its own task history, or is the runner a singleton with account-scoped descriptors? Proposal: singleton runner, each descriptor carries an `accountId`, status store keys by `(accountId, kind)`. Confirm.
+1. ✅ Runner core in AmperfyKit, UIKit lifecycle bridge in app target.
+2. ✅ Singleton runner, account-scoped descriptors, store keys by `(accountId, kind)`.
+3. ✅ Phase 2 defaults ON once profiled stable.
+4. ✅ All-unsynced scope (no "Run now" button — status-only panel).
+5. ✅ Always kick adjacency after Phase 2, using `computeIfNeeded()`.
 
-3. **Phase 2 default state after re-enable.** Once `phase2Enabled` is proven stable, do we default it ON for all users, or keep it opt-in via Settings → Developer? Current implicit assumption: ON by default once safe. Confirm or redirect.
+---
 
-4. **"Run now" scope on `.playlistItemSync`.** Should the Settings row "Run now" button sync *all* unsynced playlists (potentially minutes of work), or only the N most recently touched? Proposal: all-unsynced, with a cancel button while running. Confirm.
+## 9. Chunked implementation plan (per Olivier's request)
 
-5. **Adjacency auto-kick after Phase 2 completes.** Today's commented-out code enqueued an adjacency recompute right after playlist sync. That's probably right, but it means every Phase 2 run costs an adjacency run too. Acceptable, or should we gate adjacency recompute behind "N new playlists changed" threshold? Proposal: always kick, but use `computeIfNeeded()` not `computeFromScratch()` — since the SQLite store is append-accumulate, `isStale=true` + `computeIfNeeded` is safe and cheap when nothing actually changed. Confirm.
+PR 19 is split into focused sub-PRs. Each is independently shippable.
+
+### PR 19a — ComputedDataState store interface + status panel
+
+The foundational piece. Define the `ComputedDataState<T>` enum and the
+store protocol. Add `BackgroundTaskStatusStore` (UserDefaults-backed,
+Combine-published). Wire a read-only Settings → Library panel showing
+status and last-synced for each task kind (album scan, adjacency,
+playlist sync). Instrument the three existing call sites to poke the
+store on start/success/failure. Phase 2 stays disabled; its row shows
+status "disabled."
+
+**Deliverable:** user can see sync status of each background process.
+
+### PR 19b — Data availability in feature UIs
+
+Wire `ComputedDataState` into the UI sites that depend on background
+data. When data is `.syncing` or `.unavailable`:
+- Related Tracks (adjacency): show "Related tracks are being calculated"
+  instead of silently hiding the section.
+- In Playlist badge: show "Playlist data syncing" or similar.
+- Complete Albums filter: indicate when the scan hasn't finished.
+
+**Deliverable:** users understand why a feature isn't ready yet.
+
+### PR 19c — Runner skeleton + Phase 1 migration
+
+Introduce `TaskDescriptor`, `TaskExecutor` protocol, `LocalTaskExecutor`,
+`BackgroundTaskRunner`. Migrate Phase 1 (album scan) behind the runner.
+Status panel now reports album scan live via the runner (instead of
+manual store pokes). Unit tests for descriptor equality, queue
+serialization, status transitions.
+
+**Deliverable:** runner architecture proven with one real worker.
+
+### PR 19d — Phase 2 re-enable (batched playlist sync)
+
+Add `PlaylistSyncWorker` with per-N-playlists `context.reset()` to fix
+the Build 30 memory kill. Migrate behind the runner. Default OFF behind
+`phase2Enabled` flag. Profile on Olivier's device. Once stable, flip
+default to ON.
+
+**Deliverable:** playlist sync back online, memory-safe.
+
+### PR 19e — Adjacency migration + auto-kick
+
+Move `computeTrackAdjacencyInBackground()` into `AdjacencyWorker` behind
+the runner. Auto-kick after Phase 2 completes using `computeIfNeeded()`.
+Remove the `DispatchQueue.global` call from AppDelegate.
+
+**Deliverable:** all three background tasks unified under the runner.
+
+### PR 19f — Cleanup
+
+Delete pre-runner code paths. `BackgroundLibrarySyncer` becomes a thin
+shell or is folded into the runner module.
