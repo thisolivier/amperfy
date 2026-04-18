@@ -70,6 +70,7 @@ class EntityPreviewActionBuilder {
   private var isShowPodcastDetails = false
   private var isShowSongDetails = false
   private var isInstantMix = false
+  private var isShowPlaylists = false
 
   init(
     container: PlayableContainable,
@@ -150,6 +151,9 @@ class EntityPreviewActionBuilder {
     }
     if isAddToPlaylist {
       elementHandlingActions.append(createAddToPlaylistAction())
+    }
+    if isShowPlaylists {
+      elementHandlingActions.append(createShowPlaylistsAction())
     }
     if isDownloadPossible {
       elementHandlingActions.append(createDownloadAction())
@@ -262,6 +266,7 @@ class EntityPreviewActionBuilder {
     isShowPodcastDetails = false
     isShowSongDetails = true
     isInstantMix = appDelegate.storage.settings.user.isOnlineMode
+    isShowPlaylists = true
   }
 
   private func configureFor(podcastEpisode: PodcastEpisode) {
@@ -305,13 +310,18 @@ class EntityPreviewActionBuilder {
   }
 
   private func configureFor(playlist: Playlist) {
-    isPlay = appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
-      .hasCachedItems
-    isShuffle = (
-      appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
+    if rootView is PlaylistDetailVC {
+      isPlay = false
+      isShuffle = false
+    } else {
+      isPlay = appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
         .hasCachedItems
-    ) &&
-      appDelegate.storage.settings.user.isPlayerShuffleButtonEnabled
+      isShuffle = (
+        appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
+          .hasCachedItems
+      ) &&
+        appDelegate.storage.settings.user.isPlayerShuffleButtonEnabled
+    }
     isMusicQueue = true
     isPodcastQueue = false
     isShowAlbum = false
@@ -380,17 +390,23 @@ class EntityPreviewActionBuilder {
   }
 
   private func configureFor(album: Album) {
-    isPlay = appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
-      .hasCachedItems
-    isShuffle = (
-      appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
+    if rootView is AlbumDetailVC {
+      isPlay = false
+      isShuffle = false
+      isShowArtist = false
+    } else {
+      isPlay = appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
         .hasCachedItems
-    ) &&
-      appDelegate.storage.settings.user.isPlayerShuffleButtonEnabled
+      isShuffle = (
+        appDelegate.storage.settings.user.isOnlineMode || entityContainer.playables
+          .hasCachedItems
+      ) &&
+        appDelegate.storage.settings.user.isPlayerShuffleButtonEnabled
+      isShowArtist = !(rootView is ArtistDetailVC)
+    }
     isMusicQueue = true
     isPodcastQueue = false
     isShowAlbum = false
-    isShowArtist = !(rootView is ArtistDetailVC)
     isAddToPlaylist = appDelegate.storage.settings.user.isOnlineMode
     isDeleteOnServer = false
     isGoToSiteUrl = false
@@ -861,6 +877,86 @@ class EntityPreviewActionBuilder {
         }
       }]
     )
+  }
+
+  private func createShowPlaylistsAction() -> UIAction {
+    UIAction(title: "Show in Playlists", image: .playlist) { action in
+      guard let song = (self.entityContainer as? AbstractPlayable)?.asSong,
+            let account = self.entityContainer.account else { return }
+
+      Task { @MainActor in
+        await self.syncUnsyncedPlaylistsThenShowMembership(
+          songId: song.id,
+          account: account
+        )
+      }
+    }
+  }
+
+  @MainActor
+  private func syncUnsyncedPlaylistsThenShowMembership(
+    songId: String,
+    account: Account
+  ) async {
+    let library = appDelegate.storage.main.library
+    let allPlaylists = library.getPlaylists(for: account)
+    let tracker = PlaylistItemsSyncTracker.shared
+    let unsyncedPlaylists = allPlaylists.filter { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
+
+    let needsSync = !unsyncedPlaylists.isEmpty
+    let membershipVC = PlaylistMembershipVC(
+      playlists: [],
+      isLoading: needsSync
+    ) { selectedPlaylist in
+      let detailVC = AppStoryboard.Main.segueToPlaylistDetail(
+        account: account,
+        playlist: selectedPlaylist
+      )
+      if let popupPlayer = self.rootView as? PopupPlayerVC {
+        popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: detailVC)
+      } else if let navController = self.rootView.navigationController {
+        navController.pushViewController(detailVC, animated: true)
+      } else {
+        guard let hostingSplitVC = AppDelegate.mainWindowHostVC else { return }
+        hostingSplitVC.pushNavLibrary(vc: detailVC)
+      }
+    }
+    let navigationController = UINavigationController(rootViewController: membershipVC)
+    rootView.present(navigationController, animated: true)
+
+    if needsSync {
+      let librarySyncer = appDelegate.getMeta(account.info).librarySyncer
+      let syncTask = Task { @MainActor in
+        for playlist in unsyncedPlaylists {
+          do {
+            try Task.checkCancellation()
+            try await librarySyncer.syncDown(playlist: playlist)
+            tracker.markSynced(playlist.id)
+          } catch is CancellationError {
+            break
+          } catch {
+            // Skip failed playlists — they'll be retried on next tap.
+          }
+        }
+      }
+      // 30-second timeout to prevent infinite spinner
+      let timeoutTask = Task {
+        try await Task.sleep(nanoseconds: 30_000_000_000)
+        syncTask.cancel()
+      }
+      await syncTask.value
+      timeoutTask.cancel()
+    }
+
+    let context = appDelegate.storage.main.context
+    let playlistMOs = PlaylistMembershipQuery.playlistsContaining(
+      songId: songId,
+      in: context
+    )
+    let playlists = playlistMOs.map { managedObject in
+      Playlist(library: library, managedObject: managedObject)
+    }
+    membershipVC.updateWithPlaylists(playlists)
   }
 
   private func reloadRootView() {
