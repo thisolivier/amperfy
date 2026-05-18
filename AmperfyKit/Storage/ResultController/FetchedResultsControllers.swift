@@ -955,6 +955,7 @@ public class PlaylistFetchedResultsController: BasicFetchedResultsController<Pla
     account: Account,
     sortType: PlaylistSortType,
     isGroupedInAlphabeticSections: Bool,
+    isOfflineMode: Bool = false,
     fetchLimit: Int? = nil
   ) {
     self.account = account
@@ -971,10 +972,16 @@ public class PlaylistFetchedResultsController: BasicFetchedResultsController<Pla
       fetchRequest = PlaylistMO.durationFetchRequest
     }
     fetchRequest.fetchLimit = fetchLimit ?? 0
-    fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+    var predicates = [
       coreDataCompanion.library.getFetchPredicate(forAccount: account),
       PlaylistMO.excludeSystemPlaylistsFetchPredicate,
-    ])
+    ]
+    if isOfflineMode {
+      predicates.append(
+        coreDataCompanion.library.getFetchPredicate(forPlaylistSearchCategory: .cached)
+      )
+    }
+    fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
     fetchRequest.relationshipKeyPathsForPrefetching = PlaylistMO.relationshipKeyPathsForPrefetching
     fetchRequest.returnsObjectsAsFaults = false
     super.init(

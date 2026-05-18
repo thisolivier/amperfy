@@ -35,7 +35,11 @@ class PlaylistTableCell: BasicTableCell {
   private var playlist: Playlist?
   private var rootView: UITableViewController?
 
-  func display(playlist: Playlist, rootView: UITableViewController?) {
+  func display(
+    playlist: Playlist,
+    rootView: UITableViewController?,
+    isOfflineMode: Bool = false
+  ) {
     self.playlist = playlist
     self.rootView = rootView
     nameLabel.text = playlist.name
@@ -49,7 +53,11 @@ class PlaylistTableCell: BasicTableCell {
       details: DetailInfoType(type: .short, settings: appDelegate.storage.settings)
     )
     infoLabel.textAlignment = (traitCollection.horizontalSizeClass == .regular) ? .right : .left
-    accessoryType = .disclosureIndicator
+    if isOfflineMode, playlist.isCached {
+      accessoryType = .checkmark
+    } else {
+      accessoryType = .disclosureIndicator
+    }
     backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
   }
 }

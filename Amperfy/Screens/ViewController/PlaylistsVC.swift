@@ -206,7 +206,8 @@ class PlaylistsVC: SingleSnapshotFetchedResultsTableViewController<PlaylistMO> {
     fetchedResultsController = PlaylistFetchedResultsController(
       coreDataCompanion: appDelegate.storage.main, account: account,
       sortType: sortType,
-      isGroupedInAlphabeticSections: sortType.asSectionIndexType != .none
+      isGroupedInAlphabeticSections: sortType.asSectionIndexType != .none,
+      isOfflineMode: appDelegate.storage.settings.user.isOfflineMode
     )
     fetchedResultsController.fetchResultsController.sectionIndexType = sortType.asSectionIndexType
     singleFetchedResultsController = fetchedResultsController
@@ -228,8 +229,9 @@ class PlaylistsVC: SingleSnapshotFetchedResultsTableViewController<PlaylistMO> {
     if appDelegate.storage.settings.user.isOfflineMode {
       isEditing = false
     }
+    // Re-create fetch controller to pick up offline mode filter changes
+    change(sortType: sortType)
     updateRightBarButtonItems()
-    updateContentUnavailable()
     guard appDelegate.storage.settings.user.isOnlineMode else { return }
     Task { @MainActor in do {
       try await self.appDelegate.getMeta(self.account.info).librarySyncer
@@ -260,7 +262,11 @@ class PlaylistsVC: SingleSnapshotFetchedResultsTableViewController<PlaylistMO> {
   )
     -> UITableViewCell {
     let cell: PlaylistTableCell = dequeueCell(for: tableView, at: indexPath)
-    cell.display(playlist: playlist, rootView: self)
+    cell.display(
+      playlist: playlist,
+      rootView: self,
+      isOfflineMode: appDelegate.storage.settings.user.isOfflineMode
+    )
     return cell
   }
 
