@@ -37,9 +37,9 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
-      id: 48,
+      id: 50,
       date: "2026-05-18",
-      title: "Build 48 — Offline playlist filtering",
+      title: "Build 50 — Offline playlist filtering",
       whatsNew: [
         "Playlists with no cached songs are now hidden in offline mode — only playlists with at least one downloaded song appear",
         "Fully cached playlists show a checkmark in the playlist list when offline mode is active",
@@ -103,27 +103,6 @@ enum ReleaseNotes {
         "Monitor memory in Instruments during playlist sync on a large library — peak should stay under ~500 MB",
         "Force-quit mid-sync and relaunch — interrupted tasks should recover and re-run",
         "After playlist sync completes, adjacency should automatically start computing",
-      ]
-    ),
-    ReleaseNote(
-      id: 44,
-      date: "2026-04-17",
-      title: "Build 44 — Per-mode typography + album art",
-      whatsNew: [
-        "Font family is now configured independently for Light Mode and Dark Mode — you can run a serif in dark mode and a sans-serif in light mode",
-        "Album art border (width + color) is also per-mode — different border looks for each appearance",
-        "Typography and Album Art settings have moved from the Custom Theme root into each mode's detail screen (Light Mode / Dark Mode)",
-        "Section headings throughout Settings now sit inside the same rounded section as their content rows, fixing corner-rounding gaps",
-        "Presets capture and restore per-mode font and border; old presets migrate automatically",
-      ],
-      testingFocus: [
-        "Settings → Custom Theme → Light Mode → Typography: pick a font (e.g. Georgia) → verify it applies to light mode only; dark mode should still show system or its own font",
-        "Settings → Custom Theme → Dark Mode → Album Art: set Border Width 3 pt + bright color → verify dark mode shows border, light mode is unaffected (or has its own setting)",
-        "Switch system appearance Light ↔ Dark — fonts and borders should swap to match the mode-specific settings without app restart",
-        "Save a preset → load it in a different mode → only that mode's font + border should change",
-        "Upgrade from Build 43: existing global font/border should appear in both Light and Dark mode detail screens (migration from legacy keys)",
-        "Settings sections with headers (Typography, Album Art, Colors, Gradient, Presets) — the header text should be inside the rounded section rect, not floating above it",
-        "Custom Theme root screen should show only: toggle, Light/Dark Mode nav links, Presets, Reset — no font or border controls at root level",
       ]
     ),
   ]

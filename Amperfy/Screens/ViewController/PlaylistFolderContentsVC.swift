@@ -365,8 +365,13 @@ class PlaylistFolderContentsVC: UITableViewController {
     let library = appDelegate.storage.main.library
     let allPlaylists = library.getPlaylists(for: account)
     let filedIds = folderStore.allFiledPlaylistIds
+    let isOffline = appDelegate.storage.settings.user.isOfflineMode
     var playlists = allPlaylists
       .filter { !$0.isSmartPlaylist && !filedIds.contains($0.id) }
+
+    if isOffline {
+      playlists = playlists.filter { $0.playables.contains { $0.isCached } }
+    }
 
     if !searchText.isEmpty {
       playlists = playlists.filter {
@@ -381,7 +386,12 @@ class PlaylistFolderContentsVC: UITableViewController {
     guard !ids.isEmpty else { return [] }
     let library = appDelegate.storage.main.library
     let allPlaylists = library.getPlaylists(for: account)
+    let isOffline = appDelegate.storage.settings.user.isOfflineMode
     var playlists = allPlaylists.filter { ids.contains($0.id) }
+
+    if isOffline {
+      playlists = playlists.filter { $0.playables.contains { $0.isCached } }
+    }
 
     if !searchText.isEmpty {
       playlists = playlists.filter {
@@ -500,7 +510,12 @@ class PlaylistFolderContentsVC: UITableViewController {
     cell.detailTextLabel?.text = infoText
     cell.detailTextLabel?.textColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6)
       ?? .secondaryLabel
-    cell.accessoryType = .disclosureIndicator
+    let isOffline = appDelegate.storage.settings.user.isOfflineMode
+    if isOffline, playlist.playables.isCachedCompletely {
+      cell.accessoryType = .checkmark
+    } else {
+      cell.accessoryType = .disclosureIndicator
+    }
     cell.tintColor = ThemeStore.shared.dynamicTint ?? .systemBlue
     cell.backgroundColor = ThemeStore.shared.dynamicBackground ?? .secondarySystemGroupedBackground
     return cell

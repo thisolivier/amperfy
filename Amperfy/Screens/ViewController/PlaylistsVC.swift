@@ -203,11 +203,12 @@ class PlaylistsVC: SingleSnapshotFetchedResultsTableViewController<PlaylistMO> {
     self.sortType = sortType
     appDelegate.storage.settings.user.playlistsSortSetting = sortType
     singleFetchedResultsController?.clearResults()
+    let isOffline = appDelegate.storage.settings.user.isOfflineMode
     fetchedResultsController = PlaylistFetchedResultsController(
       coreDataCompanion: appDelegate.storage.main, account: account,
       sortType: sortType,
       isGroupedInAlphabeticSections: sortType.asSectionIndexType != .none,
-      isOfflineMode: appDelegate.storage.settings.user.isOfflineMode
+      isOfflineMode: isOffline
     )
     fetchedResultsController.fetchResultsController.sectionIndexType = sortType.asSectionIndexType
     singleFetchedResultsController = fetchedResultsController
