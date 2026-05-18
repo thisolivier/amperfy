@@ -37,6 +37,58 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 48,
+      date: "2026-05-18",
+      title: "Build 48 — Offline playlist filtering",
+      whatsNew: [
+        "Playlists with no cached songs are now hidden in offline mode — only playlists with at least one downloaded song appear",
+        "Fully cached playlists show a checkmark in the playlist list when offline mode is active",
+        "Switching offline mode on/off in Settings immediately updates the playlist list on return",
+      ],
+      testingFocus: [
+        "Enable offline mode → Playlists tab: playlists with zero cached songs should not appear",
+        "A playlist with all songs cached should show a checkmark instead of the disclosure arrow",
+        "A playlist with some (but not all) songs cached should show the normal disclosure arrow",
+        "Disable offline mode → all playlists should reappear, no checkmarks",
+        "Toggle offline mode multiple times — the list should update correctly each time",
+      ]
+    ),
+    ReleaseNote(
+      id: 47,
+      date: "2026-04-17",
+      title: "Build 47 — Home screen fix",
+      whatsNew: [
+        "Fixed a critical bug where empty home screen sections (e.g. Favourite Albums with no favourites) caused section headers to display data from the wrong section",
+        "Empty sections in the 'hidden when empty' set (Recently Added Tracks, Favourite Albums, Favourite Artists, Favourite Playlists) now correctly hide without shifting other sections",
+        "Tap handling on home screen sections now correctly routes to the right detail view",
+      ],
+      testingFocus: [
+        "Home screen: each section header should match its content — e.g. 'Newest Albums' header shows albums, not genres or tracks",
+        "If you have no Favourite Albums/Artists/Playlists, those sections should be completely hidden (no header, no row)",
+        "Tapping an album in Newest Albums should open that album's detail view",
+        "Tapping a tile in Recently Added Tracks should open the recent tracks detail",
+        "Add a favourite album → return to Home → Favourite Albums section should appear with correct content",
+      ]
+    ),
+    ReleaseNote(
+      id: 46,
+      date: "2026-04-17",
+      title: "Build 46 — Theme sharing",
+      whatsNew: [
+        "Export your custom theme as JSON — copies the full theme configuration to your clipboard for sharing",
+        "Import a theme by pasting JSON from your clipboard — applies all colors, gradients, fonts, and borders in one tap",
+        "New 'Share' section in Custom Theme settings between Presets and Reset",
+      ],
+      testingFocus: [
+        "Settings → Custom Theme → Share → 'Export Theme': tap and verify 'Copied!' confirmation appears for ~2 seconds, then paste into Notes to verify valid JSON",
+        "Copy exported JSON → 'Import Theme': should show confirmation alert → tap Apply → theme should update immediately",
+        "Modify the pasted JSON (change a color hex) → import again → verify the changed color applies",
+        "Put non-JSON text on clipboard → 'Import Theme' → should show 'Import Failed' error alert",
+        "Import with Custom Theme disabled → theme should auto-enable and apply the imported config",
+        "Export → Reset to Defaults → Import the exported JSON → original theme should restore",
+      ]
+    ),
+    ReleaseNote(
       id: 45,
       date: "2026-04-17",
       title: "Build 45 — Playlist sync enabled",
@@ -72,66 +124,6 @@ enum ReleaseNotes {
         "Upgrade from Build 43: existing global font/border should appear in both Light and Dark mode detail screens (migration from legacy keys)",
         "Settings sections with headers (Typography, Album Art, Colors, Gradient, Presets) — the header text should be inside the rounded section rect, not floating above it",
         "Custom Theme root screen should show only: toggle, Light/Dark Mode nav links, Presets, Reset — no font or border controls at root level",
-      ]
-    ),
-    ReleaseNote(
-      id: 43,
-      date: "2026-04-17",
-      title: "Build 43 — Unified background task runner",
-      whatsNew: [
-        "All three background processes (Album Scan, Playlist Sync, Track Adjacency) now run through a unified serial runner that prevents races and enforces memory budgets",
-        "Settings → Library has a new 'Background Tasks' section showing live status, last synced time, and duration for each process",
-        "Playlist Sync can be re-enabled via developer settings — it now uses batched Core Data context resets every 5 playlists to prevent the Build 30 memory crash (~2.1 GB Jetsam kill)",
-        "Track Adjacency automatically recomputes after a broad playlist sync completes",
-        "The runner catches stuck tasks via watchdog timers and recovers interrupted states on app relaunch",
-      ],
-      testingFocus: [
-        "Settings → Library → Background Tasks section: Album Scan and Track Adjacency should show 'Completed X ago (Ys)' after first launch with a connected account",
-        "Playlist Sync row shows 'Disabled' by default — enable via Settings → Developer → Phase 2 Playlist Sync toggle, then verify it runs and shows progress",
-        "With Phase 2 enabled: monitor memory in Instruments during playlist sync on a large library — should NOT exceed ~500 MB peak (the batched reset discipline)",
-        "Force-quit mid-sync and relaunch — interrupted tasks should show 'Failed (interrupted)' in the status panel, then re-run",
-        "No buttons or controls in Background Tasks — it's read-only status only",
-        "Verify the existing 'Show in Playlists' lazy-sync path still works independently of the runner",
-      ]
-    ),
-    ReleaseNote(
-      id: 41,
-      date: "2026-04-17",
-      title: "Build 41 — Border fix + playlist cleanup",
-      whatsNew: [
-        "Album art borders now wrap around the rounded corners cleanly, instead of being clipped inside",
-        "Composite album art (playlists, smart lists) shows a single border around the whole tile, not four internal borders",
-        "Playlist list view is now a cleaner text-only layout without artwork thumbnails",
-        "Playlist list content is now aligned with the navigation title and search bar (no extra inset padding)",
-      ],
-      testingFocus: [
-        "Set a border (Settings → Custom Theme → Album Art → Border Width 3pt, bright color) — borders should follow the rounded corners on all album art everywhere",
-        "Check playlist art, smart list art, or any 4-tile composite — should show ONE border around the whole tile, not four",
-        "Playlists tab — rows should show text only (name + info) without artwork thumbnails",
-        "Playlists tab — text content should be aligned to the same left margin as the 'Playlists' title and search bar",
-        "Inside a folder — same text-only layout, same alignment",
-      ]
-    ),
-    ReleaseNote(
-      id: 40,
-      date: "2026-04-16",
-      title: "Build 40 — Styling presets",
-      whatsNew: [
-        "Custom Theme: new Presets section lets you save your current theme configuration as a named snapshot, and reload it later",
-        "Presets capture every styling setting: both Light Mode and Dark Mode colors, gradients, font, and album-art border",
-        "Three load affordances: load a full preset from the Custom Theme root, or partially apply just the Light or Dark slice from each mode's detail screen",
-        "Unnamed presets get a stable auto-label like 'Preset 3'; you can rename or delete any preset at any time",
-        "Presets survive Reset to Defaults — your preset library is curated state, not active state",
-        "First Release 5 launch auto-saves your current theme as 'My Theme (auto-saved)' so you can always revert",
-      ],
-      testingFocus: [
-        "Settings → Custom Theme → modify some colors + font → tap 'Save Current as Preset' → name it 'Sunset' → row appears in Presets list",
-        "Save another preset with the name field left empty — it should appear as 'Preset 1' (or next integer)",
-        "Reset to Defaults should NOT delete any presets — the list survives across resets",
-        "Light Mode → 'Load From Preset' → pick a preset → only light-mode colors + light gradient change; dark mode, font, and border stay put",
-        "Long-press a preset row → Rename / Delete should work; swipe trailing should also offer Delete",
-        "Kill the app and relaunch — all saved presets should still be there",
-        "Upgrading from Build 39 with a configured custom theme should automatically add one preset named 'My Theme (auto-saved)'",
       ]
     ),
   ]
