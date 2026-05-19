@@ -1611,6 +1611,46 @@ Change the table view style from `.insetGrouped` to `.grouped`. The `.insetGroup
 
 ---
 
+## 26. PR 26 — Theme export / import as JSON
+
+**Release target:** standalone release (Build 46). Added 2026-04-17.
+
+**Intent:** Let users export their current custom theme as a JSON string (copy to clipboard) and import a theme by pasting JSON. This enables sharing themes between devices and users without the preset store.
+
+### 26.1 Export (copy to clipboard)
+
+Add an "Export Theme" button to `CustomThemeRootView` inside a new "Share" section (below Presets, above Reset). Tapping it:
+
+1. Calls `StylingPresetStore.captureCurrentThemeState()` (make it `public` / `internal` accessible — currently `private`).
+2. Encodes the `StylingPresetConfig` to pretty-printed JSON via `JSONEncoder`.
+3. Copies the JSON string to `UIPasteboard.general.string`.
+4. Shows a brief confirmation (swap the button label to "Copied!" for 2 seconds, then revert).
+
+### 26.2 Import (paste from clipboard)
+
+Add an "Import Theme" button in the same section. Tapping it:
+
+1. Reads `UIPasteboard.general.string`.
+2. Attempts `JSONDecoder().decode(StylingPresetConfig.self, from: data)`.
+3. On success: shows a confirmation alert ("Apply imported theme? This will overwrite your current settings.") with Apply / Cancel.
+4. On Apply: calls `StylingPresetStore.shared.applyFullConfig(_:)` — a new method that applies a `StylingPresetConfig` to `ThemeStore` the same way `loadFullPreset` does, then fires `postChangeNotification()` and `applyCustomThemeAndReload()`.
+5. On failure: shows an alert ("Invalid theme JSON — check the format and try again.").
+
+### 26.3 Implementation sites
+
+- `Amperfy/StylingPresetStore.swift`:
+  - Make `captureCurrentThemeState()` `public` (or add a public wrapper).
+  - Add `public func applyFullConfig(_ config: StylingPresetConfig)` that applies both mode slices + globals and posts notifications.
+- `Amperfy/SwiftUI/Settings/CustomThemeRootView.swift`:
+  - Add "Share" `SettingsSection` with Export and Import buttons.
+  - State vars for copy confirmation, import alert, import error alert.
+
+### 26.4 What's New entry
+
+> **Theme sharing:** Export your custom theme as JSON (copies to clipboard) and import a theme by pasting JSON — easy sharing between devices and friends.
+
+---
+
 **End of backlog.** The implementer should now:
 1. Read `PRIMER.md` and `IMPLEMENTATION.md` if not already.
 2. Run the test baseline per `IMPLEMENTATION.md` §5.2 to confirm green starting state.

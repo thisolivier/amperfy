@@ -230,7 +230,8 @@ final class HomeVC: UICollectionViewController {
               withReuseIdentifier: SectionHeaderView.reuseID,
               for: indexPath
             ) as? SectionHeaderView,
-            let section = self.sharedHome.orderedVisibleSections.element(at: indexPath.section)
+            let section = self.dataSource.snapshot().sectionIdentifiers
+            .element(at: indexPath.section)
       else {
         return nil
       }
@@ -365,7 +366,7 @@ final class HomeVC: UICollectionViewController {
     // Recent-tracks tiles route to the synthetic detail VC instead of an
     // entity detail screen — there is no parent album/artist/playlist for
     // a "recently added tracks" widget tile. See BACKLOG.md §3.2.
-    if sharedHome.orderedVisibleSections.element(at: indexPath.section) == .recentTracks {
+    if dataSource.snapshot().sectionIdentifiers.element(at: indexPath.section) == .recentTracks {
       pushRecentTracksDetail()
       return
     }

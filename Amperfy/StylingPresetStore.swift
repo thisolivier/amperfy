@@ -187,6 +187,20 @@ public final class StylingPresetStore: @unchecked Sendable {
     ThemeStore.shared.postChangeNotification()
   }
 
+  /// PR 26: Applies a raw `StylingPresetConfig` (e.g. decoded from pasted JSON)
+  /// into `ThemeStore`. Enables the theme if not already enabled.
+  public func applyFullConfig(_ config: StylingPresetConfig) {
+    let themeStore = ThemeStore.shared
+    if !themeStore.isEnabled {
+      themeStore.populateDefaultsIfNeeded()
+      themeStore.isEnabled = true
+    }
+    applyModeSlice(config.light, toThemeStore: themeStore, style: .light)
+    applyModeSlice(config.dark, toThemeStore: themeStore, style: .dark)
+    applyGlobals(config, toThemeStore: themeStore)
+    themeStore.postChangeNotification()
+  }
+
   /// Testable variant — writes into the given ThemeStore without posting a
   /// notification. Tests use this to avoid touching shared singletons.
   func loadFullPresetInto(preset: StylingPreset, themeStore: ThemeStore) {
@@ -268,9 +282,11 @@ public final class StylingPresetStore: @unchecked Sendable {
     savePreset(name: "My Theme (auto-saved)")
   }
 
-  // MARK: - Private helpers
+  // MARK: - Theme export / import (PR 26)
 
-  private func captureCurrentThemeState() -> StylingPresetConfig {
+  /// Captures the full current theme state as a `StylingPresetConfig`.
+  /// Used by preset save AND by JSON export.
+  public func captureCurrentThemeState() -> StylingPresetConfig {
     let themeStore = ThemeStore.shared
     let lightSlice = ModeSlice(
       backgroundHex: themeStore.lightBackground?.hexString,

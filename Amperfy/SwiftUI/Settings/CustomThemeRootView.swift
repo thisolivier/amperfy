@@ -39,6 +39,14 @@ struct CustomThemeRootView: View {
   private var showSavePresetAlert = false
   @State
   private var savePresetNameField = ""
+  @State
+  private var exportCopied = false
+  @State
+  private var showImportConfirm = false
+  @State
+  private var showImportError = false
+  @State
+  private var pendingImportConfig: StylingPresetConfig?
 
   var body: some View {
     SettingsList {
@@ -98,6 +106,33 @@ struct CustomThemeRootView: View {
           }
         }, header: "Presets")
 
+        SettingsSection(content: {
+          SettingsButtonRow(title: exportCopied ? "Copied!" : "Export Theme") {
+            exportThemeJSON()
+          }
+          .disabled(exportCopied)
+          SettingsButtonRow(title: "Import Theme") {
+            importThemeJSON()
+          }
+          .alert("Apply Imported Theme?", isPresented: $showImportConfirm) {
+            Button("Cancel", role: .cancel) { pendingImportConfig = nil }
+            Button("Apply") {
+              guard let config = pendingImportConfig else { return }
+              StylingPresetStore.shared.applyFullConfig(config)
+              (UIApplication.shared.delegate as? AppDelegate)?.applyCustomThemeAndReload()
+              isEnabled = true
+              pendingImportConfig = nil
+            }
+          } message: {
+            Text("This will overwrite your current theme settings with the imported theme.")
+          }
+          .alert("Import Failed", isPresented: $showImportError) {
+            Button("OK", role: .cancel) {}
+          } message: {
+            Text("Invalid theme JSON — check the format and try again.")
+          }
+        }, header: "Share")
+
         SettingsSection {
           SettingsButtonRow(title: "Reset to Defaults", actionType: .destructive) {
             showResetAlert = true
@@ -124,6 +159,33 @@ struct CustomThemeRootView: View {
   private func applyTheme() {
     ThemeStore.shared.postChangeNotification()
     (UIApplication.shared.delegate as? AppDelegate)?.applyCustomThemeAndReload()
+  }
+
+  private func exportThemeJSON() {
+    let config = StylingPresetStore.shared.captureCurrentThemeState()
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    guard let jsonData = try? encoder.encode(config),
+          let jsonString = String(data: jsonData, encoding: .utf8) else { return }
+    UIPasteboard.general.string = jsonString
+    withAnimation { exportCopied = true }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+      withAnimation { exportCopied = false }
+    }
+  }
+
+  private func importThemeJSON() {
+    guard let clipboardString = UIPasteboard.general.string,
+          let jsonData = clipboardString.data(using: .utf8) else {
+      showImportError = true
+      return
+    }
+    guard let config = try? JSONDecoder().decode(StylingPresetConfig.self, from: jsonData) else {
+      showImportError = true
+      return
+    }
+    pendingImportConfig = config
+    showImportConfirm = true
   }
 }
 
