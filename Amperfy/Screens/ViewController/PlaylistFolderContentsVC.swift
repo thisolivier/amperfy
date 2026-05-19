@@ -367,7 +367,7 @@ class PlaylistFolderContentsVC: UITableViewController {
     let filedIds = folderStore.allFiledPlaylistIds
     let isOffline = appDelegate.storage.settings.user.isOfflineMode
     var playlists = allPlaylists
-      .filter { !$0.isSmartPlaylist && !filedIds.contains($0.id) && !$0.name.isEmpty }
+      .filter { !$0.isSmartPlaylist && !filedIds.contains($0.id) }
 
     if isOffline {
       playlists = playlists.filter { $0.playables.contains { $0.isCached } }
@@ -387,7 +387,7 @@ class PlaylistFolderContentsVC: UITableViewController {
     let library = appDelegate.storage.main.library
     let allPlaylists = library.getPlaylists(for: account)
     let isOffline = appDelegate.storage.settings.user.isOfflineMode
-    var playlists = allPlaylists.filter { ids.contains($0.id) && !$0.name.isEmpty }
+    var playlists = allPlaylists.filter { ids.contains($0.id) }
 
     if isOffline {
       playlists = playlists.filter { $0.playables.contains { $0.isCached } }
@@ -507,15 +507,26 @@ class PlaylistFolderContentsVC: UITableViewController {
       for: playlist.account?.apiType.asServerApiType,
       details: DetailInfoType(type: .short, settings: appDelegate.storage.settings)
     )
-    cell.detailTextLabel?.text = infoText
+    let playables = playlist.playables
+    let cachedCount = playables.filterCached().count
+    let totalCount = playables.count
+    let isOffline = appDelegate.storage.settings.user.isOfflineMode
+    let cachePrefix: String?
+    if cachedCount == totalCount, totalCount > 0 {
+      cachePrefix = "Cached"
+    } else if isOffline, cachedCount > 0 {
+      cachePrefix = "\(cachedCount) cached"
+    } else {
+      cachePrefix = nil
+    }
+    if let cachePrefix {
+      cell.detailTextLabel?.text = "\(cachePrefix) · \(infoText)"
+    } else {
+      cell.detailTextLabel?.text = infoText
+    }
     cell.detailTextLabel?.textColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6)
       ?? .secondaryLabel
-    let isOffline = appDelegate.storage.settings.user.isOfflineMode
-    if isOffline, playlist.playables.isCachedCompletely {
-      cell.accessoryType = .checkmark
-    } else {
-      cell.accessoryType = .disclosureIndicator
-    }
+    cell.accessoryType = .disclosureIndicator
     cell.tintColor = ThemeStore.shared.dynamicTint ?? .systemBlue
     cell.backgroundColor = ThemeStore.shared.dynamicBackground ?? .secondarySystemGroupedBackground
     return cell
