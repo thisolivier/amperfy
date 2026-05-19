@@ -37,6 +37,20 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 51,
+      date: "2026-05-18",
+      title: "Build 51 — Playlist cleanup + recent tracks refresh",
+      whatsNew: [
+        "Playlists with empty names (auto-synced from .m3u files on the server) are now hidden from the playlist list",
+        "Recently Added Tracks now supports pull-to-refresh — pull down to reload after new songs are synced",
+      ],
+      testingFocus: [
+        "Playlists tab: no unnamed/blank playlists should appear",
+        "Recently Added Tracks: pull down to refresh — new songs should appear without leaving the view",
+        "Recently Added Tracks: song names and artist names should be correct after a sync",
+      ]
+    ),
+    ReleaseNote(
       id: 50,
       date: "2026-05-18",
       title: "Build 50 — Offline playlist filtering",

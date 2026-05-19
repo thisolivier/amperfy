@@ -130,6 +130,15 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     tableView.estimatedSectionFooterHeight = 0.0
     tableView.backgroundColor = .backgroundColor
 
+    #if !targetEnvironment(macCatalyst)
+      refreshControl = UIRefreshControl()
+    #endif
+    refreshControl?.addTarget(
+      self,
+      action: #selector(handleRefresh),
+      for: .valueChanged
+    )
+
     modeControl.translatesAutoresizingMaskIntoConstraints = false
     modeControl.selectedSegmentIndex = mode.rawValue
     modeControl.addTarget(self, action: #selector(modeChanged), for: .valueChanged)
@@ -167,6 +176,12 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     super.viewIsAppearing(animated)
     extendSafeAreaToAccountForMiniPlayer()
     refreshSongs()
+  }
+
+  @objc
+  private func handleRefresh() {
+    refreshSongs()
+    refreshControl?.endRefreshing()
   }
 
   // MARK: - Data refresh

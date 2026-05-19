@@ -367,7 +367,7 @@ class PlaylistFolderContentsVC: UITableViewController {
     let filedIds = folderStore.allFiledPlaylistIds
     let isOffline = appDelegate.storage.settings.user.isOfflineMode
     var playlists = allPlaylists
-      .filter { !$0.isSmartPlaylist && !filedIds.contains($0.id) }
+      .filter { !$0.isSmartPlaylist && !filedIds.contains($0.id) && !$0.name.isEmpty }
 
     if isOffline {
       playlists = playlists.filter { $0.playables.contains { $0.isCached } }
@@ -387,7 +387,7 @@ class PlaylistFolderContentsVC: UITableViewController {
     let library = appDelegate.storage.main.library
     let allPlaylists = library.getPlaylists(for: account)
     let isOffline = appDelegate.storage.settings.user.isOfflineMode
-    var playlists = allPlaylists.filter { ids.contains($0.id) }
+    var playlists = allPlaylists.filter { ids.contains($0.id) && !$0.name.isEmpty }
 
     if isOffline {
       playlists = playlists.filter { $0.playables.contains { $0.isCached } }
