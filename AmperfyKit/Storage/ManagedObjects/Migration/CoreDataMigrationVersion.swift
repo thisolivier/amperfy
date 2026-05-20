@@ -62,6 +62,7 @@ enum CoreDataMigrationVersion: String, CaseIterable {
     "Amperfy v49" // Remove PlayableFile and Artwork data (they were already deprecated); Account: add apiType
   case v50 =
     "Amperfy v50" // Add Album.releaseType (OpenSubsonic releaseTypes) for isWholeAlbum primitive
+  case v51 = "Amperfy v51" // Add PlaylistFolder entity for server-backed folder sync
 
   // MARK: - Current
 
@@ -176,6 +177,8 @@ enum CoreDataMigrationVersion: String, CaseIterable {
     case .v49:
       return .v50
     case .v50:
+      return .v51
+    case .v51:
       return nil
     }
   }

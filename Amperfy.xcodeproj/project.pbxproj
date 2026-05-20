@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		628ED22FD9FD47992DFD5854 /* NavidromeServerApi.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15DA30D0866FA18446DFAE11 /* NavidromeServerApi.swift */; };
+		70C85FEED8BFF2C4D7C8E82D /* PlaylistFolderMO+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F0DF2BE2466E004E8A817A /* PlaylistFolderMO+CoreDataClass.swift */; };
+		A31946AF6D046CC2164E3618 /* PlaylistFolderMO+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D9D2A1B832989F845D00A3B /* PlaylistFolderMO+CoreDataProperties.swift */; };
 		2D5F0F962D6F92689C3114E9 /* TrackAdjacencyProtocols.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1441B264B22F86ED2ADF326 /* TrackAdjacencyProtocols.swift */; };
 		3EA090C519B4EE95769B1CB3 /* TrackAdjacencySQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99BDEC41EF1990675AC16233 /* TrackAdjacencySQLiteStore.swift */; };
 		43FBE27F250D4DFD00D5F9B3 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43FBE27E250D4DFD00D5F9B3 /* LaunchScreen.storyboard */; };
@@ -1257,6 +1260,10 @@
 		A519B020000000000001901A /* BackgroundTasksSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTasksSection.swift; sourceTree = "<group>"; };
 		A519C020000000000001901A /* BackgroundTaskStatusStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskStatusStoreTest.swift; sourceTree = "<group>"; };
 		A519C040000000000001901A /* BackgroundTaskRunnerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskRunnerTest.swift; sourceTree = "<group>"; };
+		15DA30D0866FA18446DFAE11 /* NavidromeServerApi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavidromeServerApi.swift; sourceTree = "<group>"; };
+		44F0DF2BE2466E004E8A817A /* PlaylistFolderMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderMO+CoreDataClass.swift"; sourceTree = "<group>"; };
+		4D9D2A1B832989F845D00A3B /* PlaylistFolderMO+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderMO+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		54567B0942D948DCADE4FB21 /* Amperfy v51.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v51.xcdatamodel"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1398,6 +1405,8 @@
 				5029288D2657B78B00DA3A8F /* UserStatisticsMO+CoreDataProperties.swift */,
 				50FE808C26A55CEA00CB434D /* DownloadMO+CoreDataClass.swift */,
 				50FE808D26A55CEA00CB434D /* DownloadMO+CoreDataProperties.swift */,
+				44F0DF2BE2466E004E8A817A /* PlaylistFolderMO+CoreDataClass.swift */,
+				4D9D2A1B832989F845D00A3B /* PlaylistFolderMO+CoreDataProperties.swift */,
 			);
 			path = ManagedObjects;
 			sourceTree = "<group>";
@@ -1628,6 +1637,7 @@
 				5040B2C5269D947F00911451 /* BackgroundFetchTriggeredSyncer.swift */,
 				5086F87422384B5500546F5A /* Subsonic */,
 				50BA92F321CC29D600E5901D /* Ampache */,
+				DA66EDE1BCAACF91B0BEB709 /* Navidrome */,
 				509A7D832806A232009791D1 /* AutoDownloadLibrarySyncer.swift */,
 				50ED756528CBC5D200E5D347 /* LibrarySyncerProxy.swift */,
 				504262A42BF48ADF00B5EF38 /* CommonLibrarySyncer.swift */,
@@ -1662,6 +1672,14 @@
 				50E964A925E8E20E00E3210F /* SubsonicVersion.swift */,
 			);
 			path = Subsonic;
+			sourceTree = "<group>";
+		};
+		DA66EDE1BCAACF91B0BEB709 /* Navidrome */ = {
+			isa = PBXGroup;
+			children = (
+				15DA30D0866FA18446DFAE11 /* NavidromeServerApi.swift */,
+			);
+			path = Navidrome;
 			sourceTree = "<group>";
 		};
 		508AA5792B6A3D7E00BE8117 /* CarPlay */ = {
@@ -3076,6 +3094,9 @@
 				DF4E1154B7ECE2AFA1BF3A00 /* LocalTrackAdjacencyComputer.swift in Sources */,
 				543AB0AB446A51C424ED05C1 /* CoreDataPlaylistProvider.swift in Sources */,
 				AE61916CA3697B2E077A30D0 /* DefaultTrackAdjacencyService.swift in Sources */,
+				628ED22FD9FD47992DFD5854 /* NavidromeServerApi.swift in Sources */,
+				70C85FEED8BFF2C4D7C8E82D /* PlaylistFolderMO+CoreDataClass.swift in Sources */,
+				A31946AF6D046CC2164E3618 /* PlaylistFolderMO+CoreDataProperties.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3773,6 +3794,7 @@
 		500BB49521CAAA2700D367CF /* Amperfy.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
+				54567B0942D948DCADE4FB21 /* Amperfy v51.xcdatamodel */,
 				A5B0500000000000000050A0 /* Amperfy v50.xcdatamodel */,
 				506C314D2EE6D2100011A2C3 /* Amperfy v49.xcdatamodel */,
 				5084F70C2ED9D87500D8D3DA /* Amperfy v48.xcdatamodel */,
@@ -3824,7 +3846,7 @@
 				506B3A3823B4539D00E31F21 /* Amperfy v2.xcdatamodel */,
 				500BB49621CAAA2700D367CF /* Amperfy.xcdatamodel */,
 			);
-			currentVersion = A5B0500000000000000050A0 /* Amperfy v50.xcdatamodel */;
+			currentVersion = 54567B0942D948DCADE4FB21 /* Amperfy v51.xcdatamodel */;
 			path = Amperfy.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

@@ -66,6 +66,8 @@ extension PlaylistMO {
   public var artworkItems: [PlaylistItemMO]
   @NSManaged
   public var searchHistory: SearchHistoryItemMO?
+  @NSManaged
+  public var folders: NSSet?
 
   static let relationshipKeyPathsForPrefetching = [
     #keyPath(PlaylistMO.artworkItems),
@@ -158,4 +160,24 @@ extension PlaylistMO {
   @objc(removeArtworkItems:)
   @NSManaged
   public func removeFromArtworkItems(_ values: NSOrderedSet)
+}
+
+// MARK: Generated accessors for folders
+
+extension PlaylistMO {
+  @objc(addFoldersObject:)
+  @NSManaged
+  public func addToFolders(_ value: PlaylistFolderMO)
+
+  @objc(removeFoldersObject:)
+  @NSManaged
+  public func removeFromFolders(_ value: PlaylistFolderMO)
+
+  @objc(addFolders:)
+  @NSManaged
+  public func addToFolders(_ values: NSSet)
+
+  @objc(removeFolders:)
+  @NSManaged
+  public func removeFromFolders(_ values: NSSet)
 }
