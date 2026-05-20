@@ -91,6 +91,17 @@ struct AccountSettingsView: View {
     appDelegate.player.logout(account: account)
     if let newActiveAccountInfo = appDelegate.storage.settings.accounts.active {
       let newActiveAccount = appDelegate.storage.main.library.getAccount(info: newActiveAccountInfo)
+      // Reconfigure playlist folder store for the account that becomes active after logout
+      if let loginCredentials = appDelegate.storage.settings.accounts
+        .getSetting(newActiveAccountInfo).read.loginCredentials {
+        let folderApi: NavidromeServerApi? = (loginCredentials.backendApi == .subsonic)
+          ? NavidromeServerApi(credentials: loginCredentials) : nil
+        PlaylistFolderStore.shared.configure(
+          context: appDelegate.storage.main.context,
+          navidromeApi: folderApi,
+          account: newActiveAccount.managedObject
+        )
+      }
       appDelegate.closeAllButActiveMainTabs()
       appDelegate
         .setAppTheme(
@@ -105,8 +116,13 @@ struct AccountSettingsView: View {
             .segueToMainWindow(account: newActiveAccount)
         )
     } else {
-      // No other account: Behave like initial App start
-      // force resync after login
+      // No other account: reset folder store to legacy/unconfigured mode
+      PlaylistFolderStore.shared.configure(
+        context: appDelegate.storage.main.context,
+        navidromeApi: nil,
+        account: nil
+      )
+      // Behave like initial App start — force resync after login
       appDelegate.storage.settings.app.isLibrarySynced = false
       let loginVC = AppStoryboard.Main.segueToLogin()
       AppDelegate.mainSceneDelegate?.replaceMainRootViewController(vc: loginVC)

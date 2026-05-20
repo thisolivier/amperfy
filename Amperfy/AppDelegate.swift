@@ -439,6 +439,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     DefaultTrackAdjacencyService.configure(contextProvider: {
       adjacencyStorage.newBackgroundContext()
     })
+    // Configure playlist folder sync for Navidrome accounts
+    if let loginCredentials = storage.settings.accounts.getSetting(activeAccountInfo).read.loginCredentials {
+      let folderApi: NavidromeServerApi? = (loginCredentials.backendApi == .subsonic)
+        ? NavidromeServerApi(credentials: loginCredentials) : nil
+      let accountMO = storage.main.library.getAccount(info: activeAccountInfo).managedObject
+      PlaylistFolderStore.shared.configure(
+        context: storage.main.context,
+        navidromeApi: folderApi,
+        account: accountMO
+      )
+    }
 
     if storage.settings.app.isLibrarySynced {
       // Adjacency runs through the unified runner (AdjacencyWorker).
@@ -519,6 +530,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       userInfo: nil
     )
     let account = appDelegate.storage.main.library.getAccount(info: accountInfo)
+    // Reconfigure playlist folder store for new account
+    if let loginCredentials = appDelegate.storage.settings.accounts.getSetting(accountInfo).read.loginCredentials {
+      let folderApi: NavidromeServerApi? = (loginCredentials.backendApi == .subsonic)
+        ? NavidromeServerApi(credentials: loginCredentials) : nil
+      PlaylistFolderStore.shared.configure(
+        context: appDelegate.storage.main.context,
+        navidromeApi: folderApi,
+        account: account.managedObject
+      )
+    }
 
     closeAllButActiveMainTabs()
     setAppTheme(

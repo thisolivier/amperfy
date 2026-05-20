@@ -210,6 +210,8 @@ class SubsonicLibrarySyncer: CommonLibrarySyncer, LibrarySyncer {
         isThrowingErrorsAllowed: false
       )
     }
+    // Sync playlist folders from Navidrome native API (graceful no-op if not configured)
+    try? await PlaylistFolderStore.shared.syncFromServer()
 
     let isSupported = try await subsonicServerApi.requestServerPodcastSupport()
     guard isSupported else { return }
@@ -957,6 +959,8 @@ class SubsonicLibrarySyncer: CommonLibrarySyncer, LibrarySyncer {
       )
       try self.parse(response: response, delegate: parserDelegate)
     }
+    // Sync playlist folders from Navidrome native API (graceful no-op if not configured)
+    try? await PlaylistFolderStore.shared.syncFromServer()
   }
 
   @MainActor

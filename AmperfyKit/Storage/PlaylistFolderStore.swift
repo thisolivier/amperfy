@@ -324,10 +324,20 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   // MARK: - Sync (called during library sync)
 
   /// Sync folders from server to CoreData. Called during library sync flow.
+  /// Fetches all folders, upserts metadata, then fetches each folder's details
+  /// to reconcile playlist memberships.
   public func syncFromServer() async throws {
     guard let api = navidromeApi, let context = managedObjectContext else { return }
 
     let serverFolders = try await api.listFolders()
+
+    // Fetch details for each folder to get playlist memberships
+    var folderDetails: [NavidromeFolderDetailResponse] = []
+    for serverFolder in serverFolders {
+      if let detail = try? await api.getFolder(id: serverFolder.id) {
+        folderDetails.append(detail)
+      }
+    }
 
     await MainActor.run {
       let existingFolders = (try? context.fetch(PlaylistFolderMO.fetchRequest())) ?? []
@@ -338,11 +348,9 @@ public final class PlaylistFolderStore: @unchecked Sendable {
       for serverFolder in serverFolders {
         serverIds.insert(serverFolder.id)
         if let existing = existingById[serverFolder.id] {
-          // Update
           existing.name = serverFolder.name
           existing.parentId = serverFolder.parentId
         } else {
-          // Insert
           let newMO = PlaylistFolderMO(context: context)
           newMO.id = serverFolder.id
           newMO.name = serverFolder.name
@@ -355,6 +363,27 @@ public final class PlaylistFolderStore: @unchecked Sendable {
       for existing in existingFolders {
         if !serverIds.contains(existing.id) {
           context.delete(existing)
+        }
+      }
+
+      try? context.save()
+
+      // Reconcile playlist memberships from folder details
+      for detail in folderDetails {
+        guard let folderMO = self.fetchFolderMO(byServerId: detail.id, in: context) else {
+          continue
+        }
+        // Clear existing memberships for this folder
+        if let existingPlaylists = folderMO.playlists as? Set<PlaylistMO> {
+          for playlistMO in existingPlaylists {
+            folderMO.removeFromPlaylists(playlistMO)
+          }
+        }
+        // Add memberships from server response
+        for playlistRef in detail.playlists ?? [] {
+          if let playlistMO = self.fetchPlaylistMO(by: playlistRef.id, in: context) {
+            folderMO.addToPlaylists(playlistMO)
+          }
         }
       }
 
