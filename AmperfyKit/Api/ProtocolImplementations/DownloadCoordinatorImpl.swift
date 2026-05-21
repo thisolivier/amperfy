@@ -4,6 +4,7 @@
 import Foundation
 
 /// Thin wrapper around AmperKit's MetaManager download access conforming to DownloadCoordinator.
+@MainActor
 public class DownloadCoordinatorImpl: DownloadCoordinator {
   private let amperKit: AmperKit
 

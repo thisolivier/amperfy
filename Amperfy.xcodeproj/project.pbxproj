@@ -588,6 +588,18 @@
 		A519B010000000000001901A /* BackgroundTasksSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519B020000000000001901A /* BackgroundTasksSection.swift */; };
 		A519C010000000000001901A /* BackgroundTaskStatusStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519C020000000000001901A /* BackgroundTaskStatusStoreTest.swift */; };
 		A519C030000000000001901A /* BackgroundTaskRunnerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519C040000000000001901A /* BackgroundTaskRunnerTest.swift */; };
+		A5C00200000000000000B001 /* AmperfyServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F001 /* AmperfyServices.swift */; };
+		A5C00200000000000000B002 /* LibraryProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F002 /* LibraryProvider.swift */; };
+		A5C00200000000000000B003 /* SettingsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F003 /* SettingsProvider.swift */; };
+		A5C00200000000000000B004 /* SyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F004 /* SyncCoordinator.swift */; };
+		A5C00200000000000000B005 /* DownloadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F005 /* DownloadCoordinator.swift */; };
+		A5C00200000000000000B006 /* FolderProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F006 /* FolderProvider.swift */; };
+		A5C00200000000000000B007 /* AdjacencyProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F007 /* AdjacencyProvider.swift */; };
+		A5C00200000000000000B008 /* LibraryProviderImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F008 /* LibraryProviderImpl.swift */; };
+		A5C00200000000000000B009 /* SettingsProviderImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F009 /* SettingsProviderImpl.swift */; };
+		A5C00200000000000000B00A /* SyncCoordinatorImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F00A /* SyncCoordinatorImpl.swift */; };
+		A5C00200000000000000B00B /* DownloadCoordinatorImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F00B /* DownloadCoordinatorImpl.swift */; };
+		A5C00200000000000000B00C /* FolderProviderImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F00C /* FolderProviderImpl.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1264,6 +1276,18 @@
 		44F0DF2BE2466E004E8A817A /* PlaylistFolderMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderMO+CoreDataClass.swift"; sourceTree = "<group>"; };
 		4D9D2A1B832989F845D00A3B /* PlaylistFolderMO+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderMO+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		54567B0942D948DCADE4FB21 /* Amperfy v51.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v51.xcdatamodel"; sourceTree = "<group>"; };
+		A5C00100000000000000F001 /* AmperfyServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmperfyServices.swift; sourceTree = "<group>"; };
+		A5C00100000000000000F002 /* LibraryProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryProvider.swift; sourceTree = "<group>"; };
+		A5C00100000000000000F003 /* SettingsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsProvider.swift; sourceTree = "<group>"; };
+		A5C00100000000000000F004 /* SyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinator.swift; sourceTree = "<group>"; };
+		A5C00100000000000000F005 /* DownloadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadCoordinator.swift; sourceTree = "<group>"; };
+		A5C00100000000000000F006 /* FolderProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderProvider.swift; sourceTree = "<group>"; };
+		A5C00100000000000000F007 /* AdjacencyProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjacencyProvider.swift; sourceTree = "<group>"; };
+		A5C00100000000000000F008 /* LibraryProviderImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryProviderImpl.swift; sourceTree = "<group>"; };
+		A5C00100000000000000F009 /* SettingsProviderImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsProviderImpl.swift; sourceTree = "<group>"; };
+		A5C00100000000000000F00A /* SyncCoordinatorImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinatorImpl.swift; sourceTree = "<group>"; };
+		A5C00100000000000000F00B /* DownloadCoordinatorImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadCoordinatorImpl.swift; sourceTree = "<group>"; };
+		A5C00100000000000000F00C /* FolderProviderImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderProviderImpl.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1627,6 +1651,7 @@
 		5086F87322384A4300546F5A /* Api */ = {
 			isa = PBXGroup;
 			children = (
+				A5C00100000000000000F001 /* AmperfyServices.swift */,
 				5086F87A22397B8400546F5A /* BackendApi.swift */,
 				500B2B302249607B00D14EF4 /* BackendProxy.swift */,
 				50CDF201264BB1C000F83EF6 /* EventLogger.swift */,
@@ -1635,6 +1660,8 @@
 				50BA92EE21CBF45D00E5901D /* LoginCredentials.swift */,
 				509A7D8128059A0D009791D1 /* BackgroundLibrarySyncer.swift */,
 				5040B2C5269D947F00911451 /* BackgroundFetchTriggeredSyncer.swift */,
+				A5C00300000000000000G001 /* Protocols */,
+				A5C00300000000000000G002 /* ProtocolImplementations */,
 				5086F87422384B5500546F5A /* Subsonic */,
 				50BA92F321CC29D600E5901D /* Ampache */,
 				DA66EDE1BCAACF91B0BEB709 /* Navidrome */,
@@ -1643,6 +1670,31 @@
 				504262A42BF48ADF00B5EF38 /* CommonLibrarySyncer.swift */,
 			);
 			path = Api;
+			sourceTree = "<group>";
+		};
+		A5C00300000000000000G001 /* Protocols */ = {
+			isa = PBXGroup;
+			children = (
+				A5C00100000000000000F002 /* LibraryProvider.swift */,
+				A5C00100000000000000F003 /* SettingsProvider.swift */,
+				A5C00100000000000000F004 /* SyncCoordinator.swift */,
+				A5C00100000000000000F005 /* DownloadCoordinator.swift */,
+				A5C00100000000000000F006 /* FolderProvider.swift */,
+				A5C00100000000000000F007 /* AdjacencyProvider.swift */,
+			);
+			path = Protocols;
+			sourceTree = "<group>";
+		};
+		A5C00300000000000000G002 /* ProtocolImplementations */ = {
+			isa = PBXGroup;
+			children = (
+				A5C00100000000000000F008 /* LibraryProviderImpl.swift */,
+				A5C00100000000000000F009 /* SettingsProviderImpl.swift */,
+				A5C00100000000000000F00A /* SyncCoordinatorImpl.swift */,
+				A5C00100000000000000F00B /* DownloadCoordinatorImpl.swift */,
+				A5C00100000000000000F00C /* FolderProviderImpl.swift */,
+			);
+			path = ProtocolImplementations;
 			sourceTree = "<group>";
 		};
 		5086F87422384B5500546F5A /* Subsonic */ = {
@@ -3097,6 +3149,18 @@
 				628ED22FD9FD47992DFD5854 /* NavidromeServerApi.swift in Sources */,
 				70C85FEED8BFF2C4D7C8E82D /* PlaylistFolderMO+CoreDataClass.swift in Sources */,
 				A31946AF6D046CC2164E3618 /* PlaylistFolderMO+CoreDataProperties.swift in Sources */,
+				A5C00200000000000000B001 /* AmperfyServices.swift in Sources */,
+				A5C00200000000000000B002 /* LibraryProvider.swift in Sources */,
+				A5C00200000000000000B003 /* SettingsProvider.swift in Sources */,
+				A5C00200000000000000B004 /* SyncCoordinator.swift in Sources */,
+				A5C00200000000000000B005 /* DownloadCoordinator.swift in Sources */,
+				A5C00200000000000000B006 /* FolderProvider.swift in Sources */,
+				A5C00200000000000000B007 /* AdjacencyProvider.swift in Sources */,
+				A5C00200000000000000B008 /* LibraryProviderImpl.swift in Sources */,
+				A5C00200000000000000B009 /* SettingsProviderImpl.swift in Sources */,
+				A5C00200000000000000B00A /* SyncCoordinatorImpl.swift in Sources */,
+				A5C00200000000000000B00B /* DownloadCoordinatorImpl.swift in Sources */,
+				A5C00200000000000000B00C /* FolderProviderImpl.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

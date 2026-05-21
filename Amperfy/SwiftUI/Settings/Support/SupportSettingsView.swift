@@ -81,7 +81,7 @@ struct SupportSettingsView: View {
           """,
           recipients: ["amperfy@familie-zimba.de"],
           attachments: [MailAttachment(
-            data: LogData.collectInformation(amperfyData: AmperKit.shared).asJSONData(),
+            data: appDelegate.collectLogData().asJSONData(),
             mimeType: "application/json",
             fileName: "AmperfyLog.json"
           )]

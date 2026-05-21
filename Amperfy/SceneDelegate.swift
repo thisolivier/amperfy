@@ -77,9 +77,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     static let mainWindowSize = CGSizeMake(1168, 688) // 2560 x 1600
   #endif
 
-  public lazy var log = {
-    AmperKit.shared.log
-  }()
+  public var log: OSLog { appDelegate.log }
 
   var window: UIWindow?
 
@@ -107,11 +105,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     #if false
       windowScene.sizeRestrictions?.minimumSize = Self.mainWindowSize
     #endif
-    if let activeAccountInfo = AmperKit.shared.storage.settings.accounts.active {
+    if let activeAccountInfo = appDelegate.storage.settings.accounts.active {
       let account = appDelegate.storage.main.library.getAccount(info: activeAccountInfo)
-      if !AmperKit.shared.storage.settings.app.isLibrarySynced {
+      if !appDelegate.storage.settings.app.isLibrarySynced {
         initialViewController = AppStoryboard.Main.segueToSync(account: account)
-      } else if AmperKit.shared.libraryUpdater.isVisualUpadateNeeded {
+      } else if appDelegate.libraryUpdater.isVisualUpadateNeeded {
         initialViewController = AppStoryboard.Main.segueToUpdate()
       } else {
         initialViewController = AppStoryboard.Main.segueToMainWindow(account: account)
@@ -182,7 +180,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     // Called as the scene transitions from the background to the foreground.
     // Use this method to undo the changes made on entering the background.
     os_log("sceneWillEnterForeground", log: self.log, type: .info)
-    AmperKit.shared.threadPerformanceMonitor.isInForeground = true
+    appDelegate.setForegroundState(true)
   }
 
   func sceneDidEnterBackground(_ scene: UIScene) {
@@ -192,7 +190,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     // Save changes in the application's managed object context when the application transitions to the background.
     os_log("sceneDidEnterBackground", log: self.log, type: .info)
-    AmperKit.shared.threadPerformanceMonitor.isInForeground = false
+    appDelegate.setForegroundState(false)
     guard appDelegate.isNormalInteraction else {
       return
     }

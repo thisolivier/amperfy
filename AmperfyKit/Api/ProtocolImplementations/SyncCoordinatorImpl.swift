@@ -5,6 +5,7 @@ import Foundation
 
 /// Thin wrapper around AmperKit's MetaManager lifecycle conforming to SyncCoordinator.
 /// Delegates to AmperKit.shared for MetaManager creation and access.
+@MainActor
 public class SyncCoordinatorImpl: SyncCoordinator {
   private let amperKit: AmperKit
 

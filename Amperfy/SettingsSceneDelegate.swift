@@ -27,9 +27,7 @@ import UIKit
 // MARK: - SettingsSceneDelegate
 
 class SettingsSceneDelegate: UIResponder, UIWindowSceneDelegate {
-  public lazy var log = {
-    AmperKit.shared.log
-  }()
+  public var log: OSLog { appDelegate.log }
 
   var window: UIWindow?
 
