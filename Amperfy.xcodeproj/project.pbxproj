@@ -7,7 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A5C0D50000000000000010B2 /* ArtworkImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */; };
+		A5C0D60000000000000020A2 /* ReadOnlyNoOpImplementations.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0D60000000000000020A1 /* ReadOnlyNoOpImplementations.swift */; };
+A5C0D50000000000000010B2 /* ArtworkImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */; };
 		A5C0D40000000000000010A1 /* RoundedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5077F95222283FED0099CA91 /* RoundedImage.swift */; };
 		A5C0D40000000000000010A2 /* EntityImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504AE7B327BECFF300571BA5 /* EntityImageView.swift */; };
 		A5C0D40000000000000010A3 /* EntityImageView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 504AE7B127BECFDD00571BA5 /* EntityImageView.xib */; };
@@ -366,6 +367,7 @@
 		50C9D675284FAA4D007F18D0 /* DuplicateEntitiesResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50253F78284614A100BCCFB2 /* DuplicateEntitiesResolver.swift */; };
 		50C9D676284FAA4D007F18D0 /* LibraryElementEnum.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500B7D4221ECFCDD0083ED6F /* LibraryElementEnum.swift */; };
 		50C9D677284FAA4D007F18D0 /* PersistentStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500BB45521CAA73700D367CF /* PersistentStorage.swift */; };
+		A5B1B20000000000000050A0 /* SharedContainerMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B1A20000000000000050A0 /* SharedContainerMigration.swift */; };
 		50C9D678284FAA6C007F18D0 /* SongMO+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F81EDB23BF6B1E00EAAC3E /* SongMO+CoreDataProperties.swift */; };
 		50C9D679284FAA6C007F18D0 /* UserStatisticsMO+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5029288D2657B78B00DA3A8F /* UserStatisticsMO+CoreDataProperties.swift */; };
 		50C9D67A284FAA6C007F18D0 /* GenreMO+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505AD87A2615C834001319B6 /* GenreMO+CoreDataClass.swift */; };
@@ -661,7 +663,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkImageLoader.swift; sourceTree = "<group>"; };
+		A5C0D60000000000000020A1 /* ReadOnlyNoOpImplementations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadOnlyNoOpImplementations.swift; sourceTree = "<group>"; };
+A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkImageLoader.swift; sourceTree = "<group>"; };
 		43FBE27E250D4DFD00D5F9B3 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		5002565625E69DC700674CE1 /* SpinnerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinnerViewController.swift; sourceTree = "<group>"; };
 		5003D8F62678DD39006946BF /* SsAlbumParserPreCreatedArtistsTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SsAlbumParserPreCreatedArtistsTest.swift; sourceTree = "<group>"; };
@@ -695,6 +698,7 @@
 		500B97CC2B7BC67F005554BF /* EntityPreviewVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityPreviewVC.swift; sourceTree = "<group>"; };
 		500B97CF2B7C9546005554BF /* EntityPreviewVC.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = EntityPreviewVC.xib; sourceTree = "<group>"; };
 		500BB45521CAA73700D367CF /* PersistentStorage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PersistentStorage.swift; sourceTree = "<group>"; };
+		A5B1A20000000000000050A0 /* SharedContainerMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedContainerMigration.swift; sourceTree = "<group>"; };
 		500BB49621CAAA2700D367CF /* Amperfy.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Amperfy.xcdatamodel; sourceTree = "<group>"; };
 		500DA64A2F087221005578C7 /* CarPlayHomeTabExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayHomeTabExtension.swift; sourceTree = "<group>"; };
 		500DA64C2F087307005578C7 /* CarPlayLibraryTabExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayLibraryTabExtension.swift; sourceTree = "<group>"; };
@@ -1699,6 +1703,7 @@
 				A5C00100000000000000F00A /* SyncCoordinatorImpl.swift */,
 				A5C00100000000000000F00B /* DownloadCoordinatorImpl.swift */,
 				A5C00100000000000000F00C /* FolderProviderImpl.swift */,
+				A5C0D60000000000000020A1 /* ReadOnlyNoOpImplementations.swift */,
 			);
 			path = ProtocolImplementations;
 			sourceTree = "<group>";
@@ -1931,6 +1936,7 @@
 				5020402E2202271000ED48A3 /* ManagedObjects */,
 				50C16C3321EB454100F086F0 /* LibraryUpdater.swift */,
 				500BB45521CAA73700D367CF /* PersistentStorage.swift */,
+					A5B1A20000000000000050A0 /* SharedContainerMigration.swift */,
 				504415C62EE865D1005E8429 /* Settings.swift */,
 				50C3B9AD2EED882D00F5CAB7 /* SettingEnumerations.swift */,
 				50C3B9AB2EED848B00F5CAB7 /* LegacySettings.swift */,
@@ -2930,6 +2936,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A5C0D60000000000000020A2 /* ReadOnlyNoOpImplementations.swift in Sources */,
 				A5C0D50000000000000010B2 /* ArtworkImageLoader.swift in Sources */,
 				50C9D68E284FAA6C007F18D0 /* MusicFolderMO+CoreDataClass.swift in Sources */,
 				50C9D684284FAA6C007F18D0 /* LogEntryMO+CoreDataClass.swift in Sources */,
@@ -3102,6 +3109,7 @@
 				5084F7102ED9E2F400D8D3DA /* AccountMO+CoreDataProperties.swift in Sources */,
 				50C9D6DB284FAB88007F18D0 /* AudioSessionHandler.swift in Sources */,
 				50C9D677284FAA4D007F18D0 /* PersistentStorage.swift in Sources */,
+				A5B1B20000000000000050A0 /* SharedContainerMigration.swift in Sources */,
 				50C9D6E6284FABCB007F18D0 /* AudioPlayer.swift in Sources */,
 				50C9D659284FAA0B007F18D0 /* SongParserDelegate.swift in Sources */,
 				50C9D688284FAA6C007F18D0 /* SongMO+CoreDataClass.swift in Sources */,

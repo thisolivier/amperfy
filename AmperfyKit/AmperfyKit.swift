@@ -81,8 +81,12 @@ public class AmperKit {
     ThreadPerformanceObserver.shared
   }()
 
+  public static let sharedContainerGroupID = "group.com.amperfy.shared"
+
   public lazy var coreDataManager = {
-    CoreDataPersistentManager()
+    let configuration = CoreDataConfiguration(containerGroupID: Self.sharedContainerGroupID)
+    SharedContainerMigration.migrateIfNeeded(configuration: configuration)
+    return CoreDataPersistentManager(configuration: configuration)
   }()
 
   public lazy var storage = {
