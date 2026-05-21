@@ -67,8 +67,20 @@ public class MetaManager {
     api.selectedApi = account.apiType
     if let credentials = settings.accounts.getSetting(account.info).read.loginCredentials {
       api.provideCredentials(credentials: credentials)
+      os_log("API credentials provided via direct account match", log: log, type: .info)
+    } else if let fallbackCredentials = settings.accounts.activeSetting.read.loginCredentials {
+      api.provideCredentials(credentials: fallbackCredentials)
+      os_log(
+        "API credentials provided via active account fallback (account.info key mismatch)",
+        log: log,
+        type: .info
+      )
     } else {
-      os_log("Initializing API without credentials", log: log, type: .info)
+      os_log(
+        "No credentials available from direct match or active account fallback",
+        log: log,
+        type: .error
+      )
     }
     return api
   }()
