@@ -32,11 +32,16 @@ extension LibraryEntityImage {
     useCache: Bool
   )
     -> UIImage {
-    ArtworkImageLoader.getImageToDisplayImmediately(
+    if let imageData = ArtworkImageLoader.getImageDataToDisplayImmediately(
       libraryEntity: libraryEntity,
-      themePreference: themePreference,
       artworkDisplayPreference: artworkDisplayPreference,
       useCache: useCache
+    ), let image = UIImage(data: imageData) {
+      return image
+    }
+    return UIImage.getGeneratedArtwork(
+      theme: themePreference,
+      artworkType: libraryEntity.getDefaultArtworkType()
     )
   }
 }
@@ -45,7 +50,7 @@ extension LibraryEntityImage {
 
 @MainActor
 public class LibraryEntityImage: RoundedImage {
-  static private var cache: NSCache<NSString, UIImage> { ArtworkImageLoader.cache }
+  static private let cache: NSCache<NSString, UIImage> = NSCache()
 
   private let amperKit: AmperKit
 

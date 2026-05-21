@@ -1,6 +1,6 @@
 //
 //  QuickActionsHandler.swift
-//  AmperfyKit
+//  Amperfy
 //
 //  Created by Maximilian Bauer on 19.02.24.
 //  Copyright (c) 2024 Maximilian Bauer. All rights reserved.
@@ -19,6 +19,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+import AmperfyKit
 import UIKit
 
 // MARK: - QuickActionsHandler

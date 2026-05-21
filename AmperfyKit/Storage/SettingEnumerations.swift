@@ -22,7 +22,6 @@
 import CoreData
 import Foundation
 import SwiftUI
-import UIKit
 
 // MARK: - ArtworkDownloadSetting
 
@@ -304,40 +303,14 @@ public enum ThemePreference: Int, CaseIterable, Sendable, Codable {
       return .purple
     }
   }
+}
 
-  public var asColor: UIColor {
-    switch self {
-    case .blue:
-      return .systemBlue
-    case .green:
-      return .systemGreen
-    case .red:
-      return .systemRed
-    case .yellow:
-      return .systemYellow
-    case .orange:
-      return .systemOrange
-    case .purple:
-      return .systemPurple
-    }
-  }
+// MARK: - AppearanceStyle
 
-  public var contrastColor: UIColor {
-    switch self {
-    case .blue:
-      return .white
-    case .green:
-      return .white
-    case .red:
-      return .white
-    case .yellow:
-      return .black
-    case .orange:
-      return .white
-    case .purple:
-      return .white
-    }
-  }
+public enum AppearanceStyle: Int, CaseIterable, Sendable, Codable {
+  case unspecified = 0
+  case light = 1
+  case dark = 2
 }
 
 // MARK: - CacheTranscodingFormatPreference
@@ -390,17 +363,3 @@ public enum VisualizerType: String, CaseIterable, Sendable, Codable {
   }
 }
 
-// MARK: - UIUserInterfaceStyle
-
-extension UIUserInterfaceStyle: @retroactive Encodable, @retroactive Decodable {
-  public init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    let raw = try container.decode(Int.self)
-    self = UIUserInterfaceStyle(rawValue: raw) ?? .unspecified
-  }
-
-  public func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
-    try container.encode(rawValue)
-  }
-}

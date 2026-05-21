@@ -86,7 +86,6 @@ A5C0D50000000000000010B2 /* ArtworkImageLoader.swift in Sources */ = {isa = PBXB
 		5058709021DEBBCA0043896F /* PopupPlayerVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5058708F21DEBBCA0043896F /* PopupPlayerVC.swift */; };
 		5059A31C28A9ED680068E4D2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5059A31B28A9ED680068E4D2 /* SceneDelegate.swift */; };
 		5059A31E28ABDDCD0068E4D2 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5059A31D28ABDDCD0068E4D2 /* CarPlaySceneDelegate.swift */; };
-		505CA1F52B848B8300AA81CD /* QuickActionsHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505CA1F42B848B8300AA81CD /* QuickActionsHandler.swift */; };
 		505CA1FA2B87387600AA81CD /* SearchHistoryItemMO+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505CA1F72B87387600AA81CD /* SearchHistoryItemMO+CoreDataClass.swift */; };
 		505CA1FC2B87387600AA81CD /* SearchHistoryItemMO+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505CA1F82B87387600AA81CD /* SearchHistoryItemMO+CoreDataProperties.swift */; };
 		505CA1FE2B8739AE00AA81CD /* SearchHistoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505CA1FD2B8739AE00AA81CD /* SearchHistoryItem.swift */; };
@@ -603,6 +602,11 @@ A5C0D50000000000000010B2 /* ArtworkImageLoader.swift in Sources */ = {isa = PBXB
 		A5C00200000000000000B00A /* SyncCoordinatorImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F00A /* SyncCoordinatorImpl.swift */; };
 		A5C00200000000000000B00B /* DownloadCoordinatorImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F00B /* DownloadCoordinatorImpl.swift */; };
 		A5C00200000000000000B00C /* FolderProviderImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C00100000000000000F00C /* FolderProviderImpl.swift */; };
+		F46F1B07E57D4F7EB2167393 /* UIImageAssetsExtension+UIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10B00A56772D449DA928889D /* UIImageAssetsExtension+UIKit.swift */; };
+		B2F8B8E9A45A498A99A3F3FB /* SettingEnumerations+UIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8527D8D392314291A9BE69CA /* SettingEnumerations+UIKit.swift */; };
+		2BF1BC4E3169449D9672DF84 /* SwipeActionSettings+UIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA6C7C94AAC46FA8A0C94CD /* SwipeActionSettings+UIKit.swift */; };
+		5030FF4076414F2A9C9C3445 /* Utilities+UIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE1F35FB3C0845E6B790E33C /* Utilities+UIKit.swift */; };
+		F17E3E6C6EBC44B6AD4D40D6 /* QuickActionsHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505CA1F42B848B8300AA81CD /* QuickActionsHandler.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1294,6 +1298,10 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 		A5C00100000000000000F00A /* SyncCoordinatorImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinatorImpl.swift; sourceTree = "<group>"; };
 		A5C00100000000000000F00B /* DownloadCoordinatorImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadCoordinatorImpl.swift; sourceTree = "<group>"; };
 		A5C00100000000000000F00C /* FolderProviderImpl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderProviderImpl.swift; sourceTree = "<group>"; };
+		10B00A56772D449DA928889D /* UIImageAssetsExtension+UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImageAssetsExtension+UIKit.swift"; sourceTree = "<group>"; };
+		8527D8D392314291A9BE69CA /* SettingEnumerations+UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingEnumerations+UIKit.swift"; sourceTree = "<group>"; };
+		EEA6C7C94AAC46FA8A0C94CD /* SwipeActionSettings+UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SwipeActionSettings+UIKit.swift"; sourceTree = "<group>"; };
+		FE1F35FB3C0845E6B790E33C /* Utilities+UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Utilities+UIKit.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1489,7 +1497,6 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 				5040B2C3269CD19600911451 /* LocalNotificationManager.swift */,
 				507252DF2EF9888200FFFA4D /* AccountNotificationHandler.swift */,
 				50ED2B9027B7AE8500331BF7 /* EventNotificationHandler.swift */,
-				505CA1F42B848B8300AA81CD /* QuickActionsHandler.swift */,
 				5021B1272BC723F400893C33 /* FuzzySearcher.swift */,
 			);
 			path = Common;
@@ -1646,6 +1653,11 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 				A5C0F20000000000000060A0 /* ThemeStore.swift */,
 				A517500100000000000001A0 /* StylingPresetStore.swift */,
 				50DE29EC2B8FCFC500ABA78E /* LibraryDisplayType+Extension.swift */,
+				10B00A56772D449DA928889D /* UIImageAssetsExtension+UIKit.swift */,
+				8527D8D392314291A9BE69CA /* SettingEnumerations+UIKit.swift */,
+				EEA6C7C94AAC46FA8A0C94CD /* SwipeActionSettings+UIKit.swift */,
+				FE1F35FB3C0845E6B790E33C /* Utilities+UIKit.swift */,
+				505CA1F42B848B8300AA81CD /* QuickActionsHandler.swift */,
 				50BA92F421CC2C4800E5901D /* Screens */,
 				50E77DB528D2160800BDF882 /* SwiftUI */,
 				508AA5792B6A3D7E00BE8117 /* CarPlay */,
@@ -2876,6 +2888,11 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 				50791E8528D36F1F006CE6E5 /* LibrarySettingsView.swift in Sources */,
 				A519B010000000000001901A /* BackgroundTasksSection.swift in Sources */,
 				50DE29ED2B8FCFC500ABA78E /* LibraryDisplayType+Extension.swift in Sources */,
+				F46F1B07E57D4F7EB2167393 /* UIImageAssetsExtension+UIKit.swift in Sources */,
+				B2F8B8E9A45A498A99A3F3FB /* SettingEnumerations+UIKit.swift in Sources */,
+				2BF1BC4E3169449D9672DF84 /* SwipeActionSettings+UIKit.swift in Sources */,
+				5030FF4076414F2A9C9C3445 /* Utilities+UIKit.swift in Sources */,
+				F17E3E6C6EBC44B6AD4D40D6 /* QuickActionsHandler.swift in Sources */,
 				5019441D2B7ACB0800082D2E /* PopupPlayer+Animations.swift in Sources */,
 				50BA92F821CC318D00E5901D /* PlayableTableCell.swift in Sources */,
 				50791E8128D365E9006CE6E5 /* UpdatePasswordView.swift in Sources */,
@@ -3078,7 +3095,6 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 				50C9D6A6284FAA7F007F18D0 /* CoreDataMigrationVersion.swift in Sources */,
 				50C9D692284FAA6C007F18D0 /* DownloadMO+CoreDataClass.swift in Sources */,
 				50C9D662284FAA0B007F18D0 /* AmpacheXmlServerApi.swift in Sources */,
-				505CA1F52B848B8300AA81CD /* QuickActionsHandler.swift in Sources */,
 				50C9D64A284FAA02007F18D0 /* SsPodcastParserDelegate.swift in Sources */,
 				50C9D6DC284FAB88007F18D0 /* RemoteCommandCenterHandler.swift in Sources */,
 				50C9D6D8284FAB88007F18D0 /* PlayerUtil.swift in Sources */,

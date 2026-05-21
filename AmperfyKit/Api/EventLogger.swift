@@ -21,7 +21,6 @@
 
 import Foundation
 import os.log
-import UIKit
 
 // MARK: - AmperfyLogStatusCode
 
@@ -43,15 +42,15 @@ public protocol AlertDisplayable {
     title: String,
     subtitle: String,
     style: LogEntryType,
-    notificationBanner popupVC: UIViewController
+    notificationBanner popupVC: AnyObject
   )
-  func display(popup popupVC: UIViewController)
+  func display(popup popupVC: AnyObject)
   func createPopupVC(
     topic: String,
     shortMessage: String,
     detailMessage: String,
     logType: LogEntryType
-  ) -> UIViewController
+  ) -> AnyObject
 }
 
 // MARK: - EventLogger

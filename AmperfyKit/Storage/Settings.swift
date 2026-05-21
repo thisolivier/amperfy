@@ -19,7 +19,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-import UIKit
+import Foundation
 
 // MARK: - AppSettings
 
@@ -218,8 +218,8 @@ public struct UserSettings: Sendable, Codable {
     }
   }
 
-  private var _appearanceMode: UIUserInterfaceStyle = .unspecified
-  public var appearanceMode: UIUserInterfaceStyle {
+  private var _appearanceMode: AppearanceStyle = .unspecified
+  public var appearanceMode: AppearanceStyle {
     get { _appearanceMode }
     set { _appearanceMode = newValue }
   }
@@ -297,10 +297,9 @@ public struct UserSettings: Sendable, Codable {
   }
 
   private var _albumsGridSizeSetting: Int?
-  @MainActor
   public var albumsGridSizeSetting: Int {
     get {
-      _albumsGridSizeSetting ?? ((UIDevice.current.userInterfaceIdiom == .pad) ? 4 : 3)
+      _albumsGridSizeSetting ?? 3
     }
     set { _albumsGridSizeSetting = newValue }
   }

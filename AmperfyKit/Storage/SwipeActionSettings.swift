@@ -20,7 +20,6 @@
 //
 
 import Foundation
-import UIKit
 
 // MARK: - SwipeActionType
 
@@ -96,35 +95,6 @@ public enum SwipeActionType: Int, CaseIterable, Sendable, Codable {
     }
   }
 
-  @MainActor
-  public var image: UIImage {
-    switch self {
-    case .insertUserQueue:
-      return UIImage.userQueueInsert.withTintColor(.white)
-    case .appendUserQueue:
-      return UIImage.userQueueAppend.withTintColor(.white)
-    case .insertContextQueue:
-      return UIImage.contextQueueInsert.withTintColor(.white)
-    case .appendContextQueue:
-      return UIImage.contextQueueAppend.withTintColor(.white)
-    case .download:
-      return UIImage.download.withTintColor(.white)
-    case .removeFromCache:
-      return UIImage.trash.withTintColor(.white)
-    case .addToPlaylist:
-      return UIImage.playlist.withTintColor(.white)
-    case .play:
-      return UIImage.play.withTintColor(.white)
-    case .playShuffled:
-      return UIImage.shuffle.withTintColor(.white)
-    case .insertPodcastQueue:
-      return UIImage.podcastQueueInsert.withTintColor(.white)
-    case .appendPodcastQueue:
-      return UIImage.podcastQueueAppend.withTintColor(.white)
-    case .favorite:
-      return UIImage.heartFill.withTintColor(.white)
-    }
-  }
 }
 
 // MARK: - SwipeActionSettings

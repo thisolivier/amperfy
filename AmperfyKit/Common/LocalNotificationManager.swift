@@ -21,7 +21,6 @@
 
 import Foundation
 import os.log
-import UIKit
 import UserNotifications
 
 // MARK: - NotificationContentType
@@ -92,23 +91,20 @@ public class LocalNotificationManager {
         "account-\(account.ident)-podcast-\(podcastEpisode.podcast?.id ?? "0")-episode-\(podcastEpisode.id)"
       do {
         let fileIdentifier = identifier + ".png"
-        let artworkUrl = createLocalUrl(
-          forImage: ArtworkImageLoader.getImageToDisplayImmediately(
-            libraryEntity: podcastEpisode,
-            themePreference: storage.settings.accounts.getSetting(account.info).read
-              .themePreference,
-            artworkDisplayPreference: storage.settings.accounts.getSetting(account.info).read
-              .artworkDisplayPreference,
-            useCache: false
-          ),
-          fileIdentifier: fileIdentifier
-        )
-        let attachment = try UNNotificationAttachment(
-          identifier: fileIdentifier,
-          url: artworkUrl,
-          options: nil
-        )
-        content.attachments = [attachment]
+        if let imageData = ArtworkImageLoader.getImageDataToDisplayImmediately(
+          libraryEntity: podcastEpisode,
+          artworkDisplayPreference: storage.settings.accounts.getSetting(account.info).read
+            .artworkDisplayPreference,
+          useCache: false
+        ) {
+          let artworkUrl = createLocalUrl(forImageData: imageData, fileIdentifier: fileIdentifier)
+          let attachment = try UNNotificationAttachment(
+            identifier: fileIdentifier,
+            url: artworkUrl,
+            options: nil
+          )
+          content.attachments = [attachment]
+        }
       } catch {
         os_log("Attachment Error: %s", log: self.log, type: .error, error.localizedDescription)
       }
@@ -176,14 +172,10 @@ public class LocalNotificationManager {
     }
   }
 
-  private func createLocalUrl(forImage image: UIImage, fileIdentifier: String) -> URL {
+  private func createLocalUrl(forImageData data: Data, fileIdentifier: String) -> URL {
     let tempDirectoryURL = NSURL.fileURL(withPath: NSTemporaryDirectory(), isDirectory: true)
     let url = tempDirectoryURL.appendingPathComponent(fileIdentifier)
-    var imgData = image.pngData()
-    if imgData == nil {
-      imgData = UIImage.appIcon.pngData()
-    }
-    try! imgData!.write(to: url, options: Data.WritingOptions.atomic)
+    try! data.write(to: url, options: Data.WritingOptions.atomic)
     return url
   }
 }

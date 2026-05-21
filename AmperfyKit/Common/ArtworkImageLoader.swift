@@ -18,31 +18,31 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-import UIKit
+import Foundation
 
 @MainActor
 public enum ArtworkImageLoader {
-  public nonisolated(unsafe) static let cache: NSCache<NSString, UIImage> = NSCache()
+  public nonisolated(unsafe) static let cache: NSCache<NSString, NSData> = NSCache()
 
-  public static func getImageToDisplayImmediately(
+  /// Returns image data for the given entity, checking the in-memory cache first.
+  /// Returns nil if no artwork is found (caller should use a generated placeholder).
+  public static func getImageDataToDisplayImmediately(
     libraryEntity: AbstractLibraryEntity,
-    themePreference: ThemePreference,
     artworkDisplayPreference: ArtworkDisplayPreference,
     useCache: Bool
   )
-    -> UIImage {
+    -> Data? {
     if let artworkImagePath = libraryEntity.imagePath(
       setting: artworkDisplayPreference
     ) {
-      if useCache, let cachedImg = cache.object(forKey: artworkImagePath as NSString) {
-        return cachedImg
-      } else if let directlyLoadedImage = UIImage(named: artworkImagePath) {
-        return directlyLoadedImage
+      if useCache, let cachedData = cache.object(forKey: artworkImagePath as NSString) {
+        return cachedData as Data
+      } else if let fileURL = Bundle.main.url(forResource: artworkImagePath, withExtension: nil),
+                let data = try? Data(contentsOf: fileURL) {
+        cache.setObject(data as NSData, forKey: artworkImagePath as NSString)
+        return data
       }
     }
-    return UIImage.getGeneratedArtwork(
-      theme: themePreference,
-      artworkType: libraryEntity.getDefaultArtworkType()
-    )
+    return nil
   }
 }
