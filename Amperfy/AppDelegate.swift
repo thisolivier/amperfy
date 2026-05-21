@@ -440,7 +440,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       adjacencyStorage.newBackgroundContext()
     })
     // Configure playlist folder sync for Navidrome accounts
-    if let loginCredentials = storage.settings.accounts.getSetting(activeAccountInfo).read.loginCredentials {
+    if let loginCredentials = storage.settings.accounts.getSetting(activeAccountInfo).read
+      .loginCredentials {
       let folderApi: NavidromeServerApi? = (loginCredentials.backendApi == .subsonic)
         ? NavidromeServerApi(credentials: loginCredentials) : nil
       let accountMO = storage.main.library.getAccount(info: activeAccountInfo).managedObject
@@ -531,7 +532,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     )
     let account = appDelegate.storage.main.library.getAccount(info: accountInfo)
     // Reconfigure playlist folder store for new account
-    if let loginCredentials = appDelegate.storage.settings.accounts.getSetting(accountInfo).read.loginCredentials {
+    if let loginCredentials = appDelegate.storage.settings.accounts.getSetting(accountInfo).read
+      .loginCredentials {
       let folderApi: NavidromeServerApi? = (loginCredentials.backendApi == .subsonic)
         ? NavidromeServerApi(credentials: loginCredentials) : nil
       PlaylistFolderStore.shared.configure(

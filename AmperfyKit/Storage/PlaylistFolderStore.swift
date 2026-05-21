@@ -74,9 +74,9 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     navidromeApi: NavidromeServerApi?,
     account: AccountMO?
   ) {
-    self.managedObjectContext = context
+    managedObjectContext = context
     self.navidromeApi = navidromeApi
-    self.accountMO = account
+    accountMO = account
   }
 
   /// Whether the store has been configured with CoreData.
@@ -149,8 +149,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     // Resolve parent server ID from UUID if provided
     var parentServerId: String?
     if let parentUUID = parent,
-      let parentMO = findFolderMO(by: parentUUID, in: context)
-    {
+       let parentMO = findFolderMO(by: parentUUID, in: context) {
       parentServerId = parentMO.id
     }
 
@@ -169,7 +168,8 @@ public final class PlaylistFolderStore: @unchecked Sendable {
       Task {
         do {
           let serverResponse = try await api.createFolder(
-            name: name, parentId: parentServerId)
+            name: name, parentId: parentServerId
+          )
           // Update the local MO with server-assigned ID
           await MainActor.run {
             unsafeFolderMO.id = serverResponse.id
@@ -231,9 +231,8 @@ public final class PlaylistFolderStore: @unchecked Sendable {
 
     // Promote playlists to parent folder if one exists
     if let parentId = parentId,
-      let parentMO = fetchFolderMO(byServerId: parentId, in: context),
-      let playlists = folderMO.playlists as? Set<PlaylistMO>
-    {
+       let parentMO = fetchFolderMO(byServerId: parentId, in: context),
+       let playlists = folderMO.playlists as? Set<PlaylistMO> {
       for playlistMO in playlists {
         parentMO.addToPlaylists(playlistMO)
       }
@@ -342,7 +341,8 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     await MainActor.run {
       let existingFolders = (try? context.fetch(PlaylistFolderMO.fetchRequest())) ?? []
       let existingById = Dictionary(
-        uniqueKeysWithValues: existingFolders.map { ($0.id, $0) })
+        uniqueKeysWithValues: existingFolders.map { ($0.id, $0) }
+      )
       var serverIds = Set<String>()
 
       for serverFolder in serverFolders {
@@ -433,7 +433,8 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   private func buildPlaylistFolder(
     from folderMO: PlaylistFolderMO,
     allFolders: [PlaylistFolderMO]
-  ) -> PlaylistFolder {
+  )
+    -> PlaylistFolder {
     let children = allFolders.filter { $0.parentId == folderMO.id }
     let playlistIds = (folderMO.playlists as? Set<PlaylistMO>)?.map { $0.id } ?? []
 
@@ -446,8 +447,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   }
 
   private func findFolderMO(by uuid: UUID, in context: NSManagedObjectContext)
-    -> PlaylistFolderMO?
-  {
+    -> PlaylistFolderMO? {
     let fetchRequest = PlaylistFolderMO.fetchRequest()
     fetchRequest.predicate = NSPredicate(format: "id == %@", uuid.uuidString)
     fetchRequest.fetchLimit = 1
@@ -455,8 +455,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   }
 
   private func fetchFolderMO(byServerId serverId: String, in context: NSManagedObjectContext)
-    -> PlaylistFolderMO?
-  {
+    -> PlaylistFolderMO? {
     let fetchRequest = PlaylistFolderMO.fetchRequest()
     fetchRequest.predicate = NSPredicate(format: "id == %@", serverId)
     fetchRequest.fetchLimit = 1
@@ -464,16 +463,14 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   }
 
   private func fetchChildFolders(of parentId: String, in context: NSManagedObjectContext)
-    -> [PlaylistFolderMO]
-  {
+    -> [PlaylistFolderMO] {
     let fetchRequest = PlaylistFolderMO.fetchRequest()
     fetchRequest.predicate = NSPredicate(format: "parentId == %@", parentId)
     return (try? context.fetch(fetchRequest)) ?? []
   }
 
   private func fetchPlaylistMO(by playlistId: String, in context: NSManagedObjectContext)
-    -> PlaylistMO?
-  {
+    -> PlaylistMO? {
     let fetchRequest = PlaylistMO.fetchRequest()
     fetchRequest.predicate = NSPredicate(format: "id == %@", playlistId)
     fetchRequest.fetchLimit = 1
@@ -497,10 +494,9 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   private static func applyingMutation(
     id: UUID,
     to folders: [PlaylistFolder],
-    mutation: (inout PlaylistFolder) -> Void
+    mutation: (inout PlaylistFolder) -> ()
   )
-    -> [PlaylistFolder]
-  {
+    -> [PlaylistFolder] {
     folders.map { folder in
       var mutableFolder = folder
       if mutableFolder.id == id {
@@ -526,8 +522,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     id: UUID,
     from folders: [PlaylistFolder]
   )
-    -> [PlaylistFolder]
-  {
+    -> [PlaylistFolder] {
     var result = [PlaylistFolder]()
     result.reserveCapacity(folders.count)
     for folder in folders {
@@ -553,8 +548,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     id: UUID,
     into parent: PlaylistFolder
   )
-    -> PlaylistFolder
-  {
+    -> PlaylistFolder {
     guard let index = parent.subfolders.firstIndex(where: { $0.id == id }) else {
       return parent
     }
@@ -563,7 +557,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     mutableParent.subfolders.remove(at: index)
     mutableParent.subfolders.insert(contentsOf: target.subfolders, at: index)
     for playlistId in target.playlistIds
-    where !mutableParent.playlistIds.contains(playlistId) {
+      where !mutableParent.playlistIds.contains(playlistId) {
       mutableParent.playlistIds.append(playlistId)
     }
     return mutableParent
@@ -574,7 +568,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   private func loadFromUserDefaults() -> [PlaylistFolder] {
     if let cached = _legacyFolders { return cached }
     guard let data = defaults.data(forKey: defaultsKey),
-      let decoded = try? JSONDecoder().decode([PlaylistFolder].self, from: data)
+          let decoded = try? JSONDecoder().decode([PlaylistFolder].self, from: data)
     else { return [] }
     _legacyFolders = decoded
     return decoded
@@ -587,7 +581,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     NotificationCenter.default.post(name: Self.didChangeNotification, object: self)
   }
 
-  private func legacyMutateFolder(id: UUID, mutation: (inout PlaylistFolder) -> Void) {
+  private func legacyMutateFolder(id: UUID, mutation: (inout PlaylistFolder) -> ()) {
     var currentFolders = loadFromUserDefaults()
     currentFolders = Self.applyingMutation(id: id, to: currentFolders, mutation: mutation)
     _legacyFolders = currentFolders
