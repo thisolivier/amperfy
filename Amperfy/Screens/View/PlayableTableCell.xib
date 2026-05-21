@@ -17,7 +17,7 @@
                 <rect key="frame" x="0.0" y="0.0" width="605" height="70"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
-                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Uwb-Vy-dE7" customClass="EntityImageView" customModule="AmperfyKit">
+                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Uwb-Vy-dE7" customClass="EntityImageView" customModule="Amperfy">
                         <rect key="frame" x="32" y="15" width="48" height="40"/>
                         <color key="backgroundColor" systemColor="systemMintColor"/>
                         <constraints>

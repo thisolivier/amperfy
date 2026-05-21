@@ -24,7 +24,7 @@
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="ZEz-V1-LUZ" userLabel="OuterView">
                                 <rect key="frame" x="0.0" y="0.0" width="363" height="274"/>
                                 <subviews>
-                                    <view contentMode="scaleAspectFit" translatesAutoresizingMaskIntoConstraints="NO" id="vhw-xr-Op6" userLabel="EntityImage" customClass="EntityImageView" customModule="AmperfyKit">
+                                    <view contentMode="scaleAspectFit" translatesAutoresizingMaskIntoConstraints="NO" id="vhw-xr-Op6" userLabel="EntityImage" customClass="EntityImageView" customModule="Amperfy">
                                         <rect key="frame" x="56.666666666666657" y="12" width="249.99999999999997" height="250"/>
                                         <color key="backgroundColor" systemColor="systemRedColor"/>
                                         <constraints>

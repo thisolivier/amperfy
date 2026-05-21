@@ -485,14 +485,9 @@ extension UIImage {
     switchColors: Bool = false
   )
     -> UIImage {
-    let frame = CGRect(
-      x: 0,
-      y: 0,
-      width: ArtworkIconSizeType.defaultSize,
-      height: ArtworkIconSizeType.defaultSize
-    )
-    let buildView = EntityImageView(frame: frame)
-    let grayScale = lightDarkMode == .light ? 0.85 : 0.15
+    let artworkSize = ArtworkIconSizeType.defaultSize
+    let size = CGSize(width: artworkSize, height: artworkSize)
+    let grayScale: CGFloat = lightDarkMode == .light ? 0.85 : 0.15
     let artworkBackgroundColor = UIColor(
       red: grayScale,
       green: grayScale,
@@ -501,14 +496,25 @@ extension UIImage {
     )
     let imageTintColor = !switchColors ? theme.asColor : artworkBackgroundColor
     let backgroundColor = switchColors ? theme.asColor : artworkBackgroundColor
-    buildView.configureStyling(
-      image: image,
-      imageSizeType: iconSizeType,
-      imageTintColor: imageTintColor,
-      backgroundColor: backgroundColor
-    )
-    buildView.layoutIfNeeded()
-    return buildView.screenshot ?? UIImage()
+    let inset = iconSizeType.rawValue
+    let tintedImage = image.withTintColor(imageTintColor, renderingMode: .alwaysOriginal)
+
+    let renderer = UIGraphicsImageRenderer(size: size)
+    return renderer.image { context in
+      backgroundColor.setFill()
+      let cornerRadius: CGFloat = 5.0
+      let backgroundPath = UIBezierPath(
+        roundedRect: CGRect(origin: .zero, size: size),
+        cornerRadius: cornerRadius
+      )
+      backgroundPath.fill()
+
+      let imageRect = CGRect(
+        x: inset, y: inset,
+        width: artworkSize - 2 * inset, height: artworkSize - 2 * inset
+      )
+      tintedImage.draw(in: imageRect)
+    }
   }
 
   private static func createEmptyImage(with size: CGSize) -> UIImage? {

@@ -19,6 +19,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+import AmperfyKit
 import CoreData
 import UIKit
 
@@ -31,18 +32,11 @@ extension LibraryEntityImage {
     useCache: Bool
   )
     -> UIImage {
-    if let artworkImagePath = libraryEntity.imagePath(
-      setting: artworkDisplayPreference
-    ) {
-      if useCache, let cachedImg = Self.cache.object(forKey: artworkImagePath as NSString) {
-        return cachedImg
-      } else if let directlyLoadedImage = UIImage(named: artworkImagePath) {
-        return directlyLoadedImage
-      }
-    }
-    return UIImage.getGeneratedArtwork(
-      theme: themePreference,
-      artworkType: libraryEntity.getDefaultArtworkType()
+    ArtworkImageLoader.getImageToDisplayImmediately(
+      libraryEntity: libraryEntity,
+      themePreference: themePreference,
+      artworkDisplayPreference: artworkDisplayPreference,
+      useCache: useCache
     )
   }
 }
@@ -51,58 +45,58 @@ extension LibraryEntityImage {
 
 @MainActor
 public class LibraryEntityImage: RoundedImage {
-  static private let cache: NSCache<NSString, UIImage> = NSCache()
+  static private var cache: NSCache<NSString, UIImage> { ArtworkImageLoader.cache }
 
-  private let appDelegate: AmperKit
+  private let amperKit: AmperKit
 
   private var entity: AbstractLibraryEntity?
   private var backupArtworkType: ArtworkType?
   private var accountNotificationHandler: AccountNotificationHandler?
 
   required public init?(coder: NSCoder) {
-    self.appDelegate = AmperKit.shared
+    self.amperKit = AmperKit.shared
     super.init(coder: coder)
     self.accountNotificationHandler = AccountNotificationHandler(
-      storage: appDelegate.storage,
-      notificationHandler: appDelegate.notificationHandler
+      storage: amperKit.storage,
+      notificationHandler: amperKit.notificationHandler
     )
     accountNotificationHandler?.registerCallbackForAllAccounts { [weak self] accountInfo in
       guard let self else { return }
-      appDelegate.notificationHandler.register(
+      amperKit.notificationHandler.register(
         self,
         selector: #selector(downloadFinishedSuccessful(notification:)),
         name: .downloadFinishedSuccess,
-        object: appDelegate.getMeta(accountInfo).artworkDownloadManager
+        object: amperKit.getMeta(accountInfo).artworkDownloadManager
       )
-      appDelegate.notificationHandler.register(
+      amperKit.notificationHandler.register(
         self,
         selector: #selector(downloadFinishedSuccessful(notification:)),
         name: .downloadFinishedSuccess,
-        object: appDelegate.getMeta(accountInfo).playableDownloadManager
+        object: amperKit.getMeta(accountInfo).playableDownloadManager
       )
     }
   }
 
   override public init(frame: CGRect) {
-    self.appDelegate = AmperKit.shared
+    self.amperKit = AmperKit.shared
     super.init(frame: .zero)
     self.accountNotificationHandler = AccountNotificationHandler(
-      storage: appDelegate.storage,
-      notificationHandler: appDelegate.notificationHandler
+      storage: amperKit.storage,
+      notificationHandler: amperKit.notificationHandler
     )
     accountNotificationHandler?.registerCallbackForAllAccounts { [weak self] accountInfo in
       guard let self else { return }
-      appDelegate.notificationHandler.register(
+      amperKit.notificationHandler.register(
         self,
         selector: #selector(downloadFinishedSuccessful(notification:)),
         name: .downloadFinishedSuccess,
-        object: appDelegate.getMeta(accountInfo).artworkDownloadManager
+        object: amperKit.getMeta(accountInfo).artworkDownloadManager
       )
-      appDelegate.notificationHandler.register(
+      amperKit.notificationHandler.register(
         self,
         selector: #selector(downloadFinishedSuccessful(notification:)),
         name: .downloadFinishedSuccess,
-        object: appDelegate.getMeta(accountInfo).playableDownloadManager
+        object: amperKit.getMeta(accountInfo).playableDownloadManager
       )
     }
   }
@@ -118,7 +112,7 @@ public class LibraryEntityImage: RoundedImage {
 
     display(entity: entity)
     if let artwork = entity.artwork, let accountInfo = entity.account?.info {
-      appDelegate.getMeta(accountInfo).artworkDownloadManager.download(object: artwork)
+      amperKit.getMeta(accountInfo).artworkDownloadManager.download(object: artwork)
     }
   }
 
@@ -134,9 +128,9 @@ public class LibraryEntityImage: RoundedImage {
   }
 
   private var placeholderImage: UIImage {
-    var theme = appDelegate.storage.settings.accounts.activeSetting.read.themePreference
+    var theme = amperKit.storage.settings.accounts.activeSetting.read.themePreference
     if let accountInfo = entity?.account?.info {
-      theme = appDelegate.storage.settings.accounts.getSetting(accountInfo).read.themePreference
+      theme = amperKit.storage.settings.accounts.getSetting(accountInfo).read.themePreference
     }
     return UIImage.getGeneratedArtwork(
       theme: theme,
@@ -145,10 +139,10 @@ public class LibraryEntityImage: RoundedImage {
   }
 
   private var entityImagePathToDisplay: String? {
-    var artworkDisplayPreference = appDelegate.storage.settings.accounts.activeSetting.read
+    var artworkDisplayPreference = amperKit.storage.settings.accounts.activeSetting.read
       .artworkDisplayPreference
     if let accountInfo = entity?.account?.info {
-      artworkDisplayPreference = appDelegate.storage.settings.accounts.getSetting(accountInfo).read
+      artworkDisplayPreference = amperKit.storage.settings.accounts.getSetting(accountInfo).read
         .artworkDisplayPreference
     }
     return entity?.imagePath(
@@ -196,7 +190,7 @@ public class LibraryEntityImage: RoundedImage {
        playable.uniqueID == downloadNotification.id, let accountInfo = playable.account?.info {
       Task { @MainActor in
         guard let imagePath = entity.imagePath(
-          setting: appDelegate.storage.settings.accounts.getSetting(accountInfo).read
+          setting: amperKit.storage.settings.accounts.getSetting(accountInfo).read
             .artworkDisplayPreference
         ) else { return }
         await self.loadImageAndCacheIt(
@@ -208,7 +202,7 @@ public class LibraryEntityImage: RoundedImage {
        artwork.uniqueID == downloadNotification.id, let accountInfo = artwork.account?.info {
       Task { @MainActor in
         guard let imagePath = entity.imagePath(
-          setting: appDelegate.storage.settings.accounts.getSetting(accountInfo).read
+          setting: amperKit.storage.settings.accounts.getSetting(accountInfo).read
             .artworkDisplayPreference
         ) else { return }
         await self.loadImageAndCacheIt(

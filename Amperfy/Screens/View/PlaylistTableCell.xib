@@ -58,7 +58,7 @@
                         </subviews>
                         <variation key="widthClass=regular" alignment="center" axis="horizontal" spacing="8"/>
                     </stackView>
-                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="TkT-gC-6LF" customClass="EntityImageView" customModule="AmperfyKit">
+                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="TkT-gC-6LF" customClass="EntityImageView" customModule="Amperfy">
                         <rect key="frame" x="32" y="11" width="70" height="70"/>
                         <color key="backgroundColor" systemColor="systemRedColor"/>
                         <constraints>

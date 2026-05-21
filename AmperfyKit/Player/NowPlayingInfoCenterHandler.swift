@@ -77,7 +77,7 @@ public class NowPlayingInfoCenterHandler {
 
     var artworkImage = UIImage()
     if let accountInfo = playable.account?.info {
-      artworkImage = LibraryEntityImage.getImageToDisplayImmediately(
+      artworkImage = ArtworkImageLoader.getImageToDisplayImmediately(
         libraryEntity: playable,
         themePreference: storage.settings.accounts.getSetting(accountInfo).read.themePreference,
         artworkDisplayPreference: storage.settings.accounts.getSetting(accountInfo).read

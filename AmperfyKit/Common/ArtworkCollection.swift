@@ -20,7 +20,6 @@
 //
 
 import Foundation
-import UIKit
 
 public class ArtworkCollection {
   public let defaultArtworkType: ArtworkType

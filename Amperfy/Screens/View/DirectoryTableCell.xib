@@ -15,7 +15,7 @@
                 <rect key="frame" x="0.0" y="0.0" width="375" height="68"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
-                    <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="JCR-db-pze" userLabel="Artwork" customClass="LibraryEntityImage" customModule="AmperfyKit">
+                    <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="JCR-db-pze" userLabel="Artwork" customClass="LibraryEntityImage" customModule="Amperfy">
                         <rect key="frame" x="32" y="10" width="48" height="48"/>
                         <constraints>
                             <constraint firstAttribute="width" secondItem="JCR-db-pze" secondAttribute="height" multiplier="1:1" id="AFH-YX-4Oq"/>

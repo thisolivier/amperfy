@@ -28,7 +28,7 @@
                 <stackView opaque="NO" contentMode="scaleToFill" alignment="center" spacing="4" translatesAutoresizingMaskIntoConstraints="NO" id="FTu-YN-bUM">
                     <rect key="frame" x="20" y="260" width="760" height="80"/>
                     <subviews>
-                        <view contentMode="scaleAspectFill" translatesAutoresizingMaskIntoConstraints="NO" id="mAm-Nt-stn" customClass="EntityImageView" customModule="AmperfyKit">
+                        <view contentMode="scaleAspectFill" translatesAutoresizingMaskIntoConstraints="NO" id="mAm-Nt-stn" customClass="EntityImageView" customModule="Amperfy">
                             <rect key="frame" x="0.0" y="0.0" width="80" height="80"/>
                             <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                             <constraints>

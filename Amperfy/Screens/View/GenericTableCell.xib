@@ -20,7 +20,7 @@
                     <stackView opaque="NO" contentMode="scaleToFill" alignment="center" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="sEM-ZY-PBA" userLabel="VStack View">
                         <rect key="frame" x="36" y="10" width="605" height="48"/>
                         <subviews>
-                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="kaN-9u-M2i" userLabel="EntityImage" customClass="EntityImageView" customModule="AmperfyKit">
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="kaN-9u-M2i" userLabel="EntityImage" customClass="EntityImageView" customModule="Amperfy">
                                 <rect key="frame" x="0.0" y="0.0" width="48" height="48"/>
                                 <color key="backgroundColor" systemColor="systemRedColor"/>
                                 <constraints>
