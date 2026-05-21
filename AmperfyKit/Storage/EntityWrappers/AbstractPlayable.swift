@@ -22,7 +22,6 @@
 import AVFoundation
 import CoreData
 import Foundation
-import UIKit
 
 // MARK: - DerivedPlayableType
 

@@ -21,7 +21,6 @@
 
 import CoreData
 import Foundation
-import UIKit
 
 final class AmpacheArtworkDownloadDelegate: DownloadManagerDelegate {
   /// max file size of an error response from an API

@@ -22,7 +22,6 @@
 import CoreData
 import Foundation
 import os.log
-import UIKit
 
 class AmpacheLibrarySyncer: CommonLibrarySyncer, LibrarySyncer {
   private let ampacheXmlServerApi: AmpacheXmlServerApi

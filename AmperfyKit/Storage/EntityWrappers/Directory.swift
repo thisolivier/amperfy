@@ -20,7 +20,6 @@
 //
 
 import Foundation
-import UIKit
 
 // MARK: - Directory
 

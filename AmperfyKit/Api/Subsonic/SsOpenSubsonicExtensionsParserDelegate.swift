@@ -21,7 +21,6 @@
 
 import CoreData
 import Foundation
-import UIKit
 
 // MARK: - OpenSubsonicExtensionsResponse
 

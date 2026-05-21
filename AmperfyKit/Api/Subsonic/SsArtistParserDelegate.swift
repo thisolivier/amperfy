@@ -21,7 +21,6 @@
 
 import CoreData
 import Foundation
-import UIKit
 
 class SsArtistParserDelegate: SsXmlLibWithArtworkParser {
   private var artistBuffer: Artist?

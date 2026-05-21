@@ -22,7 +22,6 @@
 import CoreData
 import Foundation
 import os.log
-import UIKit
 
 final class SubsonicArtworkDownloadDelegate: DownloadManagerDelegate {
   /// max file size of an error response from an API

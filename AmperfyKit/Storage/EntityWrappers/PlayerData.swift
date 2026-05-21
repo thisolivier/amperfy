@@ -22,7 +22,6 @@
 import CoreData
 import CoreMedia
 import Foundation
-import UIKit
 
 // MARK: - PlayerStatusPersistent
 
