@@ -357,7 +357,9 @@ extension BackendProxy: BackendApi {
   public var serverApiVersion: String { activeApi.serverApiVersion }
 
   public func provideCredentials(credentials: LoginCredentials) {
-    activeApi.provideCredentials(credentials: credentials)
+    ampacheApi.wrappedValue?.provideCredentials(credentials: credentials)
+    subsonicApi.wrappedValue?.provideCredentials(credentials: credentials)
+    subsonicLegacyApi.wrappedValue?.provideCredentials(credentials: credentials)
   }
 
   public func isAuthenticationValid(credentials: LoginCredentials) async throws {
