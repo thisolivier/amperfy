@@ -201,50 +201,87 @@ protocol CoreDataManagable {
   var context: NSManagedObjectContext { get }
 }
 
+// MARK: - CoreDataConfiguration
+
+public struct CoreDataConfiguration: Sendable {
+  public let containerGroupID: String?
+  public let readOnly: Bool
+
+  public init(containerGroupID: String? = nil, readOnly: Bool = false) {
+    self.containerGroupID = containerGroupID
+    self.readOnly = readOnly
+  }
+
+  public static let `default` = CoreDataConfiguration()
+
+  /// Shared container URL for the given App Group identifier.
+  public var sharedContainerURL: URL? {
+    guard let groupID = containerGroupID else { return nil }
+    return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupID)
+  }
+
+  /// Full URL for the SQLite store inside the shared container.
+  public var sharedStoreURL: URL? {
+    sharedContainerURL?.appendingPathComponent("Amperfy.sqlite")
+  }
+}
+
 // MARK: - CoreDataPersistentManager
 
 public class CoreDataPersistentManager: CoreDataManagable {
   nonisolated(unsafe) public static let managedObjectModel: NSManagedObjectModel =
     .mergedModel(from: [Bundle.main])!
 
+  public let configuration: CoreDataConfiguration
+
+  public init(configuration: CoreDataConfiguration = .default) {
+    self.configuration = configuration
+  }
+
   lazy var persistentContainer: NSPersistentContainer = {
-    /*
-     The persistent container for the application. This implementation
-     creates and returns a container, having loaded the store for the
-     application to it. This property is optional since there are legitimate
-     error conditions that could cause the creation of the store to fail.
-     */
     let container = NSPersistentContainer(
       name: "Amperfy",
       managedObjectModel: Self.managedObjectModel
     )
-    let description = container.persistentStoreDescriptions.first
-    description?.shouldInferMappingModelAutomatically = false
-    description?.shouldMigrateStoreAutomatically = false
-    description?.type = NSSQLiteStoreType
+
+    // Use shared container URL if an App Group is configured
+    if let sharedStoreURL = configuration.sharedStoreURL {
+      let storeDescription = NSPersistentStoreDescription(url: sharedStoreURL)
+      storeDescription.type = NSSQLiteStoreType
+
+      if configuration.readOnly {
+        storeDescription.setOption(true as NSNumber, forKey: NSReadOnlyPersistentStoreOption)
+        // Read-only consumers should never migrate the store
+        storeDescription.shouldInferMappingModelAutomatically = false
+        storeDescription.shouldMigrateStoreAutomatically = false
+      } else {
+        storeDescription.shouldInferMappingModelAutomatically = false
+        storeDescription.shouldMigrateStoreAutomatically = false
+      }
+
+      container.persistentStoreDescriptions = [storeDescription]
+    } else {
+      // Default location — configure existing description
+      let description = container.persistentStoreDescriptions.first
+      description?.shouldInferMappingModelAutomatically = false
+      description?.shouldMigrateStoreAutomatically = false
+      description?.type = NSSQLiteStoreType
+    }
 
     guard let storeURL = container.persistentStoreDescriptions.first?.url else {
       fatalError("persistentContainer was not set up properly")
     }
 
-    let migrator = CoreDataMigrator()
-    if migrator.requiresMigration(at: storeURL, toVersion: CoreDataMigrationVersion.current) {
-      migrator.migrateStore(at: storeURL, toVersion: CoreDataMigrationVersion.current)
+    // Only run migration for read-write mode
+    if !configuration.readOnly {
+      let migrator = CoreDataMigrator()
+      if migrator.requiresMigration(at: storeURL, toVersion: CoreDataMigrationVersion.current) {
+        migrator.migrateStore(at: storeURL, toVersion: CoreDataMigrationVersion.current)
+      }
     }
 
     container.loadPersistentStores(completionHandler: { storeDescription, error in
       if let error = error as NSError? {
-        // Replace this implementation with code to handle the error appropriately.
-        // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-
-        /*
-         Typical reasons for an error here include:
-         * The parent directory does not exist, cannot be created, or disallows writing.
-         * The persistent store is not accessible, due to permissions or data protection when the device is locked.
-         * The device is out of space.
-         * The store could not be migrated to the current model version.
-         Check the error message to determine what the actual problem was.
-         */
         fatalError("Unresolved error \(error), \(error.userInfo)")
       }
     })

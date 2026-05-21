@@ -384,6 +384,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   )
     -> Bool {
+    // Migrate CoreData store to shared App Group container (no-op if already migrated)
+    SharedContainerMigration.migrateIfNeeded(
+      configuration: CoreDataConfiguration(containerGroupID: AmperKit.sharedContainerGroupID)
+    )
+
     // Construct all services once — must happen before any property access
     services = AmperKit.shared.createServices()
 
