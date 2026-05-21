@@ -49,11 +49,11 @@ public class FolderProviderImpl: FolderProvider {
   }
 
   public func movePlaylist(
-    playlistId: String,
-    from sourceFolderId: UUID?,
-    to targetFolderId: UUID?
+    _ playlistId: String,
+    from sourceFolderId: UUID,
+    to destFolderId: UUID
   ) {
-    folderStore.movePlaylist(playlistId: playlistId, from: sourceFolderId, to: targetFolderId)
+    folderStore.movePlaylist(playlistId, from: sourceFolderId, to: destFolderId)
   }
 
   public func folder(byId id: UUID) -> PlaylistFolder? {

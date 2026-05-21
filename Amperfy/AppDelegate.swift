@@ -54,38 +54,34 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   var window: UIWindow?
   var focusedWindowTitle: String?
 
+  /// All protocol-backed services, constructed once at launch via `AmperKit.shared.createServices()`.
+  public private(set) var services: AmperfyServices!
+
+  // MARK: - Service Accessors (forwarding to services)
+
   lazy var player: PlayerFacade = {
     UIApplication.shared.beginReceivingRemoteControlEvents()
-    return AmperKit.shared.player
+    return services.player
   }()
 
-  public lazy var log = {
-    AmperKit.shared.log
-  }()
+  public var log: OSLog { services.log }
+  public var storage: PersistentStorage { services.storage }
+  public var networkMonitor: NetworkMonitorFacade { services.networkMonitor }
+  public var eventLogger: EventLogger { services.eventLogger }
+  public var notificationHandler: EventNotificationHandler { services.notificationHandler }
+  public var libraryUpdater: LibraryUpdater { services.libraryUpdater }
+  public var userStatistics: UserStatistics { services.userStatistics }
+  public var localNotificationManager: LocalNotificationManager { services.localNotificationManager
+  }
 
-  public lazy var storage = {
-    AmperKit.shared.storage
-  }()
+  public var threadPerformanceMonitor: ThreadPerformanceMonitor { services.threadPerformanceMonitor
+  }
 
-  public var networkMonitor: NetworkMonitorFacade { AmperKit.shared.networkMonitor }
+  public func setForegroundState(_ isInForeground: Bool) {
+    AmperKit.shared.threadPerformanceMonitor.isInForeground = isInForeground
+  }
 
-  public lazy var eventLogger: EventLogger = {
-    AmperKit.shared.eventLogger
-  }()
-
-  public lazy var notificationHandler: EventNotificationHandler = {
-    AmperKit.shared.notificationHandler
-  }()
-
-  public var libraryUpdater: LibraryUpdater { AmperKit.shared.libraryUpdater }
-
-  public lazy var userStatistics = {
-    AmperKit.shared.userStatistics
-  }()
-
-  public lazy var localNotificationManager = {
-    AmperKit.shared.localNotificationManager
-  }()
+  // MARK: - MetaManager access (bootstrap-level, routes through AmperKit.shared)
 
   public func getMeta(_ accountInfo: AccountInfo) -> MetaManager {
     AmperKit.shared.getMeta(accountInfo)
@@ -267,7 +263,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
   func configureBatteryMonitoring() {
     UIDevice.current.isBatteryMonitoringEnabled =
-      (AmperKit.shared.storage.settings.user.screenLockPreventionPreference == .onlyIfCharging)
+      (storage.settings.user.screenLockPreventionPreference == .onlyIfCharging)
     configureLockScreenPrevention()
     NotificationCenter.default.addObserver(
       self,
@@ -289,7 +285,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       type: .info,
       UIDevice.current.batteryState.description
     )
-    switch AmperKit.shared.storage.settings.user.screenLockPreventionPreference {
+    switch storage.settings.user.screenLockPreventionPreference {
     case .always:
       isKeepScreenAlive = true
     case .never:
@@ -351,7 +347,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 
   func initEventLogger() {
-    AmperKit.shared.eventLogger.alertDisplayer = self
+    eventLogger.alertDisplayer = self
+  }
+
+  /// Collects diagnostic log data for support emails. Routes through AmperKit.shared (bootstrap-level).
+  func collectLogData() -> LogData {
+    LogData.collectInformation(amperfyData: AmperKit.shared)
   }
 
   func stopForInit() {
@@ -383,6 +384,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   )
     -> Bool {
+    // Construct all services once — must happen before any property access
+    services = AmperKit.shared.createServices()
+
     if let options = launchOptions {
       os_log("application launch with options:", log: self.log, type: .info)
       options
@@ -415,7 +419,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         .asColor
     )
 
-    guard AmperKit.shared.storage.settings.app.isLibrarySynced else {
+    guard storage.settings.app.isLibrarySynced else {
       return true
     }
 

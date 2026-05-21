@@ -19,7 +19,7 @@ public protocol FolderProvider {
   func deleteFolder(id: UUID)
   func addPlaylists(_ playlistIds: [String], to folderId: UUID)
   func removePlaylists(_ playlistIds: [String], from folderId: UUID)
-  func movePlaylist(playlistId: String, from sourceFolderId: UUID?, to targetFolderId: UUID?)
+  func movePlaylist(_ playlistId: String, from sourceFolderId: UUID, to destFolderId: UUID)
   func folder(byId id: UUID) -> PlaylistFolder?
   func syncFromServer() async throws
   func syncMemberships(playlistId: String, folderIds: [String])

@@ -225,4 +225,27 @@ public class AmperKit {
   public lazy var localNotificationManager = {
     LocalNotificationManager(userStatistics: userStatistics, storage: storage)
   }()
+
+  /// Construct an `AmperfyServices` container wiring all protocol implementations.
+  /// Called once at app launch by AppDelegate.
+  @MainActor
+  public func createServices() -> AmperfyServices {
+    AmperfyServices(
+      library: LibraryProviderImpl(libraryStorage: storage.main.library),
+      settings: SettingsProviderImpl(storage: storage),
+      player: player,
+      sync: SyncCoordinatorImpl(amperKit: self),
+      downloads: DownloadCoordinatorImpl(amperKit: self),
+      folders: FolderProviderImpl(folderStore: PlaylistFolderStore.shared),
+      networkMonitor: networkMonitor,
+      storage: storage,
+      eventLogger: eventLogger,
+      libraryUpdater: libraryUpdater,
+      userStatistics: userStatistics,
+      localNotificationManager: localNotificationManager,
+      notificationHandler: notificationHandler,
+      log: log,
+      threadPerformanceMonitor: threadPerformanceMonitor
+    )
+  }
 }

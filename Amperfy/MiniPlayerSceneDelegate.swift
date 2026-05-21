@@ -27,9 +27,7 @@ import UIKit
 class MiniPlayerSceneDelegate: UIResponder, UIWindowSceneDelegate {
   static let sceneTitle = "Amperfy Mini Player"
 
-  public lazy var log = {
-    AmperKit.shared.log
-  }()
+  public var log: OSLog { appDelegate.log }
 
   var window: UIWindow?
 
