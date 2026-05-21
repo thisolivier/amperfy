@@ -94,7 +94,6 @@ public enum SwipeActionType: Int, CaseIterable, Sendable, Codable {
       return "Mark as Favorite"
     }
   }
-
 }
 
 // MARK: - SwipeActionSettings

@@ -82,7 +82,6 @@ public enum LibraryDisplayType: Int, CaseIterable, Sendable {
       return "Complete Albums"
     }
   }
-
 }
 
 // MARK: - LibraryDisplaySettings

@@ -397,4 +397,3 @@ extension Array where Element == String {
     sorted { $0.localizedStandardCompare($1) == ComparisonResult.orderedDescending }
   }
 }
-

@@ -362,4 +362,3 @@ public enum VisualizerType: String, CaseIterable, Sendable, Codable {
     }
   }
 }
-
