@@ -23,7 +23,7 @@ import CoreData
 import Foundation
 
 public class PlaylistItem: NSObject {
-  public let managedObject: PlaylistItemMO
+  let managedObject: PlaylistItemMO
   private let library: LibraryStorage
 
   public init(library: LibraryStorage, managedObject: PlaylistItemMO) {

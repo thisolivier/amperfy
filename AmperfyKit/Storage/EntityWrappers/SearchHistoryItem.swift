@@ -19,14 +19,17 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+import CoreData
 import Foundation
 
 public class SearchHistoryItem: NSObject {
-  public let managedObject: SearchHistoryItemMO
+  let managedObject: SearchHistoryItemMO
 
   public init(managedObject: SearchHistoryItemMO) {
     self.managedObject = managedObject
   }
+
+  public var objectID: NSManagedObjectID { managedObject.objectID }
 
   public var account: Account? {
     get {

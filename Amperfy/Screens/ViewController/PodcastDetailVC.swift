@@ -150,7 +150,7 @@ class PodcastDetailVC: SingleFetchedResultsTableViewController<PodcastEpisodeMO>
     defer { episodeToScrollTo = nil }
     guard let episodeToScrollTo = episodeToScrollTo,
           let indexPath = fetchedResultsController.fetchResultsController
-          .indexPath(forObject: episodeToScrollTo.managedObject)
+          .indexPath(forObject: episodeToScrollTo.coreDataObject)
     else { return }
     tableView.scrollToRow(at: indexPath, at: .top, animated: true)
   }

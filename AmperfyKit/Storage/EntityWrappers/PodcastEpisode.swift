@@ -88,7 +88,7 @@ public enum PodcastEpisodeUserStatus {
 // MARK: - PodcastEpisode
 
 public class PodcastEpisode: AbstractPlayable {
-  public let managedObject: PodcastEpisodeMO
+  let managedObject: PodcastEpisodeMO
 
   public init(managedObject: PodcastEpisodeMO) {
     self.managedObject = managedObject

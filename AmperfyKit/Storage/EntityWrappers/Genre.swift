@@ -26,7 +26,7 @@ import UIKit
 // MARK: - Genre
 
 public class Genre: AbstractLibraryEntity {
-  public let managedObject: GenreMO
+  let managedObject: GenreMO
 
   public init(managedObject: GenreMO) {
     self.managedObject = managedObject

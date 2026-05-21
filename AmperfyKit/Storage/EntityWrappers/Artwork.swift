@@ -42,7 +42,7 @@ public struct ArtworkRemoteInfo: Sendable, Hashable {
 // MARK: - Artwork
 
 public class Artwork: NSObject {
-  public let managedObject: ArtworkMO
+  let managedObject: ArtworkMO
   private let fileManager = CacheFileManager.shared
 
   public init(managedObject: ArtworkMO) {

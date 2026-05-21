@@ -74,7 +74,7 @@ struct LibrarySettingsView: View {
     Task { @MainActor in do {
       guard let activeAccountInfo = settings.activeAccountInfo else { return }
       let accountObjectId = appDelegate.storage.main.library
-        .getAccount(info: activeAccountInfo).managedObject.objectID
+        .getAccount(info: activeAccountInfo).objectID
       playlistCount = try await appDelegate.storage.async.performAndGet { asyncCompanion in
         let accountAsync = asyncCompanion.library.getAccount(managedObjectId: accountObjectId)
         return asyncCompanion.library.getPlaylistCount(for: accountAsync)

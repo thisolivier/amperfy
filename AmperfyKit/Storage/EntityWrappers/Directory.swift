@@ -25,7 +25,7 @@ import UIKit
 // MARK: - Directory
 
 public class Directory: AbstractLibraryEntity {
-  public let managedObject: DirectoryMO
+  let managedObject: DirectoryMO
 
   public init(managedObject: DirectoryMO) {
     self.managedObject = managedObject

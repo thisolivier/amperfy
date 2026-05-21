@@ -343,12 +343,12 @@ class PlaylistsVC: SingleSnapshotFetchedResultsTableViewController<PlaylistMO> {
   private func createOptionsButtonMenu() -> UIMenu {
     let fetchAllPlaylists = UIAction(title: "Sync All Playlists", image: .refresh, handler: { _ in
       Task { @MainActor in do {
-        let accountObjectId = self.account.managedObject.objectID
+        let accountObjectId = self.account.objectID
         let playlistsIds = try await self.appDelegate.storage.async
           .performAndGet { asyncCompanion in
             let accoundAsync = asyncCompanion.library.getAccount(managedObjectId: accountObjectId)
             let playlists = asyncCompanion.library.getPlaylists(for: accoundAsync)
-            return playlists.compactMap { $0.managedObject.objectID }
+            return playlists.compactMap { $0.objectID }
           }
         for moId in playlistsIds {
           let playlistMainMO = self.appDelegate.storage.main.context

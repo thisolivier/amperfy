@@ -43,11 +43,13 @@ public enum LogEntryType: Int16, Sendable {
 // MARK: - LogEntry
 
 public class LogEntry: NSObject {
-  public let managedObject: LogEntryMO
+  let managedObject: LogEntryMO
 
   public init(managedObject: LogEntryMO) {
     self.managedObject = managedObject
   }
+
+  public var objectID: NSManagedObjectID { managedObject.objectID }
 
   public var creationDate: Date {
     get { managedObject.creationDate }

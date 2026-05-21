@@ -26,7 +26,7 @@ import UIKit
 // MARK: - Podcast
 
 public class Podcast: AbstractLibraryEntity {
-  public let managedObject: PodcastMO
+  let managedObject: PodcastMO
 
   public init(managedObject: PodcastMO) {
     self.managedObject = managedObject

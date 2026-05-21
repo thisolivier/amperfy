@@ -19,6 +19,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+import CoreData
 import Foundation
 
 // MARK: - MusicFolder
@@ -28,11 +29,13 @@ public class MusicFolder {
     String(describing: Self.self)
   }
 
-  public let managedObject: MusicFolderMO
+  let managedObject: MusicFolderMO
 
   public init(managedObject: MusicFolderMO) {
     self.managedObject = managedObject
   }
+
+  public var objectID: NSManagedObjectID { managedObject.objectID }
 
   public var id: String {
     get { managedObject.id }

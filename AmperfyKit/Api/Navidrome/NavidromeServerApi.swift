@@ -109,7 +109,8 @@ public final class NavidromeServerApi: Sendable {
       "password": credentials.password,
     ]
 
-    logger.info("Authenticating with Navidrome at \(credentials.serverUrl, privacy: .public)")
+    let serverUrl = credentials.serverUrl
+    logger.info("Authenticating with Navidrome at \(serverUrl, privacy: .public)")
 
     do {
       let authResponse = try await AF.request(

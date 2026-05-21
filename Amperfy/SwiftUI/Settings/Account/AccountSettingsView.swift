@@ -99,7 +99,7 @@ struct AccountSettingsView: View {
         PlaylistFolderStore.shared.configure(
           context: appDelegate.storage.main.context,
           navidromeApi: folderApi,
-          account: newActiveAccount.managedObject
+          account: newActiveAccount.accountManagedObject
         )
       }
       appDelegate.closeAllButActiveMainTabs()

@@ -19,14 +19,17 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+import CoreData
 import Foundation
 
 public class ScrobbleEntry: NSObject {
-  public let managedObject: ScrobbleEntryMO
+  let managedObject: ScrobbleEntryMO
 
   public init(managedObject: ScrobbleEntryMO) {
     self.managedObject = managedObject
   }
+
+  public var objectID: NSManagedObjectID { managedObject.objectID }
 
   public var account: Account? {
     get {

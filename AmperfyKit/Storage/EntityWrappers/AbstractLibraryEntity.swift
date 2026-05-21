@@ -47,6 +47,8 @@ public class AbstractLibraryEntity {
     managedObject.objectID
   }
 
+  public var coreDataObject: NSManagedObject { managedObject }
+
   public var id: String {
     get { managedObject.id }
     set {
