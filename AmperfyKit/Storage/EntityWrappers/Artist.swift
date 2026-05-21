@@ -26,7 +26,7 @@ import UIKit
 // MARK: - Artist
 
 public class Artist: AbstractLibraryEntity {
-  public let managedObject: ArtistMO
+  let managedObject: ArtistMO
 
   public init(managedObject: ArtistMO) {
     self.managedObject = managedObject

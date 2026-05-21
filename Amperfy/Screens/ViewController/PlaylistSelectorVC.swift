@@ -342,7 +342,7 @@ class PlaylistSelectorVC: SingleSnapshotFetchedResultsTableViewController<Playli
       }
 
       var snap = diffableDataSource.snapshot()
-      snap.reconfigureItems([playlist.managedObject.objectID])
+      snap.reconfigureItems([playlist.objectID])
       diffableDataSource.apply(snap)
 
       if selectMode == .single {
@@ -356,7 +356,7 @@ class PlaylistSelectorVC: SingleSnapshotFetchedResultsTableViewController<Playli
     if selectedPlaylits[playlist] != nil {
       selectedPlaylits.removeValue(forKey: playlist)
       var snap = diffableDataSource.snapshot()
-      snap.reconfigureItems([playlist.managedObject.objectID])
+      snap.reconfigureItems([playlist.objectID])
       diffableDataSource.apply(snap)
     } else {
       let itemsNotContained = playlist.notContaines(playables: itemsToAdd)

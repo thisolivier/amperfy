@@ -277,7 +277,7 @@ class SongsVC: SingleFetchedResultsTableViewController<SongMO> {
     let song = fetchedResultsController.getWrappedEntity(at: songIndexPath)
 
     guard let allFetchedObjects = fetchedResultsController.fetchedObjects,
-          let arrayIndex = allFetchedObjects.firstIndex(of: song.managedObject)
+          let arrayIndex = allFetchedObjects.firstIndex(where: { $0.objectID == song.objectID })
     else { return PlayContext(containable: song) }
 
     var contextPlayables = [AbstractPlayable]()

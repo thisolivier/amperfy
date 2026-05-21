@@ -40,7 +40,7 @@ public struct DownloadElementInfo: Hashable, Sendable {
 // MARK: - Download
 
 public class Download: NSObject {
-  public let managedObject: DownloadMO
+  let managedObject: DownloadMO
 
   public init(managedObject: DownloadMO) {
     self.managedObject = managedObject
@@ -49,6 +49,8 @@ public class Download: NSObject {
       self.creationDate = Date()
     }
   }
+
+  public var objectID: NSManagedObjectID { managedObject.objectID }
 
   public var account: Account? {
     get {

@@ -35,13 +35,15 @@ public class Playlist: Identifyable {
 
   static let artworkItemMaxLookCount = 20
 
-  public let managedObject: PlaylistMO
+  let managedObject: PlaylistMO
   private let library: LibraryStorage
 
   public init(library: LibraryStorage, managedObject: PlaylistMO) {
     self.library = library
     self.managedObject = managedObject
   }
+
+  public var objectID: NSManagedObjectID { managedObject.objectID }
 
   public var identifier: String {
     name

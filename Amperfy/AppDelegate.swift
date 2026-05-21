@@ -448,7 +448,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       .loginCredentials {
       let folderApi: NavidromeServerApi? = (loginCredentials.backendApi == .subsonic)
         ? NavidromeServerApi(credentials: loginCredentials) : nil
-      let accountMO = storage.main.library.getAccount(info: activeAccountInfo).managedObject
+      let accountMO = storage.main.library.getAccount(info: activeAccountInfo).accountManagedObject
       PlaylistFolderStore.shared.configure(
         context: storage.main.context,
         navidromeApi: folderApi,
@@ -543,7 +543,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       PlaylistFolderStore.shared.configure(
         context: appDelegate.storage.main.context,
         navidromeApi: folderApi,
-        account: account.managedObject
+        account: account.accountManagedObject
       )
     }
 

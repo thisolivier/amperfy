@@ -49,7 +49,7 @@ struct ArtworkSettingsView: View {
     Task { @MainActor in do {
       guard let activeAccountInfo = settings.activeAccountInfo else { return }
       let accountObjectId = appDelegate.storage.main.library
-        .getAccount(info: activeAccountInfo).managedObject.objectID
+        .getAccount(info: activeAccountInfo).objectID
       (
         artworkCountText,
         artworkNotCheckedCountText,

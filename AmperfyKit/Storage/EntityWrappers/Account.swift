@@ -86,11 +86,14 @@ public struct AccountInfo: Sendable, Hashable, Codable {
 // MARK: - Account
 
 public class Account {
-  public let managedObject: AccountMO
+  let managedObject: AccountMO
 
   public init(managedObject: AccountMO) {
     self.managedObject = managedObject
   }
+
+  public var objectID: NSManagedObjectID { managedObject.objectID }
+  public var accountManagedObject: AccountMO { managedObject }
 
   func assignAccount(serverUrl: String, userName: String, apiType: BackenApiType) {
     managedObject.serverUrl = serverUrl

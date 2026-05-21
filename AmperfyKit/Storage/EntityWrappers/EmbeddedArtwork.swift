@@ -19,16 +19,19 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+import CoreData
 import Foundation
 import UIKit
 
 public class EmbeddedArtwork: NSObject {
-  public let managedObject: EmbeddedArtworkMO
+  let managedObject: EmbeddedArtworkMO
   private let fileManager = CacheFileManager.shared
 
   public init(managedObject: EmbeddedArtworkMO) {
     self.managedObject = managedObject
   }
+
+  public var objectID: NSManagedObjectID { managedObject.objectID }
 
   public var account: Account? {
     get {

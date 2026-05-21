@@ -116,23 +116,23 @@ class SearchVC: BasicTableViewController {
     snapshot.deleteAllItems()
     snapshot.appendSections(SearchSection.allCases.compactMap { $0.rawValue })
     snapshot.appendItems(
-      searchHistory.compactMap { $0.managedObject.objectID },
+      searchHistory.compactMap { $0.objectID },
       toSection: SearchSection.History.rawValue
     )
     snapshot.appendItems(
-      artists.compactMap { $0.managedObject.objectID },
+      artists.compactMap { $0.objectID },
       toSection: SearchSection.Artist.rawValue
     )
     snapshot.appendItems(
-      albums.compactMap { $0.managedObject.objectID },
+      albums.compactMap { $0.objectID },
       toSection: SearchSection.Album.rawValue
     )
     snapshot.appendItems(
-      playlists.compactMap { $0.managedObject.objectID },
+      playlists.compactMap { $0.objectID },
       toSection: SearchSection.Playlist.rawValue
     )
     snapshot.appendItems(
-      songs.compactMap { $0.managedObject.objectID },
+      songs.compactMap { $0.objectID },
       toSection: SearchSection.Song.rawValue
     )
     dataSource.apply(snapshot, animatingDifferences: animated)
@@ -145,7 +145,7 @@ class SearchVC: BasicTableViewController {
     /// Assign the data source to your collection view.
     tableView.dataSource = diffableDataSource
 
-    accountObjectId = account.managedObject.objectID
+    accountObjectId = account.objectID
     searchHistory = appDelegate.storage.main.library.getSearchHistory(for: account)
     updateDataSource(animated: false)
     navigationController?.navigationItem.searchBarPlacementAllowsExternalIntegration = true
@@ -554,19 +554,19 @@ class SearchVC: BasicTableViewController {
           result.artistsIDs = FuzzySearcher.findBestMatch(in: artists, search: searchText)
             .prefix(upToAsArray: Self.categoryItemLimit)
             .compactMap { $0 as? Artist }
-            .compactMap { $0.managedObject.objectID }
+            .compactMap { $0.objectID }
           result.albumsIDs = FuzzySearcher.findBestMatch(in: albums, search: searchText)
             .prefix(upToAsArray: Self.categoryItemLimit)
             .compactMap { $0 as? Album }
-            .compactMap { $0.managedObject.objectID }
+            .compactMap { $0.objectID }
           result.playlistsIDs = FuzzySearcher.findBestMatch(in: playlists, search: searchText)
             .prefix(upToAsArray: Self.categoryItemLimit)
             .compactMap { $0 as? Playlist }
-            .compactMap { $0.managedObject.objectID }
+            .compactMap { $0.objectID }
           result.songsIDs = FuzzySearcher.findBestMatch(in: songs, search: searchText)
             .prefix(upToAsArray: Self.categoryItemLimit)
             .compactMap { $0 as? Song }
-            .compactMap { $0.managedObject.objectID }
+            .compactMap { $0.objectID }
           return result
         }
 
@@ -624,19 +624,19 @@ class SearchVC: BasicTableViewController {
           result.artistsIDs = FuzzySearcher.findBestMatch(in: artists, search: searchText)
             .prefix(upToAsArray: Self.categoryItemLimit)
             .compactMap { $0 as? Artist }
-            .compactMap { $0.managedObject.objectID }
+            .compactMap { $0.objectID }
           result.albumsIDs = FuzzySearcher.findBestMatch(in: albums, search: searchText)
             .prefix(upToAsArray: Self.categoryItemLimit)
             .compactMap { $0 as? Album }
-            .compactMap { $0.managedObject.objectID }
+            .compactMap { $0.objectID }
           result.playlistsIDs = FuzzySearcher.findBestMatch(in: playlists, search: searchText)
             .prefix(upToAsArray: Self.categoryItemLimit)
             .compactMap { $0 as? Playlist }
-            .compactMap { $0.managedObject.objectID }
+            .compactMap { $0.objectID }
           result.songsIDs = FuzzySearcher.findBestMatch(in: songs, search: searchText)
             .prefix(upToAsArray: Self.categoryItemLimit)
             .compactMap { $0 as? Song }
-            .compactMap { $0.managedObject.objectID }
+            .compactMap { $0.objectID }
           return result
         }
 

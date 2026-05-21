@@ -24,7 +24,7 @@ import Foundation
 import UIKit
 
 public class Radio: AbstractPlayable, Identifyable {
-  public let managedObject: RadioMO
+  let managedObject: RadioMO
 
   public init(managedObject: RadioMO) {
     self.managedObject = managedObject

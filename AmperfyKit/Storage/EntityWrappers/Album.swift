@@ -26,7 +26,7 @@ import UIKit
 // MARK: - Album
 
 public class Album: AbstractLibraryEntity {
-  public let managedObject: AlbumMO
+  let managedObject: AlbumMO
 
   public init(managedObject: AlbumMO) {
     self.managedObject = managedObject

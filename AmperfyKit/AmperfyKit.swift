@@ -36,6 +36,7 @@ public class AmperKit {
   }
 
   nonisolated public static let newestElementsFetchCount = 50
+  @available(*, deprecated, message: "Use AmperfyServices instead")
   public static let shared = AmperKit()
 
   public lazy var log = {

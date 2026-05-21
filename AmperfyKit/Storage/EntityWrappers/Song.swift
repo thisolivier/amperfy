@@ -26,7 +26,7 @@ import UIKit
 // MARK: - Song
 
 public class Song: AbstractPlayable, Identifyable {
-  public let managedObject: SongMO
+  let managedObject: SongMO
 
   public init(managedObject: SongMO) {
     self.managedObject = managedObject

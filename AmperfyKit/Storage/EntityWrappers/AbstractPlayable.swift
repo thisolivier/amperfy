@@ -50,7 +50,7 @@ public class AbstractPlayable: AbstractLibraryEntity, Downloadable {
    it sticks there till the song is removed from memory.
    This will result in memory overflow for an array of songs.
    */
-  public let playableManagedObject: AbstractPlayableMO
+  let playableManagedObject: AbstractPlayableMO
 
   public init(managedObject: AbstractPlayableMO) {
     self.playableManagedObject = managedObject

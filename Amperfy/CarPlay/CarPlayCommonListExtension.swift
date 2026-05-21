@@ -184,7 +184,7 @@ extension CarPlaySceneDelegate {
     }
     section.userInfo = [
       CarPlayListUserInfoKeys.artworkDownloadID.rawValue: artist.artwork?.uniqueID as Any,
-      CarPlayListUserInfoKeys.artworkOwnerObjectID.rawValue: artist.managedObject.objectID as Any,
+      CarPlayListUserInfoKeys.artworkOwnerObjectID.rawValue: artist.objectID as Any,
       CarPlayListUserInfoKeys.artworkOwnerType.rawValue: ArtworkType.artist as Any,
     ]
     section.handler = { [weak self] item, completion in
@@ -270,7 +270,7 @@ extension CarPlaySceneDelegate {
     }
     section.userInfo = [
       CarPlayListUserInfoKeys.artworkDownloadID.rawValue: album.artwork?.uniqueID as Any,
-      CarPlayListUserInfoKeys.artworkOwnerObjectID.rawValue: album.managedObject.objectID as Any,
+      CarPlayListUserInfoKeys.artworkOwnerObjectID.rawValue: album.objectID as Any,
       CarPlayListUserInfoKeys.artworkOwnerType.rawValue: ArtworkType.album as Any,
     ]
     section.handler = { [weak self] item, completion in
@@ -388,8 +388,7 @@ extension CarPlaySceneDelegate {
         }
         item.userInfo = [
           CarPlayListUserInfoKeys.artworkDownloadID.rawValue: podcast.artwork?.uniqueID as Any,
-          CarPlayListUserInfoKeys.artworkOwnerObjectID.rawValue: podcast.managedObject
-            .objectID as Any,
+          CarPlayListUserInfoKeys.artworkOwnerObjectID.rawValue: podcast.objectID as Any,
           CarPlayListUserInfoKeys.artworkOwnerType.rawValue: ArtworkType.podcast as Any,
         ]
         item.handler = { [weak self] item, completion in

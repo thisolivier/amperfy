@@ -207,7 +207,7 @@ class ArtistDetailVC: MultiSourceTableViewController {
     defer { albumToScrollTo = nil }
     guard let albumToScrollTo = albumToScrollTo,
           let indexPath = albumsFetchedResultsController.fetchResultsController
-          .indexPath(forObject: albumToScrollTo.managedObject)
+          .indexPath(forObject: albumToScrollTo.coreDataObject)
     else { return }
     let adjustedIndexPath = IndexPath(row: indexPath.row, section: 1)
     tableView.scrollToRow(at: adjustedIndexPath, at: .top, animated: true)
