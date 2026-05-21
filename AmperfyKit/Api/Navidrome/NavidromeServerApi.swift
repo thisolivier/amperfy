@@ -22,11 +22,13 @@
 import Foundation
 import os.log
 
-// MARK: - Response Models
+// MARK: - NavidromeAuthResponse
 
 public struct NavidromeAuthResponse: Codable, Sendable {
   public let token: String
 }
+
+// MARK: - NavidromeFolderResponse
 
 public struct NavidromeFolderResponse: Codable, Sendable {
   public let id: String
@@ -38,6 +40,8 @@ public struct NavidromeFolderResponse: Codable, Sendable {
     case parentId = "parent_id"
   }
 }
+
+// MARK: - NavidromeFolderDetailResponse
 
 public struct NavidromeFolderDetailResponse: Codable, Sendable {
   public let id: String
@@ -53,12 +57,14 @@ public struct NavidromeFolderDetailResponse: Codable, Sendable {
   }
 }
 
+// MARK: - NavidromePlaylistRef
+
 public struct NavidromePlaylistRef: Codable, Sendable {
   public let id: String
   public let name: String
 }
 
-// MARK: - Error Types
+// MARK: - NavidromeApiError
 
 public enum NavidromeApiError: Error, LocalizedError {
   case unauthorized
@@ -73,11 +79,11 @@ public enum NavidromeApiError: Error, LocalizedError {
       return "Navidrome authentication failed"
     case .notFound:
       return "Requested resource not found"
-    case .serverError(let statusCode):
+    case let .serverError(statusCode):
       return "Navidrome server error (HTTP \(statusCode))"
-    case .networkError(let underlyingError):
+    case let .networkError(underlyingError):
       return "Network error: \(underlyingError.localizedDescription)"
-    case .decodingError(let underlyingError):
+    case let .decodingError(underlyingError):
       return "Failed to decode response: \(underlyingError.localizedDescription)"
     }
   }
@@ -86,7 +92,6 @@ public enum NavidromeApiError: Error, LocalizedError {
 // MARK: - NavidromeServerApi
 
 public final class NavidromeServerApi: Sendable {
-
   private let credentials: LoginCredentials
   private let jwtToken = Atomic<String?>(wrappedValue: nil)
   private let logger = Logger(subsystem: "dev.thisolivier.amperfy", category: "NavidromeApi")
@@ -104,7 +109,7 @@ public final class NavidromeServerApi: Sendable {
       "password": credentials.password,
     ]
 
-    logger.info("Authenticating with Navidrome at \(self.credentials.serverUrl, privacy: .public)")
+    logger.info("Authenticating with Navidrome at \(credentials.serverUrl, privacy: .public)")
 
     do {
       let authResponse = try await AF.request(
@@ -120,7 +125,8 @@ public final class NavidromeServerApi: Sendable {
       jwtToken.wrappedValue = authResponse.token
       logger.info("Navidrome authentication successful")
     } catch {
-      logger.error("Navidrome authentication failed: \(error.localizedDescription, privacy: .public)")
+      logger
+        .error("Navidrome authentication failed: \(error.localizedDescription, privacy: .public)")
       throw NavidromeApiError.unauthorized
     }
   }
@@ -143,7 +149,8 @@ public final class NavidromeServerApi: Sendable {
     method: HTTPMethod = .get,
     parameters: Parameters? = nil,
     encoding: ParameterEncoding = URLEncoding.default
-  ) async throws -> ResponseType {
+  ) async throws
+    -> ResponseType {
     let headers = try await authenticatedHeaders()
 
     do {
@@ -158,10 +165,9 @@ public final class NavidromeServerApi: Sendable {
       .serializingDecodable(ResponseType.self)
       .value
     } catch let afError as AFError {
-      if case .responseValidationFailed(let reason) = afError,
-        case .unacceptableStatusCode(let statusCode) = reason,
-        statusCode == 401
-      {
+      if case let .responseValidationFailed(reason) = afError,
+         case let .unacceptableStatusCode(statusCode) = reason,
+         statusCode == 401 {
         // Token expired — re-authenticate and retry once
         logger.info("JWT expired, re-authenticating")
         jwtToken.wrappedValue = nil
@@ -211,10 +217,9 @@ public final class NavidromeServerApi: Sendable {
       .serializingData()
       .value
     } catch let afError as AFError {
-      if case .responseValidationFailed(let reason) = afError,
-        case .unacceptableStatusCode(let statusCode) = reason,
-        statusCode == 401
-      {
+      if case let .responseValidationFailed(reason) = afError,
+         case let .unacceptableStatusCode(statusCode) = reason,
+         statusCode == 401 {
         // Token expired — re-authenticate and retry once
         logger.info("JWT expired, re-authenticating")
         jwtToken.wrappedValue = nil
@@ -242,9 +247,8 @@ public final class NavidromeServerApi: Sendable {
   }
 
   private func mapAFError(_ afError: AFError) -> NavidromeApiError {
-    if case .responseValidationFailed(let reason) = afError,
-      case .unacceptableStatusCode(let statusCode) = reason
-    {
+    if case let .responseValidationFailed(reason) = afError,
+       case let .unacceptableStatusCode(statusCode) = reason {
       switch statusCode {
       case 401:
         return .unauthorized
@@ -278,8 +282,7 @@ public final class NavidromeServerApi: Sendable {
   }
 
   public func createFolder(name: String, parentId: String?) async throws
-    -> NavidromeFolderResponse
-  {
+    -> NavidromeFolderResponse {
     let url = "\(baseUrl)/api/playlist/folder"
     var bodyParameters: [String: String] = ["name": name]
     if let parentId = parentId {
@@ -324,14 +327,16 @@ public final class NavidromeServerApi: Sendable {
   public func addPlaylistToFolder(folderId: String, playlistId: String) async throws {
     let url = "\(baseUrl)/api/playlist/folder/\(folderId)/playlist/\(playlistId)"
     logger.info(
-      "Adding playlist \(playlistId, privacy: .public) to folder \(folderId, privacy: .public)")
+      "Adding playlist \(playlistId, privacy: .public) to folder \(folderId, privacy: .public)"
+    )
     try await requestVoid(url: url, method: .post)
   }
 
   public func removePlaylistFromFolder(folderId: String, playlistId: String) async throws {
     let url = "\(baseUrl)/api/playlist/folder/\(folderId)/playlist/\(playlistId)"
     logger.info(
-      "Removing playlist \(playlistId, privacy: .public) from folder \(folderId, privacy: .public)")
+      "Removing playlist \(playlistId, privacy: .public) from folder \(folderId, privacy: .public)"
+    )
     try await requestVoid(url: url, method: .delete)
   }
 }
