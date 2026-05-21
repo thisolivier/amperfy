@@ -93,7 +93,7 @@ public class LocalNotificationManager {
       do {
         let fileIdentifier = identifier + ".png"
         let artworkUrl = createLocalUrl(
-          forImage: LibraryEntityImage.getImageToDisplayImmediately(
+          forImage: ArtworkImageLoader.getImageToDisplayImmediately(
             libraryEntity: podcastEpisode,
             themePreference: storage.settings.accounts.getSetting(account.info).read
               .themePreference,

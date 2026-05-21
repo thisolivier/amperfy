@@ -8,7 +8,7 @@
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
-        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="EntityImageView" customModule="AmperfyKit" customModuleProvider="target">
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="EntityImageView" customModule="Amperfy" customModuleProvider="target">
             <connections>
                 <outlet property="quadImage1" destination="vKx-V3-3Oe" id="XpO-WC-fnY"/>
                 <outlet property="quadImage2" destination="6Yw-eq-dMr" id="Osq-T2-uqF"/>
@@ -22,7 +22,7 @@
             <rect key="frame" x="0.0" y="0.0" width="518" height="379"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
-                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="L2a-k6-g8X" userLabel="Single" customClass="LibraryEntityImage" customModule="AmperfyKit" customModuleProvider="target">
+                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="L2a-k6-g8X" userLabel="Single" customClass="LibraryEntityImage" customModule="Amperfy" customModuleProvider="target">
                     <rect key="frame" x="113.5" y="44" width="291" height="291"/>
                     <constraints>
                         <constraint firstAttribute="width" secondItem="L2a-k6-g8X" secondAttribute="height" multiplier="1:1" id="1xB-u6-yjz"/>
@@ -34,13 +34,13 @@
                         <stackView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="So1-5P-vey">
                             <rect key="frame" x="0.0" y="0.0" width="379" height="189.5"/>
                             <subviews>
-                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="vKx-V3-3Oe" customClass="LibraryEntityImage" customModule="AmperfyKit" customModuleProvider="target">
+                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="vKx-V3-3Oe" customClass="LibraryEntityImage" customModule="Amperfy" customModuleProvider="target">
                                     <rect key="frame" x="0.0" y="0.0" width="189.5" height="189.5"/>
                                     <constraints>
                                         <constraint firstAttribute="width" secondItem="vKx-V3-3Oe" secondAttribute="height" multiplier="1:1" id="fux-HR-Knr"/>
                                     </constraints>
                                 </imageView>
-                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="6Yw-eq-dMr" customClass="LibraryEntityImage" customModule="AmperfyKit" customModuleProvider="target">
+                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="6Yw-eq-dMr" customClass="LibraryEntityImage" customModule="Amperfy" customModuleProvider="target">
                                     <rect key="frame" x="189.5" y="0.0" width="189.5" height="189.5"/>
                                     <constraints>
                                         <constraint firstAttribute="width" secondItem="6Yw-eq-dMr" secondAttribute="height" multiplier="1:1" id="CCz-KH-54K"/>
@@ -54,13 +54,13 @@
                         <stackView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="4lh-dP-UIC">
                             <rect key="frame" x="0.0" y="189.5" width="379" height="189.5"/>
                             <subviews>
-                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="I31-Jf-S7g" customClass="LibraryEntityImage" customModule="AmperfyKit" customModuleProvider="target">
+                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="I31-Jf-S7g" customClass="LibraryEntityImage" customModule="Amperfy" customModuleProvider="target">
                                     <rect key="frame" x="0.0" y="0.0" width="189.5" height="189.5"/>
                                     <constraints>
                                         <constraint firstAttribute="width" secondItem="I31-Jf-S7g" secondAttribute="height" multiplier="1:1" id="C3j-xh-UT7"/>
                                     </constraints>
                                 </imageView>
-                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="BdD-Im-e5K" customClass="LibraryEntityImage" customModule="AmperfyKit" customModuleProvider="target">
+                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="BdD-Im-e5K" customClass="LibraryEntityImage" customModule="Amperfy" customModuleProvider="target">
                                     <rect key="frame" x="189.5" y="0.0" width="189.5" height="189.5"/>
                                     <constraints>
                                         <constraint firstAttribute="width" secondItem="BdD-Im-e5K" secondAttribute="height" multiplier="1:1" id="tQq-0v-DSm"/>

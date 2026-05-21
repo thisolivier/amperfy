@@ -26,7 +26,7 @@
                             <action selector="artworkPressed:" destination="gve-H7-PxP" eventType="touchUpInside" id="Vbj-zr-e7V"/>
                         </connections>
                     </button>
-                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="vJs-cv-sQf" customClass="LibraryEntityImage" customModule="AmperfyKit">
+                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="vJs-cv-sQf" customClass="LibraryEntityImage" customModule="Amperfy">
                         <rect key="frame" x="16" y="11" width="72" height="72"/>
                         <constraints>
                             <constraint firstAttribute="width" secondItem="vJs-cv-sQf" secondAttribute="height" multiplier="1:1" id="ArE-L3-Wyz"/>
