@@ -210,6 +210,24 @@ public final class StandaloneAmperfyKit: @unchecked Sendable {
     storage.settings.app.isLibrarySynced = true
   }
 
+  /// Syncs a single album's songs from the server. Must be called after `syncInitial()`.
+  @MainActor
+  public func sync(album: Album) async throws {
+    guard let librarySyncer = _librarySyncer else {
+      fatalError("sync(album:) called before login()")
+    }
+    try await librarySyncer.sync(album: album)
+  }
+
+  /// Syncs a single playlist's songs from the server. Must be called after `syncInitial()`.
+  @MainActor
+  public func syncDown(playlist: Playlist) async throws {
+    guard let librarySyncer = _librarySyncer else {
+      fatalError("syncDown(playlist:) called before login()")
+    }
+    try await librarySyncer.syncDown(playlist: playlist)
+  }
+
   /// Whether the initial sync has been completed for the active account.
   public var isSyncCompleted: Bool {
     let accountSetting = storage.settings.accounts.activeSetting.read
