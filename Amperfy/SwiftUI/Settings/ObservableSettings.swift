@@ -78,7 +78,7 @@ final class Settings: ObservableObject {
   @Published
   var themePreference: ThemePreference = .defaultValue
   @Published
-  var appearanceMode: UIUserInterfaceStyle = .unspecified
+  var appearanceMode: AppearanceStyle = .unspecified
 
   @Published
   var isEqualizerEnabled = false

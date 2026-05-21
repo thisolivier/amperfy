@@ -21,7 +21,6 @@
 
 import CoreData
 import Foundation
-import UIKit
 
 class SsGenreParserDelegate: SsXmlLibParser {
   override func parser(

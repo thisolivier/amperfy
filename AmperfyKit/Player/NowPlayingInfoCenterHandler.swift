@@ -77,13 +77,14 @@ public class NowPlayingInfoCenterHandler {
 
     var artworkImage = UIImage()
     if let accountInfo = playable.account?.info {
-      artworkImage = ArtworkImageLoader.getImageToDisplayImmediately(
+      if let imageData = ArtworkImageLoader.getImageDataToDisplayImmediately(
         libraryEntity: playable,
-        themePreference: storage.settings.accounts.getSetting(accountInfo).read.themePreference,
         artworkDisplayPreference: storage.settings.accounts.getSetting(accountInfo).read
           .artworkDisplayPreference,
         useCache: true
-      )
+      ), let loadedImage = UIImage(data: imageData) {
+        artworkImage = loadedImage
+      }
       if let artwork = playable.artwork {
         getArtworkDownloaderCB(accountInfo).download(object: artwork)
       }

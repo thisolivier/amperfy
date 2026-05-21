@@ -249,7 +249,7 @@ extension PlayerFacade {
     }
   }
 
-  public var skipForwardIcon: UIImage {
+  public var skipForwardImage: AmperfyImage {
     switch playerMode {
     case .music:
       return .skipForward10
@@ -267,7 +267,7 @@ extension PlayerFacade {
     }
   }
 
-  public var skipBackwardIcon: UIImage {
+  public var skipBackwardImage: AmperfyImage {
     switch playerMode {
     case .music:
       return .skipBackward10

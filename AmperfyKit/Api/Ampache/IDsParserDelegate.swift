@@ -21,7 +21,6 @@
 
 import CoreData
 import Foundation
-import UIKit
 
 class IDsParserDelegate: AmpacheNotifiableXmlParser {
   public private(set) var prefetchIDs = LibraryStorage.PrefetchIdContainer()

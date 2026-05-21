@@ -22,7 +22,6 @@
 import CoreData
 import Foundation
 import os.log
-import UIKit
 
 class SsIDsParserDelegate: SsNotifiableXmlParser {
   public private(set) var prefetchIDs = LibraryStorage.PrefetchIdContainer()

@@ -133,16 +133,16 @@ class MOCK_AlertDisplayable: AlertDisplayable {
     title: String,
     subtitle: String,
     style: LogEntryType,
-    notificationBanner popupVC: UIViewController
+    notificationBanner popupVC: AnyObject
   ) {}
-  func display(popup popupVC: UIViewController) {}
+  func display(popup popupVC: AnyObject) {}
   func createPopupVC(
     topic: String,
     shortMessage: String,
     detailMessage: String,
     logType: AmperfyKit.LogEntryType
   )
-    -> UIViewController { UIViewController() }
+    -> AnyObject { NSObject() }
 }
 
 // MARK: - MOCK_LibrarySyncer

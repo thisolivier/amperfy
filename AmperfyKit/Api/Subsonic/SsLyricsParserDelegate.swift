@@ -21,7 +21,6 @@
 
 import CoreData
 import Foundation
-import UIKit
 
 class SsLyricsParserDelegate: SsXmlParser {
   public var lyricsList: LyricsList?

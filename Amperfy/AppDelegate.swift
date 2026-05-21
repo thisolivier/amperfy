@@ -325,7 +325,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       }
     }
     bgTask.setTaskCompleted(success: success)
-    userStatistics.backgroundFetchPerformed(result: UIBackgroundFetchResult.newData)
+    userStatistics.backgroundFetchPerformed(result: .newData)
     scheduleAppRefresh()
   }
 
@@ -576,18 +576,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     )
   }
 
-  func setAppAppearanceMode(style: UIUserInterfaceStyle) {
-    if #available(iOS 13.0, *) {
-      UIApplication.shared.connectedScenes
-        .forEach {
-          if let windowScene = $0 as? UIWindowScene {
-            windowScene.windows.forEach { window in
-              window.overrideUserInterfaceStyle = style
-              window.rootViewController?.overrideUserInterfaceStyle = style
-            }
+  func setAppAppearanceMode(style: AppearanceStyle) {
+    let uiStyle = style.asUIUserInterfaceStyle
+    UIApplication.shared.connectedScenes
+      .forEach {
+        if let windowScene = $0 as? UIWindowScene {
+          windowScene.windows.forEach { window in
+            window.overrideUserInterfaceStyle = uiStyle
+            window.rootViewController?.overrideUserInterfaceStyle = uiStyle
           }
         }
-    }
+      }
   }
 
   func applicationWillResignActive(_ application: UIApplication) {

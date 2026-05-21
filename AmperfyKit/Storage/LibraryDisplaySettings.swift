@@ -21,9 +21,6 @@
 
 import Foundation
 
-import Foundation
-import UIKit
-
 // MARK: - LibraryDisplayType
 
 @MainActor
@@ -83,41 +80,6 @@ public enum LibraryDisplayType: Int, CaseIterable, Sendable {
       return "Radios"
     case .completeAlbums:
       return "Complete Albums"
-    }
-  }
-
-  public var image: UIImage {
-    switch self {
-    case .artists:
-      return UIImage.artist
-    case .albums:
-      return UIImage.album
-    case .songs:
-      return UIImage.musicalNotes
-    case .genres:
-      return UIImage.genre
-    case .directories:
-      return UIImage.folder
-    case .playlists:
-      return UIImage.playlist
-    case .podcasts:
-      return UIImage.podcast
-    case .downloads:
-      return UIImage.download
-    case .favoriteSongs:
-      return UIImage.heartFill
-    case .favoriteAlbums:
-      return UIImage.heartFill
-    case .favoriteArtists:
-      return UIImage.heartFill
-    case .newestAlbums:
-      return UIImage.albumNewest
-    case .recentAlbums:
-      return UIImage.albumRecent
-    case .radios:
-      return UIImage.radio
-    case .completeAlbums:
-      return UIImage.album
     }
   }
 }

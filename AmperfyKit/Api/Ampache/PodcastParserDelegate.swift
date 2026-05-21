@@ -22,7 +22,6 @@
 import CoreData
 import Foundation
 import os.log
-import UIKit
 
 class PodcastParserDelegate: AmpacheXmlLibParser {
   var parsedPodcasts = Set<Podcast>()

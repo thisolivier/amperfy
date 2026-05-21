@@ -21,7 +21,6 @@
 
 import Foundation
 import os.log
-import UIKit
 
 public class BackgroundFetchTriggeredSyncer {
   private let storage: PersistentStorage

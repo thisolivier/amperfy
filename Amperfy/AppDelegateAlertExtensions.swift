@@ -115,8 +115,9 @@ extension AppDelegate: AlertDisplayable {
     title: String,
     subtitle: String,
     style: LogEntryType,
-    notificationBanner popupVC: UIViewController
+    notificationBanner popupVC: AnyObject
   ) {
+    guard let popupVC = popupVC as? UIViewController else { return }
     guard NotificationBannerQueue.default.numberOfBanners < 1,
           let topView = Self.topViewController(),
           topView.presentedViewController == nil,
@@ -162,8 +163,9 @@ extension AppDelegate: AlertDisplayable {
     )
   }
 
-  func display(popup popupVC: UIViewController) {
-    guard let topView = Self.topViewController(),
+  func display(popup popupVC: AnyObject) {
+    guard let popupVC = popupVC as? UIViewController,
+          let topView = Self.topViewController(),
           topView.presentedViewController == nil
     else { return }
     popupVC.modalPresentationStyle = .overCurrentContext
@@ -177,7 +179,7 @@ extension AppDelegate: AlertDisplayable {
     detailMessage: String,
     logType: LogEntryType
   )
-    -> UIViewController {
+    -> AnyObject {
     let popupVC = NotificationDetailVC()
     popupVC.display(title: topic, message: detailMessage, type: logType)
     return popupVC

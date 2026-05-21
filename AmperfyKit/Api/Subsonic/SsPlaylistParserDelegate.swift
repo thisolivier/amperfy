@@ -22,7 +22,6 @@
 import CoreData
 import Foundation
 import os.log
-import UIKit
 
 class SsPlaylistParserDelegate: SsXmlParser {
   private var playlist: Playlist?

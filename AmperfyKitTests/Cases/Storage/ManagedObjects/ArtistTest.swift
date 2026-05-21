@@ -105,7 +105,7 @@ class ArtistTest: XCTestCase {
   }
 
   func testArtworkAndImage() {
-    let testData = UIImage.getGeneratedArtwork(theme: .blue, artworkType: .artist).pngData()!
+    let testData = UIImage(systemName: "music.note")!.pngData()!
     let relFilePath = URL(string: "testArtwork")!
     let absFilePath = CacheFileManager.shared.getAbsoluteAmperfyPath(relFilePath: relFilePath)!
     try! CacheFileManager.shared.writeDataExcludedFromBackup(

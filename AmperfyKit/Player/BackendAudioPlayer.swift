@@ -23,7 +23,6 @@ import AudioStreaming
 import AVFoundation
 import Foundation
 import os.log
-import UIKit
 
 // MARK: - BackendAudioPlayerNotifiable
 

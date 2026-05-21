@@ -210,7 +210,7 @@ extension AppDelegate {
       ),
       UIKeyCommand(
         title: "Skip Forward: " + Int(player.skipForwardInterval).description + " sec.",
-        image: player.skipForwardIcon,
+        image: player.skipForwardImage.asUIImage,
         action: #selector(keyCommandSkipForward),
         input: UIKeyCommand.inputRightArrow,
         modifierFlags: [.shift, .command],
@@ -218,7 +218,7 @@ extension AppDelegate {
       ),
       UIKeyCommand(
         title: "Skip Backward: " + Int(player.skipBackwardInterval).description + " sec.",
-        image: player.skipBackwardIcon,
+        image: player.skipBackwardImage.asUIImage,
         action: #selector(keyCommandSkipBackward),
         input: UIKeyCommand.inputLeftArrow,
         modifierFlags: [.shift, .command],
