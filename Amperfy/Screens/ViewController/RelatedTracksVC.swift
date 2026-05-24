@@ -52,6 +52,7 @@ class RelatedTracksVC: UITableViewController {
     )
     tableView.register(nibName: PlayableTableCell.typeName)
     tableView.rowHeight = PlayableTableCell.rowHeight
+    setupToolbar()
     showLoadingState()
     Task { @MainActor in
       await loadRelatedTracks()
@@ -96,6 +97,7 @@ class RelatedTracksVC: UITableViewController {
     sourceInfoByIndex = sourceInfoMap
     tableView.reloadData()
     updateContentState()
+    updateToolbarState()
   }
 
   private func fetchSongMO(
@@ -193,78 +195,118 @@ class RelatedTracksVC: UITableViewController {
     appDelegate.player.play(context: playContext)
   }
 
-  // MARK: - Swipe actions
+  // MARK: - Toolbar actions
 
-  override func tableView(
-    _ tableView: UITableView,
-    leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
-  ) -> UISwipeActionsConfiguration? {
-    let playNowAction = UIContextualAction(
-      style: .normal,
-      title: "Play Now"
-    ) { [weak self] _, _, completionHandler in
-      guard let self = self else { completionHandler(false); return }
-      let playContext = PlayContext(
-        name: "Related to \(seedSongTitle)",
-        index: indexPath.row,
-        playables: relatedSongs
-      )
-      Haptics.success.vibrate(
-        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
-      )
-      appDelegate.player.play(context: playContext)
-      completionHandler(true)
-    }
-    playNowAction.backgroundColor = .systemGreen
-    playNowAction.image = UIImage(systemName: "play.fill")
-    let configuration = UISwipeActionsConfiguration(actions: [playNowAction])
-    configuration.performsFirstActionWithFullSwipe = true
-    return configuration
+  private func setupToolbar() {
+    let playButton = UIBarButtonItem(
+      image: UIImage(systemName: "play.fill"),
+      style: .plain,
+      target: self,
+      action: #selector(playAllTapped)
+    )
+    playButton.tintColor = .systemGreen
+
+    let shuffleButton = UIBarButtonItem(
+      image: UIImage(systemName: "shuffle"),
+      style: .plain,
+      target: self,
+      action: #selector(shuffleTapped)
+    )
+
+    let queueButton = UIBarButtonItem(
+      image: UIImage(systemName: "text.badge.plus"),
+      style: .plain,
+      target: self,
+      action: #selector(queueMenuTapped(_:))
+    )
+
+    let flexSpace = UIBarButtonItem(
+      barButtonSystemItem: .flexibleSpace,
+      target: nil,
+      action: nil
+    )
+
+    toolbarItems = [playButton, flexSpace, shuffleButton, flexSpace, queueButton]
   }
 
-  override func tableView(
-    _ tableView: UITableView,
-    trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
-  ) -> UISwipeActionsConfiguration? {
-    let playable = relatedSongs[indexPath.row]
-    let isOfflineMode = appDelegate.storage.settings.user.isOfflineMode
-
-    let insertUserQueueAction = UIContextualAction(
-      style: .normal,
-      title: "Insert\nUser Queue"
-    ) { [weak self] _, _, completionHandler in
-      guard let self = self else { completionHandler(false); return }
-      Haptics.success.vibrate(
-        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
-      )
-      appDelegate.player.insertUserQueue(
-        playables: [playable].filterCached(dependigOn: isOfflineMode)
-      )
-      completionHandler(true)
+  private func updateToolbarState() {
+    let hasItems = !relatedSongs.isEmpty
+    toolbarItems?.forEach { item in
+      if item.style != .plain { return }  // skip flex spacers
+      item.isEnabled = hasItems
     }
-    insertUserQueueAction.backgroundColor = .systemBlue
-    insertUserQueueAction.image = UIImage(systemName: "text.line.first.and.arrowtriangle.forward")
+    navigationController?.setToolbarHidden(false, animated: false)
+  }
 
-    let appendUserQueueAction = UIContextualAction(
-      style: .normal,
-      title: "Append\nUser Queue"
-    ) { [weak self] _, _, completionHandler in
-      guard let self = self else { completionHandler(false); return }
-      Haptics.success.vibrate(
-        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
-      )
-      appDelegate.player.appendUserQueue(
-        playables: [playable].filterCached(dependigOn: isOfflineMode)
-      )
-      completionHandler(true)
-    }
-    appendUserQueueAction.backgroundColor = .systemIndigo
-    appendUserQueueAction.image = UIImage(systemName: "text.line.last.and.arrowtriangle.forward")
-
-    let configuration = UISwipeActionsConfiguration(
-      actions: [insertUserQueueAction, appendUserQueueAction]
+  private var filteredTracks: [AbstractPlayable] {
+    relatedSongs.filterCached(
+      dependigOn: appDelegate.storage.settings.user.isOfflineMode
     )
-    configuration.performsFirstActionWithFullSwipe = false
-    return configuration
+  }
+
+  @objc
+  private func playAllTapped() {
+    guard !relatedSongs.isEmpty else { return }
+    Haptics.success.vibrate(
+      isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
+    )
+    let playContext = PlayContext(
+      name: "Related to \(seedSongTitle)",
+      playables: filteredTracks
+    )
+    appDelegate.player.play(context: playContext)
+  }
+
+  @objc
+  private func shuffleTapped() {
+    guard !relatedSongs.isEmpty else { return }
+    Haptics.success.vibrate(
+      isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
+    )
+    let playContext = PlayContext(
+      name: "Related to \(seedSongTitle)",
+      playables: filteredTracks
+    )
+    appDelegate.player.playShuffled(context: playContext)
+  }
+
+  @objc
+  private func queueMenuTapped(_ sender: UIBarButtonItem) {
+    let alert = UIAlertController(
+      title: "Add to Queue",
+      message: "\(filteredTracks.count) tracks",
+      preferredStyle: .actionSheet
+    )
+    alert.addAction(UIAlertAction(title: "Insert to User Queue", style: .default) { [weak self] _ in
+      guard let self else { return }
+      Haptics.success.vibrate(
+        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
+      )
+      appDelegate.player.insertUserQueue(playables: filteredTracks)
+    })
+    alert.addAction(UIAlertAction(title: "Append to User Queue", style: .default) { [weak self] _ in
+      guard let self else { return }
+      Haptics.success.vibrate(
+        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
+      )
+      appDelegate.player.appendUserQueue(playables: filteredTracks)
+    })
+    alert.addAction(UIAlertAction(title: "Insert to Context Queue", style: .default) { [weak self] _ in
+      guard let self else { return }
+      Haptics.success.vibrate(
+        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
+      )
+      appDelegate.player.insertContextQueue(playables: filteredTracks)
+    })
+    alert.addAction(UIAlertAction(title: "Append to Context Queue", style: .default) { [weak self] _ in
+      guard let self else { return }
+      Haptics.success.vibrate(
+        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
+      )
+      appDelegate.player.appendContextQueue(playables: filteredTracks)
+    })
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.popoverPresentationController?.barButtonItem = sender
+    present(alert, animated: true)
   }
 }

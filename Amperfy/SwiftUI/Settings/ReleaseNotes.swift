@@ -37,21 +37,21 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
-      id: 53,
+      id: 54,
       date: "2026-05-24",
-      title: "Build 53 — Related tracks queue actions",
+      title: "Build 54 — Related tracks bulk queue",
       whatsNew: [
-        "Swipe right on a related track to play it immediately",
-        "Swipe left on a related track to insert or append to user queue",
-        "Existing context menu (three-dot button) with full queue options remains available",
+        "Play All or Shuffle All related tracks from the modal toolbar",
+        "Add all related tracks to queue (insert or append, user or context queue)",
+        "Removed per-song swipe actions that conflicted with existing detail UI",
       ],
       testingFocus: [
-        "Play a song → open Related Tracks → swipe right on a track: should start playing immediately",
-        "Swipe left on a related track: two actions appear (Insert User Queue, Append User Queue)",
-        "Insert User Queue: track should appear next in the queue after current song",
-        "Append User Queue: track should appear at end of queue",
-        "Three-dot menu on each cell still shows full context menu with all options",
-        "In offline mode: queue actions should only add cached/available tracks",
+        "Play a song → open Related Tracks → tap Play All: should start playing all related tracks",
+        "Tap Shuffle: should play related tracks in random order",
+        "Tap queue button → Insert User Queue: all tracks appear at start of queue",
+        "Tap queue button → Append User Queue: all tracks appear at end of queue",
+        "In offline mode: only cached tracks should be included in queue actions",
+        "Individual song cells should still show detail view on tap (no swipe actions)",
       ]
     ),
     ReleaseNote(
@@ -105,24 +105,6 @@ enum ReleaseNotes {
         "Tapping an album in Newest Albums should open that album's detail view",
         "Tapping a tile in Recently Added Tracks should open the recent tracks detail",
         "Add a favourite album → return to Home → Favourite Albums section should appear with correct content",
-      ]
-    ),
-    ReleaseNote(
-      id: 46,
-      date: "2026-04-17",
-      title: "Build 46 — Theme sharing",
-      whatsNew: [
-        "Export your custom theme as JSON — copies the full theme configuration to your clipboard for sharing",
-        "Import a theme by pasting JSON from your clipboard — applies all colors, gradients, fonts, and borders in one tap",
-        "New 'Share' section in Custom Theme settings between Presets and Reset",
-      ],
-      testingFocus: [
-        "Settings → Custom Theme → Share → 'Export Theme': tap and verify 'Copied!' confirmation appears for ~2 seconds, then paste into Notes to verify valid JSON",
-        "Copy exported JSON → 'Import Theme': should show confirmation alert → tap Apply → theme should update immediately",
-        "Modify the pasted JSON (change a color hex) → import again → verify the changed color applies",
-        "Put non-JSON text on clipboard → 'Import Theme' → should show 'Import Failed' error alert",
-        "Import with Custom Theme disabled → theme should auto-enable and apply the imported config",
-        "Export → Reset to Defaults → Import the exported JSON → original theme should restore",
       ]
     ),
   ]
