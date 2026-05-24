@@ -37,6 +37,24 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 53,
+      date: "2026-05-24",
+      title: "Build 53 — Related tracks queue actions",
+      whatsNew: [
+        "Swipe right on a related track to play it immediately",
+        "Swipe left on a related track to insert or append to user queue",
+        "Existing context menu (three-dot button) with full queue options remains available",
+      ],
+      testingFocus: [
+        "Play a song → open Related Tracks → swipe right on a track: should start playing immediately",
+        "Swipe left on a related track: two actions appear (Insert User Queue, Append User Queue)",
+        "Insert User Queue: track should appear next in the queue after current song",
+        "Append User Queue: track should appear at end of queue",
+        "Three-dot menu on each cell still shows full context menu with all options",
+        "In offline mode: queue actions should only add cached/available tracks",
+      ]
+    ),
+    ReleaseNote(
       id: 52,
       date: "2026-05-19",
       title: "Build 52 — Cache labels + recent tracks refresh",
@@ -105,23 +123,6 @@ enum ReleaseNotes {
         "Put non-JSON text on clipboard → 'Import Theme' → should show 'Import Failed' error alert",
         "Import with Custom Theme disabled → theme should auto-enable and apply the imported config",
         "Export → Reset to Defaults → Import the exported JSON → original theme should restore",
-      ]
-    ),
-    ReleaseNote(
-      id: 45,
-      date: "2026-04-17",
-      title: "Build 45 — Playlist sync enabled",
-      whatsNew: [
-        "Playlist background sync is now enabled by default — playlist items sync automatically on launch alongside album scan and adjacency compute",
-        "Memory safety: playlist items are parsed in a dedicated async context (per-playlist bounded), and the main context resets every 5 playlists to prevent accumulated faults",
-        "Track adjacency automatically recomputes after playlist sync completes, so adjacency scores reflect the latest playlist data",
-      ],
-      testingFocus: [
-        "Settings → Library → Background Tasks: 'Playlist Sync' should now show progress or 'Completed' instead of 'Disabled'",
-        "On first launch with this build: all three background tasks (Album Scan, Playlist Sync, Adjacency) should run sequentially",
-        "Monitor memory in Instruments during playlist sync on a large library — peak should stay under ~500 MB",
-        "Force-quit mid-sync and relaunch — interrupted tasks should recover and re-run",
-        "After playlist sync completes, adjacency should automatically start computing",
       ]
     ),
   ]

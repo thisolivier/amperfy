@@ -192,4 +192,79 @@ class RelatedTracksVC: UITableViewController {
     )
     appDelegate.player.play(context: playContext)
   }
+
+  // MARK: - Swipe actions
+
+  override func tableView(
+    _ tableView: UITableView,
+    leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+  ) -> UISwipeActionsConfiguration? {
+    let playNowAction = UIContextualAction(
+      style: .normal,
+      title: "Play Now"
+    ) { [weak self] _, _, completionHandler in
+      guard let self = self else { completionHandler(false); return }
+      let playContext = PlayContext(
+        name: "Related to \(seedSongTitle)",
+        index: indexPath.row,
+        playables: relatedSongs
+      )
+      Haptics.success.vibrate(
+        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
+      )
+      appDelegate.player.play(context: playContext)
+      completionHandler(true)
+    }
+    playNowAction.backgroundColor = .systemGreen
+    playNowAction.image = UIImage(systemName: "play.fill")
+    let configuration = UISwipeActionsConfiguration(actions: [playNowAction])
+    configuration.performsFirstActionWithFullSwipe = true
+    return configuration
+  }
+
+  override func tableView(
+    _ tableView: UITableView,
+    trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+  ) -> UISwipeActionsConfiguration? {
+    let playable = relatedSongs[indexPath.row]
+    let isOfflineMode = appDelegate.storage.settings.user.isOfflineMode
+
+    let insertUserQueueAction = UIContextualAction(
+      style: .normal,
+      title: "Insert\nUser Queue"
+    ) { [weak self] _, _, completionHandler in
+      guard let self = self else { completionHandler(false); return }
+      Haptics.success.vibrate(
+        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
+      )
+      appDelegate.player.insertUserQueue(
+        playables: [playable].filterCached(dependigOn: isOfflineMode)
+      )
+      completionHandler(true)
+    }
+    insertUserQueueAction.backgroundColor = .systemBlue
+    insertUserQueueAction.image = UIImage(systemName: "text.line.first.and.arrowtriangle.forward")
+
+    let appendUserQueueAction = UIContextualAction(
+      style: .normal,
+      title: "Append\nUser Queue"
+    ) { [weak self] _, _, completionHandler in
+      guard let self = self else { completionHandler(false); return }
+      Haptics.success.vibrate(
+        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
+      )
+      appDelegate.player.appendUserQueue(
+        playables: [playable].filterCached(dependigOn: isOfflineMode)
+      )
+      completionHandler(true)
+    }
+    appendUserQueueAction.backgroundColor = .systemIndigo
+    appendUserQueueAction.image = UIImage(systemName: "text.line.last.and.arrowtriangle.forward")
+
+    let configuration = UISwipeActionsConfiguration(
+      actions: [insertUserQueueAction, appendUserQueueAction]
+    )
+    configuration.performsFirstActionWithFullSwipe = false
+    return configuration
+  }
 }
