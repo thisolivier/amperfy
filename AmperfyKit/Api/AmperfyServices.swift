@@ -228,6 +228,16 @@ public final class StandaloneAmperfyKit: @unchecked Sendable {
     try await librarySyncer.syncDown(playlist: playlist)
   }
 
+  /// Searches the server for songs matching the given text and stores results in CoreData.
+  /// After this call returns, `library.searchSongs()` will find the server-synced results.
+  @MainActor
+  public func searchSongs(searchText: String) async throws {
+    guard let librarySyncer = _librarySyncer else {
+      fatalError("searchSongs(searchText:) called before login()")
+    }
+    try await librarySyncer.searchSongs(searchText: searchText)
+  }
+
   /// Whether the initial sync has been completed for the active account.
   public var isSyncCompleted: Bool {
     let accountSetting = storage.settings.accounts.activeSetting.read
