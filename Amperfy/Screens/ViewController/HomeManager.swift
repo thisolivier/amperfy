@@ -504,17 +504,20 @@ class HomeManager: NSObject {
     applySnapshotCB?()
   }
 
-  /// Refresh the recent-tracks widget data. Pulls the top 10 songs that pass
-  /// the non-whole-album filter (threshold 5) and always renders them —
-  /// `RecentTracksQuery.topN` naturally falls back to the next-most-recent
-  /// older songs when fewer than 10 were added within the freshness window,
-  /// and to the whole library when it has fewer than 10 qualifying songs in
-  /// total — and computes the "X more in the last 7 days" footer count.
+  /// Refresh the recent-tracks widget data. Uses `RecentTracksQuery`'s
+  /// two-stage fetch (`widgetTracks(context:minimumCount:)`) so the widget
+  /// always renders: stage 1 supplies the top songs that pass the
+  /// non-whole-album filter (threshold 5), and stage 2 pads the remainder
+  /// with the most-recently-added songs of ANY album type (deduped against
+  /// stage 1) whenever stage 1 alone falls short of
+  /// `recentTracksWidgetItemCount` — including the case where a library's
+  /// recent additions are entirely whole albums and stage 1 returns zero
+  /// rows. Also computes the "X more in the last 7 days" footer count.
   func updateRecentTracks() {
     let context = storage.main.context
-    let topSongs = RecentTracksQuery.topN(
+    let topSongs = RecentTracksQuery.widgetTracks(
       context: context,
-      n: Self.recentTracksWidgetItemCount
+      minimumCount: Self.recentTracksWidgetItemCount
     )
     data[.recentTracks] = topSongs.compactMap { Song(managedObject: $0) }.compactMap {
       HomeItem(playableContainable: $0)

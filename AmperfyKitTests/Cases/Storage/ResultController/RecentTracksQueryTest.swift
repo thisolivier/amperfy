@@ -336,4 +336,165 @@ class RecentTracksQueryTest: XCTestCase {
     let result = RecentTracksQuery.topN(context: testContext, n: 10)
     XCTAssertEqual(ids(result, withPrefix: "t-"), expectedIds)
   }
+
+  // MARK: - widgetTracks two-stage fetch
+
+  /// Removes every song the shared `CoreDataSeeder` inserted, leaving only
+  /// whatever the current test created (identified by the `"t-"` id
+  /// prefix). 12 of the seeded fixture songs are marked `isCached: true`
+  /// and therefore pass `SongMO.excludeServerDeleteUncachedSongsFetchPredicate`
+  /// via its `relFilePath != nil` branch; since their parent albums also
+  /// have `remoteSongCount == 0` (unset), they pass the non-whole-album
+  /// filter too — meaning they qualify for BOTH `topN` and `topNAnyAlbum`,
+  /// with a `nil` `addedDate` that would otherwise silently consume
+  /// `fetchLimit` slots. Filtering assertions by the `"t-"` prefix (as the
+  /// `topN`/`lastMDays` tests above do) is enough when only the
+  /// presence/order of specific ids matters, but not for the
+  /// `widgetTracks` tests below — several of which depend on the stage-1
+  /// fetch being genuinely empty, or on an exact total-count budget, which
+  /// the 12 seeded rows would otherwise quietly satisfy on their own.
+  private func removeSeededContaminantSongs() {
+    let fetchRequest: NSFetchRequest<SongMO> = SongMO.fetchRequest()
+    let allSongs = (try? testContext.fetch(fetchRequest)) ?? []
+    for song in allSongs where !song.id.hasPrefix("t-") {
+      testContext.delete(song)
+    }
+    library.saveContext()
+  }
+
+  /// A library whose recent additions are entirely whole albums yields
+  /// zero qualifying rows from `topN` (stage 1) — `widgetTracks` must still
+  /// show the 10 most-recently-added songs of any album type via stage-2
+  /// padding, since `primary` is empty and `padding` supplies all 10.
+  func testWidgetTracksPadsEntirelyFromAnyAlbumWhenLibraryIsAllWholeAlbums() {
+    removeSeededContaminantSongs()
+    let dayInSeconds = 86_400.0
+    let wholeAlbum = makeAlbum(id: "alb-whole", releaseType: "album", remoteSongCount: 8)
+    var expectedIds: [String] = []
+    for offsetDays in 1 ... 10 {
+      let id = "t-whole-\(offsetDays)d"
+      makeSong(
+        id: id,
+        addedDate: nowReference.addingTimeInterval(-Double(offsetDays) * dayInSeconds),
+        onAlbum: wholeAlbum
+      )
+      expectedIds.append(id)
+    }
+    library.saveContext()
+
+    let result = RecentTracksQuery.widgetTracks(context: testContext, minimumCount: 10)
+    XCTAssertEqual(ids(result, withPrefix: "t-"), expectedIds)
+  }
+
+  /// Primary (qualifying) songs also satisfy `topNAnyAlbum`'s predicate (it
+  /// has no whole-album exclusion), so a naive "top candidates by date"
+  /// padding fetch would re-surface them unless explicitly deduped. This
+  /// test picks a fetch window (`minimumCount + primary.count` == 13) that
+  /// exactly spans all 13 fixture songs, guaranteeing the 3 qualifying
+  /// songs fall inside the `topNAnyAlbum` candidate window and must be
+  /// filtered out by id rather than merely being out of range.
+  func testWidgetTracksDedupesPrimarySongsFromPadding() {
+    removeSeededContaminantSongs()
+    let dayInSeconds = 86_400.0
+    let qualifyingAlbum = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 2)
+    let wholeAlbum = makeAlbum(id: "alb-whole", releaseType: "album", remoteSongCount: 8)
+
+    // 3 qualifying songs, most-recent-first: 2d, 4d, 6d.
+    let qualifyingIds = ["t-q-2d", "t-q-4d", "t-q-6d"]
+    makeSong(
+      id: "t-q-2d",
+      addedDate: nowReference.addingTimeInterval(-2 * dayInSeconds),
+      onAlbum: qualifyingAlbum
+    )
+    makeSong(
+      id: "t-q-4d",
+      addedDate: nowReference.addingTimeInterval(-4 * dayInSeconds),
+      onAlbum: qualifyingAlbum
+    )
+    makeSong(
+      id: "t-q-6d",
+      addedDate: nowReference.addingTimeInterval(-6 * dayInSeconds),
+      onAlbum: qualifyingAlbum
+    )
+
+    // 10 whole-album songs interleaved around and beyond the qualifying
+    // dates (some fresher than every qualifying song, some older than all
+    // of them), in most-recent-first order.
+    let wholeOffsetsDays = [1, 3, 5, 7, 8, 9, 10, 11, 12, 13]
+    var wholeIdsByRecency: [String] = []
+    for offsetDays in wholeOffsetsDays {
+      let id = "t-w-\(offsetDays)d"
+      makeSong(
+        id: id,
+        addedDate: nowReference.addingTimeInterval(-Double(offsetDays) * dayInSeconds),
+        onAlbum: wholeAlbum
+      )
+      wholeIdsByRecency.append(id)
+    }
+    library.saveContext()
+
+    let result = RecentTracksQuery.widgetTracks(context: testContext, minimumCount: 10)
+    let resultIds = ids(result, withPrefix: "t-")
+
+    // (a) no id appears twice.
+    XCTAssertEqual(resultIds.count, Set(resultIds).count)
+    // (c) total count is exactly min(10, 13 distinct songs available).
+    XCTAssertEqual(resultIds.count, 10)
+    // (b) qualifying songs appear first, in their own recency order.
+    XCTAssertEqual(Array(resultIds.prefix(3)), qualifyingIds)
+    // (d) padding is the next-most-recent any-album songs excluding the
+    // ones already counted as primary — the 7 most recent of the 10
+    // whole-album songs (the 3 oldest, 11d/12d/13d, are dropped since only
+    // 10 - 3 = 7 padding slots remain).
+    XCTAssertEqual(Array(resultIds.suffix(7)), Array(wholeIdsByRecency.prefix(7)))
+  }
+
+  /// A tiny library with fewer than `minimumCount` songs of any kind
+  /// returns everything that exists — qualifying songs first, then
+  /// whole-album padding — without erroring or padding further than what
+  /// actually exists.
+  func testWidgetTracksReturnsEverythingWhenLibrarySmallerThanMinimum() {
+    removeSeededContaminantSongs()
+    let dayInSeconds = 86_400.0
+    let qualifyingAlbum = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 1)
+    let wholeAlbum = makeAlbum(id: "alb-whole", releaseType: "album", remoteSongCount: 8)
+
+    makeSong(
+      id: "t-q-1d",
+      addedDate: nowReference.addingTimeInterval(-1 * dayInSeconds),
+      onAlbum: qualifyingAlbum
+    )
+    makeSong(
+      id: "t-w-2d",
+      addedDate: nowReference.addingTimeInterval(-2 * dayInSeconds),
+      onAlbum: wholeAlbum
+    )
+    makeSong(
+      id: "t-q-3d",
+      addedDate: nowReference.addingTimeInterval(-3 * dayInSeconds),
+      onAlbum: qualifyingAlbum
+    )
+    makeSong(
+      id: "t-w-4d",
+      addedDate: nowReference.addingTimeInterval(-4 * dayInSeconds),
+      onAlbum: wholeAlbum
+    )
+    library.saveContext()
+
+    let result = RecentTracksQuery.widgetTracks(context: testContext, minimumCount: 10)
+    // primary = qualifying songs, most-recent-first: t-q-1d, t-q-3d.
+    // padding = remaining any-album songs after dedup: t-w-2d, t-w-4d.
+    XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-q-1d", "t-q-3d", "t-w-2d", "t-w-4d"])
+  }
+
+  /// A genuinely empty library (no songs of any kind, once seeded
+  /// contaminants are removed) returns an empty array from both fetch
+  /// stages rather than erroring or crashing.
+  func testWidgetTracksReturnsEmptyForEmptyLibrary() {
+    removeSeededContaminantSongs()
+    library.saveContext()
+
+    let result = RecentTracksQuery.widgetTracks(context: testContext, minimumCount: 10)
+    XCTAssertTrue(result.isEmpty)
+  }
 }

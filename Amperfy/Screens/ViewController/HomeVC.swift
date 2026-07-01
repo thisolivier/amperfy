@@ -264,14 +264,22 @@ final class HomeVC: UICollectionViewController {
   }
 
   /// Sections that must be hidden from the Home snapshot when they have no
-  /// items to show. Used to drop the standalone "Recently Added Tracks"
-  /// header on fresh-install / empty-data states (QA Bug B-2, 2026-04-11).
-  /// Sections are opted in explicitly — most Home sections have an
-  /// init-time placeholder or synchronous population path and never
-  /// transit through an empty-but-visible state, so the default continues
-  /// to render an empty section header as before.
+  /// items to show. Originally used to drop the standalone "Recently Added
+  /// Tracks" header on fresh-install / empty-data states alongside the
+  /// favourites sections (QA Bug B-2, 2026-04-11). `.recentTracks` was
+  /// removed from this set per sprint Amp-1 (Director Review Round 1): once
+  /// the widget is added to the home screen it must always render, even
+  /// when `HomeManager.updateRecentTracks()` legitimately produces an empty
+  /// (or short) result — visibility is no longer coupled to whether the
+  /// underlying query matched anything. `.favouriteAlbums`,
+  /// `.favouriteArtists`, and `.favouritePlaylists` keep the original
+  /// empty-hiding behaviour for B-2 and remain opted in below. Sections are
+  /// opted in explicitly — most Home sections have an init-time placeholder
+  /// or synchronous population path and never transit through an
+  /// empty-but-visible state, so the default continues to render an empty
+  /// section header as before.
   private static let sectionsHiddenWhenEmpty: Set<HomeSection> = [
-    .recentTracks, .favouriteAlbums, .favouriteArtists, .favouritePlaylists,
+    .favouriteAlbums, .favouriteArtists, .favouritePlaylists,
   ]
 
   private func applySnapshot(animated: Bool = true) {
