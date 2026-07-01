@@ -51,7 +51,12 @@ public enum RecentTracksQuery {
   /// Returns up to `n` songs sorted by `addedDate` DESC, filtered to songs
   /// whose parent album is not a whole album. Used by:
   ///
-  /// * The home widget (n=7) — bounded list.
+  /// * The home widget (n=10) — bounded list. Once the widget is on the
+  ///   home screen it always renders: Core Data's `fetchLimit` only caps
+  ///   the result, it never pads, so this single fetch naturally covers
+  ///   "fewer than 10 fresh songs" (falls back to older songs) and
+  ///   "fewer than 10 songs in the whole library" (returns all of them)
+  ///   with no extra merge/top-up logic required.
   /// * The synthetic detail view's "Top N" mode (default n=14).
   public static func topN(
     context: NSManagedObjectContext,
@@ -114,26 +119,5 @@ public enum RecentTracksQuery {
       NSPredicate(format: "%K >= %@", #keyPath(SongMO.addedDate), cutoff as NSDate),
     ])
     return (try? context.count(for: fetchRequest)) ?? 0
-  }
-
-  /// Returns `true` if the home widget should render given the current top-N
-  /// fetch result. The widget is hidden if all of the freshest 7 qualifying
-  /// tracks have `addedDate < now - 7.days`. With fewer than 7 results we
-  /// still show whatever we have, as long as at least one is fresh.
-  ///
-  /// The hide-when-stale rule is implemented in pure Swift (not in the
-  /// fetch predicate) so the helper is unit-testable without a Core Data
-  /// stack.
-  public static func shouldShowWidget(
-    topResults: [SongMO],
-    now: Date = Date(),
-    freshnessWindowDays: Int = 7
-  )
-    -> Bool {
-    let cutoff = now.addingTimeInterval(-Double(freshnessWindowDays) * 24 * 60 * 60)
-    return topResults.contains { song in
-      guard let addedDate = song.addedDate else { return false }
-      return addedDate >= cutoff
-    }
   }
 }

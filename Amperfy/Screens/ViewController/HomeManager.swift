@@ -45,8 +45,10 @@ struct HomeItem: Hashable, @unchecked Sendable {
 class HomeManager: NSObject {
   public static let sectionMaxItemCount = 20
   /// The number of recent-track rows the home widget shows when present.
-  /// Spec: "up to 7 track rows" (BACKLOG.md §3.1).
-  public static let recentTracksWidgetItemCount = 7
+  /// Once the widget is on the home screen it always renders, always
+  /// showing the 10 most recently-added qualifying tracks (or the whole
+  /// library if it has fewer than 10) — see `RecentTracksQuery.topN`.
+  public static let recentTracksWidgetItemCount = 10
 
   public var orderedVisibleSections: [HomeSection]
   public var data: [HomeSection: [HomeItem]] = [:]
@@ -502,33 +504,29 @@ class HomeManager: NSObject {
     applySnapshotCB?()
   }
 
-  /// Refresh the recent-tracks widget data. Pulls the top 7 songs that pass
-  /// the non-whole-album filter (threshold 5), hides the section entirely
-  /// when all 7 are older than 7 days (per BACKLOG.md §3.1), and computes
-  /// the "X more in the last 7 days" footer count.
+  /// Refresh the recent-tracks widget data. Pulls the top 10 songs that pass
+  /// the non-whole-album filter (threshold 5) and always renders them —
+  /// `RecentTracksQuery.topN` naturally falls back to the next-most-recent
+  /// older songs when fewer than 10 were added within the freshness window,
+  /// and to the whole library when it has fewer than 10 qualifying songs in
+  /// total — and computes the "X more in the last 7 days" footer count.
   func updateRecentTracks() {
     let context = storage.main.context
     let topSongs = RecentTracksQuery.topN(
       context: context,
       n: Self.recentTracksWidgetItemCount
     )
-    if RecentTracksQuery.shouldShowWidget(topResults: topSongs) {
-      data[.recentTracks] = topSongs.compactMap { Song(managedObject: $0) }.compactMap {
-        HomeItem(playableContainable: $0)
-      }
-      let lastWeekCount = RecentTracksQuery.lastMDaysCount(context: context, m: 7)
-      // Subtract the visible rows that are themselves in the 7-day window so
-      // the footer reads "X more" rather than double-counting.
-      let visibleFreshCount = topSongs.filter { song in
-        guard let added = song.addedDate else { return false }
-        return added >= Date().addingTimeInterval(-7 * 24 * 60 * 60)
-      }.count
-      recentTracksExtraCount = max(0, lastWeekCount - visibleFreshCount)
-    } else {
-      // All freshest 7 are older than 7 days → hide widget by emptying data.
-      data[.recentTracks] = []
-      recentTracksExtraCount = 0
+    data[.recentTracks] = topSongs.compactMap { Song(managedObject: $0) }.compactMap {
+      HomeItem(playableContainable: $0)
     }
+    let lastWeekCount = RecentTracksQuery.lastMDaysCount(context: context, m: 7)
+    // Subtract the visible rows that are themselves in the 7-day window so
+    // the footer reads "X more" rather than double-counting.
+    let visibleFreshCount = topSongs.filter { song in
+      guard let added = song.addedDate else { return false }
+      return added >= Date().addingTimeInterval(-7 * 24 * 60 * 60)
+    }.count
+    recentTracksExtraCount = max(0, lastWeekCount - visibleFreshCount)
     applySnapshotCB?()
   }
 }
