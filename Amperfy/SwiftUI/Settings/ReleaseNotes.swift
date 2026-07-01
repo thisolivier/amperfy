@@ -38,8 +38,24 @@ enum ReleaseNotes {
   static let entries: [ReleaseNote] = [
     ReleaseNote(
       id: 54,
+      date: "2026-07-01",
+      title: "Build 54 — Recently added tracks widget always renders",
+      whatsNew: [
+        "Recently Added Tracks no longer disappears from the Home screen — once you've added it, it always shows",
+        "The widget always shows up to 10 of your most recently added songs, topped up from your whole library when needed",
+        "Fixed a case where a library whose newest additions were all whole albums would show an empty (or missing) widget",
+      ],
+      testingFocus: [
+        "Home screen: Recently Added Tracks should always appear once added to Home, even on a lightly-used or freshly-synced library",
+        "Add several whole albums (no individual singles/loose tracks) recently: the widget should still show up to 10 of the newest songs from those albums",
+        "A library with fewer than 10 total songs should show everything it has in the widget",
+        "Tapping a tile in Recently Added Tracks should still open the recent tracks detail view as before",
+      ]
+    ),
+    ReleaseNote(
+      id: 53,
       date: "2026-05-24",
-      title: "Build 54 — Related tracks bulk queue",
+      title: "Build 53 — Related tracks bulk queue",
       whatsNew: [
         "Play All or Shuffle All related tracks from the modal toolbar",
         "Add all related tracks to queue (insert or append, user or context queue)",
