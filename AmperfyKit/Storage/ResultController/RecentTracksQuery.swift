@@ -39,11 +39,15 @@ import Foundation
 /// threshold is **5** here, intentionally stricter than the library-side
 /// `wholeAlbum` filter (threshold 3) — false positives in the recent
 /// tracks list are more annoying than false negatives in the Albums
-/// filter. See `spike/amperfy/BACKLOG.md` §1.1 + §4. `topNAnyAlbum` is the
-/// exception: it deliberately omits this filter (see its doc comment) so
-/// that `widgetTracks(context:minimumCount:)` can pad the widget's display
-/// list even for libraries whose recent additions are entirely whole
-/// albums.
+/// filter. See `spike/amperfy/BACKLOG.md` §1.1 + §4.
+///
+/// This whole-album exclusion is deliberate, not a gap to be patched: the
+/// recent-tracks widget is meant to surface individually-added / single-ish
+/// tracks, and works in concert with the separate recent-albums section,
+/// which already covers whole albums. A library whose recent additions are
+/// entirely whole albums should show an empty (but visible) widget — do not
+/// "fix" that by padding the result with whole-album tracks. (User-confirmed
+/// design, sprint Amp-2, 2026-07.)
 ///
 /// The entry points return raw `SongMO` arrays. Callers wrap them into
 /// `Song` entity wrappers (the wrapping is left to the caller to keep this
@@ -55,16 +59,14 @@ public enum RecentTracksQuery {
   public static let nonWholeAlbumMinSongCount: Int16 = 5
 
   /// Returns up to `n` songs sorted by `addedDate` DESC, filtered to songs
-  /// whose parent album is not a whole album. This is the **stage 1
-  /// ("qualifying")** fetch: it highlights individually-added tracks first,
-  /// but a library whose recent additions are all whole albums can
-  /// legitimately return zero rows here. It is no longer the sole source of
-  /// the widget's display list — see `widgetTracks(context:minimumCount:)`,
-  /// which pads stage 1's results with `topNAnyAlbum` when they fall short
-  /// of the desired minimum. Used by:
+  /// whose parent album is not a whole album. This highlights
+  /// individually-added tracks first; a library whose recent additions are
+  /// all whole albums can legitimately (and correctly) return zero rows
+  /// here — see the whole-album exclusion note in the file-level doc
+  /// comment above. Used by:
   ///
-  /// * `widgetTracks(context:minimumCount:)` as its stage-1 "qualifying"
-  ///   fetch.
+  /// * The home widget (`HomeManager.updateRecentTracks()`), directly and
+  ///   unpadded.
   /// * The synthetic detail view's "Top N" mode (default n=14).
   public static func topN(
     context: NSManagedObjectContext,
@@ -74,74 +76,19 @@ public enum RecentTracksQuery {
     let fetchRequest: NSFetchRequest<SongMO> = SongMO.addedDateSortedFetchRequest
     fetchRequest.fetchLimit = n
     fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+      // Deliberately excludes tracks belonging to whole albums: this widget
+      // surfaces individually-added / single-ish tracks and works in
+      // concert with the recent-albums section, which covers whole albums.
+      // Do not "fix" an empty result by padding with album tracks — an
+      // empty (but visible) widget is correct for libraries whose recent
+      // additions are all whole albums. (User-confirmed design, sprint
+      // Amp-2, 2026-07.)
       WholeAlbumPredicates.songFromNonWholeAlbum(minSongCount: nonWholeAlbumMinSongCount),
       SongMO.excludeServerDeleteUncachedSongsFetchPredicate,
     ])
     fetchRequest.relationshipKeyPathsForPrefetching = SongMO.relationshipKeyPathsForPrefetching
     fetchRequest.returnsObjectsAsFaults = false
     return (try? context.fetch(fetchRequest)) ?? []
-  }
-
-  /// Returns up to `n` songs sorted by `addedDate` DESC, WITHOUT the
-  /// whole-album exclusion applied — the "stage 2 / any-album" fallback
-  /// fetch. Still applies the "song must be playable" guard
-  /// (`SongMO.excludeServerDeleteUncachedSongsFetchPredicate`) so the widget
-  /// never surfaces ghost rows for songs whose backing files have been
-  /// removed server-side without a local cache.
-  ///
-  /// Used by `widgetTracks(context:minimumCount:)` to pad out the display
-  /// list when `topN` returns fewer than `minimumCount` qualifying songs —
-  /// e.g. a library whose recent additions are entirely whole albums, which
-  /// would otherwise yield zero rows from `topN` no matter how large or
-  /// active the library is.
-  public static func topNAnyAlbum(
-    context: NSManagedObjectContext,
-    n: Int
-  )
-    -> [SongMO] {
-    let fetchRequest: NSFetchRequest<SongMO> = SongMO.addedDateSortedFetchRequest
-    fetchRequest.fetchLimit = n
-    fetchRequest.predicate = SongMO.excludeServerDeleteUncachedSongsFetchPredicate
-    fetchRequest.relationshipKeyPathsForPrefetching = SongMO.relationshipKeyPathsForPrefetching
-    fetchRequest.returnsObjectsAsFaults = false
-    return (try? context.fetch(fetchRequest)) ?? []
-  }
-
-  /// The home widget's display-list orchestrator: a two-stage fetch that
-  /// guarantees the widget always has something to show (down to the size
-  /// of the whole library) regardless of how the qualifying-song predicate
-  /// in `topN` fares.
-  ///
-  /// Stage 1 fetches `topN(context:n: minimumCount)` — the qualifying,
-  /// non-whole-album songs, most recent first. If that alone meets
-  /// `minimumCount`, it is returned unchanged (the common case for an
-  /// actively-curated library keeps its existing behaviour). Otherwise,
-  /// stage 2 fetches `topNAnyAlbum` with a widened window
-  /// (`minimumCount + primary.count` candidates) regardless of the
-  /// whole-album predicate, removes any songs already present in stage 1's
-  /// results (by `id`), and appends just enough of what remains — in their
-  /// own recency order — to reach `minimumCount` rows.
-  ///
-  /// The qualifying songs always lead the returned array, followed by the
-  /// padding songs; the two groups are never re-sorted together, since
-  /// surfacing individually-added tracks first is intentional. If the
-  /// library has fewer than `minimumCount` songs in total (of any kind),
-  /// the returned array is correspondingly shorter — "show everything that
-  /// exists" rather than an error or an empty result.
-  public static func widgetTracks(
-    context: NSManagedObjectContext,
-    minimumCount: Int
-  )
-    -> [SongMO] {
-    let primary = topN(context: context, n: minimumCount)
-    guard primary.count < minimumCount else { return primary }
-
-    let primaryIds = Set(primary.map(\.id))
-    let candidates = topNAnyAlbum(context: context, n: minimumCount + primary.count)
-    let padding = candidates
-      .filter { !primaryIds.contains($0.id) }
-      .prefix(minimumCount - primary.count)
-    return primary + padding
   }
 
   /// Returns all songs added within the last `m` days (inclusive of the

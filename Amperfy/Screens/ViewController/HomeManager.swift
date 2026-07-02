@@ -504,20 +504,19 @@ class HomeManager: NSObject {
     applySnapshotCB?()
   }
 
-  /// Refresh the recent-tracks widget data. Uses `RecentTracksQuery`'s
-  /// two-stage fetch (`widgetTracks(context:minimumCount:)`) so the widget
-  /// always renders: stage 1 supplies the top songs that pass the
-  /// non-whole-album filter (threshold 5), and stage 2 pads the remainder
-  /// with the most-recently-added songs of ANY album type (deduped against
-  /// stage 1) whenever stage 1 alone falls short of
-  /// `recentTracksWidgetItemCount` — including the case where a library's
-  /// recent additions are entirely whole albums and stage 1 returns zero
-  /// rows. Also computes the "X more in the last 7 days" footer count.
+  /// Refresh the recent-tracks widget data. Pulls the top
+  /// `recentTracksWidgetItemCount` qualifying (non-whole-album) songs via
+  /// `RecentTracksQuery.topN` and always renders them, even if that's fewer
+  /// than `recentTracksWidgetItemCount` rows or zero — an empty-but-visible
+  /// widget is correct when a library's recent additions are all whole
+  /// albums, since this widget deliberately excludes whole-album tracks (see
+  /// `RecentTracksQuery`'s doc comment). Also computes the "X more in the
+  /// last 7 days" footer count.
   func updateRecentTracks() {
     let context = storage.main.context
-    let topSongs = RecentTracksQuery.widgetTracks(
+    let topSongs = RecentTracksQuery.topN(
       context: context,
-      minimumCount: Self.recentTracksWidgetItemCount
+      n: Self.recentTracksWidgetItemCount
     )
     data[.recentTracks] = topSongs.compactMap { Song(managedObject: $0) }.compactMap {
       HomeItem(playableContainable: $0)

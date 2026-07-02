@@ -42,13 +42,13 @@ enum ReleaseNotes {
       title: "Build 54 — Recently added tracks widget always renders",
       whatsNew: [
         "Recently Added Tracks no longer disappears from the Home screen — once you've added it, it always shows",
-        "The widget always shows up to 10 of your most recently added songs, topped up from your whole library when needed",
-        "Fixed a case where a library whose newest additions were all whole albums would show an empty (or missing) widget",
+        "The widget shows up to 10 of your most recently added individually-added/single-ish tracks, regardless of how old the newest ones are",
+        "Whole albums are still deliberately excluded from this widget (see the separate recent-albums section) — a library whose recent additions are all whole albums will correctly show an empty (but present) widget",
       ],
       testingFocus: [
         "Home screen: Recently Added Tracks should always appear once added to Home, even on a lightly-used or freshly-synced library",
-        "Add several whole albums (no individual singles/loose tracks) recently: the widget should still show up to 10 of the newest songs from those albums",
-        "A library with fewer than 10 total songs should show everything it has in the widget",
+        "A library with only whole-album recent additions (no individual singles/loose tracks) should show an empty Recently Added Tracks widget, not a hidden one",
+        "A library with fewer than 10 qualifying (non-whole-album) songs should show everything it has in the widget",
         "Tapping a tile in Recently Added Tracks should still open the recent tracks detail view as before",
       ]
     ),
