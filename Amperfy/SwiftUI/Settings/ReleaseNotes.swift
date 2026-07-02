@@ -37,9 +37,9 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
-      id: 54,
+      id: 55,
       date: "2026-07-01",
-      title: "Build 54 — Recently added tracks widget always renders",
+      title: "Build 55 — Recently added tracks widget always renders",
       whatsNew: [
         "Recently Added Tracks no longer disappears from the Home screen — once you've added it, it always shows",
         "The widget shows up to 10 of your most recently added individually-added/single-ish tracks, regardless of how old the newest ones are",
