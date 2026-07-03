@@ -40,37 +40,27 @@ extension AuditionDeckController {
 
   /// Appends a fresh deal after the current last card (design §5.4/§5.5's "Deal <n> more").
   ///
-  /// Guarded against re-entrancy: `dealMore()` and `refresh()` share `inFlightDealingTask`
-  /// (declared on `AuditionDeckController`) because both mutate
+  /// Guarded against re-entrancy via `dealingGate` (shared with `refresh()`, declared on
+  /// `AuditionDeckController`) because both mutate
   /// `candidates`/`excludeIds`/`likedBeforeSessionIds`, and letting either run while the other is
   /// still awaiting its own `fusionEngine.deal(...)` round trip is the confirmed bug this guard
   /// closes: the slower call's eventual `candidates` write would otherwise be built against state
   /// that predates the faster call's own mutation, silently discarding it.
   ///
   /// A same-kind collision (a duplicate "Deal more" tap landing while one is already in flight) is
-  /// simply ignored — a second identical tap expresses no "newer intent" a fresh fetch could serve,
-  /// and the button is also `.disabled(isExtending || isRefreshing)` at the UI layer for the same
-  /// reason (`AuditionDeckBlendPanel.swift`); this is the belt-and-braces version for any other
-  /// caller, e.g. `AuditionDeckEndCardView`'s own "Deal more" button, which this sprint's scope
-  /// didn't include wiring a disabled state for. A cross-kind collision (`refresh()` is running)
-  /// waits instead of cancelling — abandoning `refresh()` mid-flight would risk applying its
-  /// pinning logic against half-updated state, so it is simply left to finish first.
+  /// simply ignored (`ignoreIfSameKindInFlight: true`) — a second identical tap expresses no
+  /// "newer intent" a fresh fetch could serve, and the button is also
+  /// `.disabled(isExtending || isRefreshing)` at the UI layer for the same reason
+  /// (`AuditionDeckBlendPanel.swift`); this is the belt-and-braces version for any other caller,
+  /// e.g. `AuditionDeckEndCardView`'s own "Deal more" button, which this sprint's scope didn't
+  /// include wiring a disabled state for. A cross-kind collision (`refresh()` is running) waits
+  /// instead of cancelling — abandoning `refresh()` mid-flight would risk applying its pinning
+  /// logic against half-updated state, so it is simply left to finish first.
   func dealMore() async {
-    while let existingTask = inFlightDealingTask {
-      if inFlightDealingKind == .dealMore { return }
-      await existingTask.value
-    }
-
     guard let seed = currentSeed, let kind = currentKind else { return }
-
-    let task = Task { [weak self] in
+    await dealingGate.run(kind: .dealMore, ignoreIfSameKindInFlight: true) { [weak self] in
       await self?.performDealMore(seed: seed, kind: kind)
     }
-    inFlightDealingKind = .dealMore
-    inFlightDealingTask = task
-    await task.value
-    inFlightDealingTask = nil
-    inFlightDealingKind = nil
   }
 
   private func performDealMore(seed: DeckSeed, kind: DeckCandidateKind) async {
@@ -100,47 +90,47 @@ extension AuditionDeckController {
   /// liked-but-not-yet-swiped card are pinned in place; only truly-unswiped, unliked cards below
   /// the current position regenerate.
   ///
-  /// Guarded against re-entrancy the same way as `dealMore()` — see that method's doc comment for
-  /// why the two share `inFlightDealingTask`. Unlike `dealMore()`, a same-kind collision here does
-  /// NOT ignore the newer call: `blend` is a live `@Published` property the slider mutates
-  /// directly mid-drag (see the controller's type doc comment), so simply waiting for an in-flight
-  /// `refresh()` to finish and only THEN taking a fresh `candidates`/`blend` snapshot already gives
-  /// the newest slider position priority — there's no need to cancel the older network round trip
-  /// to achieve "the newest blend wins", waiting achieves it for free. Crucially, the snapshot
-  /// (`currentIndex`/`keptIndexedCandidates`) is taken AFTER the wait loop below, not before:
-  /// taking it before would reintroduce the exact staleness bug this guard exists to fix, just
-  /// gated behind a queue instead of firing concurrently.
+  /// Guarded against re-entrancy via `dealingGate`, shared with `dealMore()` — see that method's
+  /// doc comment for why the two share a gate. Unlike `dealMore()`, a same-kind collision here
+  /// does NOT ignore the newer call (`ignoreIfSameKindInFlight: false`): `blend` is a live
+  /// `@Published` property the slider mutates directly mid-drag (see the controller's type doc
+  /// comment), so simply waiting for an in-flight `refresh()` to finish and only THEN taking a
+  /// fresh `candidates`/`blend` snapshot already gives the newest slider position priority —
+  /// there's no need to cancel the older network round trip to achieve "the newest blend wins",
+  /// waiting achieves it for free. Crucially, the snapshot (`currentIndex`/`keptIndexedCandidates`)
+  /// is computed INSIDE the gate's operation closure, not before calling `run` — computing it
+  /// before would reintroduce the exact staleness bug this guard exists to fix, just gated behind
+  /// a queue instead of firing concurrently.
   func refresh() async {
-    while let existingTask = inFlightDealingTask {
-      await existingTask.value
+    guard let seed = currentSeed, let kind = currentKind else { return }
+    var didRefresh = false
+    await dealingGate.run(kind: .refresh, ignoreIfSameKindInFlight: false) { [weak self] in
+      guard let self else { return }
+      guard let snapshot = refreshSnapshot() else { return }
+      didRefresh = true
+      await performRefresh(
+        seed: seed, kind: kind, currentIndex: snapshot.currentIndex,
+        replaceCount: snapshot.replaceCount, keptIds: snapshot.keptIds
+      )
     }
 
-    guard let seed = currentSeed, let kind = currentKind else { return }
-    let currentIndex = candidates.firstIndex(where: { $0.id == scrollPositionId }) ?? 0
+    // Deliberately outside the gated span above: the banner-visibility timer below doesn't touch
+    // `candidates`/`excludeIds`, so it has no need to hold the gate and block a subsequent
+    // refresh()/dealMore() call for its own full 1.5s on top of the actual network round trip.
+    if didRefresh {
+      await showRefreshBannerTransiently()
+    }
+  }
 
+  private func refreshSnapshot() -> (currentIndex: Int, keptIds: Set<String>, replaceCount: Int)? {
+    let currentIndex = candidates.firstIndex(where: { $0.id == scrollPositionId }) ?? 0
     let keptIndexedCandidates = candidates.enumerated().filter { index, candidate in
       index <= currentIndex || likeCoordinator.isLiked(candidate)
     }
     let keptIds = Set(keptIndexedCandidates.map(\.element.id))
     let replaceCount = candidates.count - keptIndexedCandidates.count
-    guard replaceCount > 0 else { return }
-
-    let task = Task { [weak self] in
-      await self?.performRefresh(
-        seed: seed, kind: kind, currentIndex: currentIndex,
-        replaceCount: replaceCount, keptIds: keptIds
-      )
-    }
-    inFlightDealingKind = .refresh
-    inFlightDealingTask = task
-    await task.value
-    inFlightDealingTask = nil
-    inFlightDealingKind = nil
-
-    // Deliberately outside the guarded span above: the banner-visibility timer below doesn't touch
-    // `candidates`/`excludeIds`, so it has no need to hold the slot and block a subsequent
-    // refresh()/dealMore() call for its own full 1.5s on top of the actual network round trip.
-    await showRefreshBannerTransiently()
+    guard replaceCount > 0 else { return nil }
+    return (currentIndex, keptIds, replaceCount)
   }
 
   private func performRefresh(

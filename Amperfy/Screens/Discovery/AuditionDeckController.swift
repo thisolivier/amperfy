@@ -96,22 +96,15 @@ final class AuditionDeckController: ObservableObject {
   /// More) — the baseline `sessionLikedCount` diffs against.
   var likedBeforeSessionIds: Set<String> = []
 
-  /// Tags which of `refresh()`/`dealMore()` currently owns `inFlightDealingTask` — see both
-  /// methods' doc comments in `AuditionDeckController+Dealing.swift` for the full re-entrancy
-  /// design these two properties implement together.
-  enum DealingOperationKind {
-    case refresh
-    case dealMore
-  }
-
-  /// Single shared slot `refresh()` and `dealMore()` both claim while they run. Neither is safe to
-  /// run concurrently with the other, or with a second call to itself, since both mutate
+  /// Single shared gate `refresh()` and `dealMore()` both run through — neither is safe to run
+  /// concurrently with the other, or with a second call to itself, since both mutate
   /// `candidates`/`excludeIds`/`likedBeforeSessionIds` and `refresh()` snapshots `candidates`
-  /// before its own `await` — an unguarded overlap is exactly the re-entrancy bug this pair of
-  /// properties closes. Not `private`, same reasoning as `excludeIds` et al. above:
-  /// `AuditionDeckController+Dealing.swift` needs to read/write these too.
-  var inFlightDealingTask: Task<Void, Never>?
-  var inFlightDealingKind: DealingOperationKind?
+  /// before its own `await` — an unguarded overlap is exactly the re-entrancy bug this gate
+  /// closes (D4 Director review finding). Extracted to `AmperfyKit.DeckDealingGate` so the
+  /// mutual-exclusion mechanism itself is unit-testable without needing `Amperfy`-app-target
+  /// testability (see that type's doc comment for why). Not `private`, same reasoning as
+  /// `excludeIds` et al. above: `AuditionDeckController+Dealing.swift` needs to read this too.
+  let dealingGate = DeckDealingGate()
 
   var deckLength: Int {
     let stored = UserDefaults.standard.object(forKey: Self.deckLengthDefaultsKey) as? Int
