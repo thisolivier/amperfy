@@ -35,6 +35,7 @@ public struct AuditionDeckBlendPanel: View {
   @Binding
   var blend: Double
   let degradedPools: Set<DeckPool>
+  let isBusy: Bool
   let onBlendSettled: (Double) -> ()
   let onDealMore: () -> ()
 
@@ -49,6 +50,13 @@ public struct AuditionDeckBlendPanel: View {
   ///   - degradedPools: Non-empty when one pool (adjacency/similar) is
   ///     currently unreachable (design §8) — drives the orange-dot chip
   ///     state and the panel's degraded-pool notice line.
+  ///   - isBusy: True while the deck controller has a `refresh()` or
+  ///     `dealMore()` already in flight (its `isRefreshing`/`isExtending`).
+  ///     Disables "Deal <n> more" for the duration — both operations share a
+  ///     single in-flight guard on the controller (re-entrancy fix), so a
+  ///     second tap while one is running would otherwise just be silently
+  ///     queued/ignored with no visible feedback; disabling the button is
+  ///     the user-facing half of that guard.
   ///   - onBlendSettled: Fired ~400ms after the slider stops moving, with
   ///     the settled value. The caller (deck controller) is responsible for
   ///     regenerating un-swiped cards — this view has no deck knowledge.
@@ -57,11 +65,13 @@ public struct AuditionDeckBlendPanel: View {
   public init(
     blend: Binding<Double>,
     degradedPools: Set<DeckPool>,
+    isBusy: Bool = false,
     onBlendSettled: @escaping (Double) -> (),
     onDealMore: @escaping () -> ()
   ) {
     self._blend = blend
     self.degradedPools = degradedPools
+    self.isBusy = isBusy
     self.onBlendSettled = onBlendSettled
     self.onDealMore = onDealMore
   }
@@ -94,6 +104,7 @@ public struct AuditionDeckBlendPanel: View {
       Button("Deal \(deckLength) more", action: onDealMore)
         .buttonStyle(.bordered)
         .frame(maxWidth: .infinity)
+        .disabled(isBusy)
     }
     .padding(16)
     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))

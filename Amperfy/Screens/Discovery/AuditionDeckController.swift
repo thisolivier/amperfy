@@ -96,6 +96,23 @@ final class AuditionDeckController: ObservableObject {
   /// More) — the baseline `sessionLikedCount` diffs against.
   var likedBeforeSessionIds: Set<String> = []
 
+  /// Tags which of `refresh()`/`dealMore()` currently owns `inFlightDealingTask` — see both
+  /// methods' doc comments in `AuditionDeckController+Dealing.swift` for the full re-entrancy
+  /// design these two properties implement together.
+  enum DealingOperationKind {
+    case refresh
+    case dealMore
+  }
+
+  /// Single shared slot `refresh()` and `dealMore()` both claim while they run. Neither is safe to
+  /// run concurrently with the other, or with a second call to itself, since both mutate
+  /// `candidates`/`excludeIds`/`likedBeforeSessionIds` and `refresh()` snapshots `candidates`
+  /// before its own `await` — an unguarded overlap is exactly the re-entrancy bug this pair of
+  /// properties closes. Not `private`, same reasoning as `excludeIds` et al. above:
+  /// `AuditionDeckController+Dealing.swift` needs to read/write these too.
+  var inFlightDealingTask: Task<Void, Never>?
+  var inFlightDealingKind: DealingOperationKind?
+
   var deckLength: Int {
     let stored = UserDefaults.standard.object(forKey: Self.deckLengthDefaultsKey) as? Int
     return stored ?? Self.defaultDeckLength

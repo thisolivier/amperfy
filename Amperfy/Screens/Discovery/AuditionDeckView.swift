@@ -68,6 +68,7 @@ struct AuditionDeckView: View {
         AuditionDeckBlendPanel(
           blend: $controller.blend,
           degradedPools: controller.degradedPools,
+          isBusy: controller.isRefreshing || controller.isExtending,
           onBlendSettled: { _ in Task { await controller.refresh() } },
           onDealMore: { Task { await controller.dealMore() } }
         )
