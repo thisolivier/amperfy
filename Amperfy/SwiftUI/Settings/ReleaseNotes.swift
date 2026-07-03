@@ -37,6 +37,20 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 56,
+      date: "2026-07-02",
+      title: "Build 56 — Fixed wrong song playing from Recently Added Tracks",
+      whatsNew: [
+        "Fixed a bug where tapping a track in Recently Added Tracks could start playing a different song than the one you tapped",
+        "This could happen right after the list refreshed (e.g. new tracks synced in) while you were tapping a row",
+      ],
+      testingFocus: [
+        "Open Recently Added Tracks, let new tracks sync in or pull-to-refresh, then tap a track — the song that plays should always match the one you tapped",
+        "Tap a track immediately after switching between 'Top N' and 'Last M days' modes, or after adjusting the count stepper — playback should still match the tapped row",
+        "General regression: tapping any track in this list should behave exactly as before when no refresh has just happened",
+      ]
+    ),
+    ReleaseNote(
       id: 55,
       date: "2026-07-01",
       title: "Build 55 — Recently added tracks widget always renders",
