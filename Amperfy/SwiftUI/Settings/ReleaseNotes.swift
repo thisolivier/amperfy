@@ -37,6 +37,23 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 58,
+      date: "2026-07-03",
+      title: "Build 58 — Discovery polish from your first test drive",
+      whatsNew: [
+        "The first card of a deck now auto-auditions the moment it's dealt (it used to sit silent until you swiped)",
+        "'Open' in a card's menu now actually takes you to the playlist/album",
+        "Mega-playlists (folder playlists, imported liked-songs dumps) are no longer recommended",
+        "Blend changes and Deal More no longer come up short when you've already seen the top matches — the deck digs deeper into the ranking",
+      ],
+      testingFocus: [
+        "Open a deck and just wait — the first card should start auditioning by itself within about a second",
+        "Card menu (···) → Open — should land on that collection's detail screen",
+        "Playlists with many hundreds of tracks should no longer appear as recommendations",
+        "Move the blend slider back and forth a few times — the deck should refill with fresh cards rather than shrinking",
+      ]
+    ),
+    ReleaseNote(
       id: 57,
       date: "2026-07-03",
       title: "Build 57 — Discovery: Audition Deck + Needle Drop",
@@ -100,25 +117,6 @@ enum ReleaseNotes {
         "Tap queue button → Append User Queue: all tracks appear at end of queue",
         "In offline mode: only cached tracks should be included in queue actions",
         "Individual song cells should still show detail view on tap (no swipe actions)",
-      ]
-    ),
-    ReleaseNote(
-      id: 52,
-      date: "2026-05-19",
-      title: "Build 52 — Cache labels + recent tracks refresh",
-      whatsNew: [
-        "Fully cached playlists show 'Cached' prefix in their subtitle (visible in both online and offline mode)",
-        "Partially cached playlists in offline mode show the cached song count (e.g. '6 cached · 8 Songs · 22m')",
-        "Checkmark accessory replaced with the label-based approach for clearer cache status",
-        "Empty-name playlist filter removed — names fixed server-side in Navidrome",
-        "Recently Added Tracks now supports pull-to-refresh",
-      ],
-      testingFocus: [
-        "Playlists tab (online): fully cached playlist should show 'Cached · N Songs · Xm'",
-        "Playlists tab (online): non-cached playlist should show normal subtitle without prefix",
-        "Playlists tab (offline): partially cached playlist should show 'N cached · M Songs · Xm'",
-        "Playlists tab (offline): fully cached playlist should show 'Cached · M Songs · Xm'",
-        "Recently Added Tracks: pull down to refresh after new songs sync",
       ]
     ),
   ]
