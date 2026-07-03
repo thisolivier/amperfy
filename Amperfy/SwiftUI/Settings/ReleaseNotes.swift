@@ -37,6 +37,21 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 59,
+      date: "2026-07-03",
+      title: "Build 59 — Related Tracks becomes a real page",
+      whatsNew: [
+        "Related Tracks now pushes in like any other page — with a proper header showing the track you came from — instead of opening as a floating sheet",
+        "'Show in Playlists' works again and also pushes in; picking a playlist stacks its detail on top so you can navigate back the way you came",
+        "Menus opened from the Now Playing popup no longer silently swallow actions like Add to Playlist",
+      ],
+      testingFocus: [
+        "Track menu → Related Tracks: should slide in with a back button and a 'Related Tracks To:' header showing the original track",
+        "From a related track's menu → Show in Playlists → pick a playlist → back, back, back — you should retrace your exact steps",
+        "From the Now Playing popup, try Add to Playlist and Show in Playlists — both should appear reliably",
+      ]
+    ),
+    ReleaseNote(
       id: 58,
       date: "2026-07-03",
       title: "Build 58 — Discovery polish from your first test drive",
@@ -99,24 +114,6 @@ enum ReleaseNotes {
         "A library with only whole-album recent additions (no individual singles/loose tracks) should show an empty Recently Added Tracks widget, not a hidden one",
         "A library with fewer than 10 qualifying (non-whole-album) songs should show everything it has in the widget",
         "Tapping a tile in Recently Added Tracks should still open the recent tracks detail view as before",
-      ]
-    ),
-    ReleaseNote(
-      id: 53,
-      date: "2026-05-24",
-      title: "Build 53 — Related tracks bulk queue",
-      whatsNew: [
-        "Play All or Shuffle All related tracks from the modal toolbar",
-        "Add all related tracks to queue (insert or append, user or context queue)",
-        "Removed per-song swipe actions that conflicted with existing detail UI",
-      ],
-      testingFocus: [
-        "Play a song → open Related Tracks → tap Play All: should start playing all related tracks",
-        "Tap Shuffle: should play related tracks in random order",
-        "Tap queue button → Insert User Queue: all tracks appear at start of queue",
-        "Tap queue button → Append User Queue: all tracks appear at end of queue",
-        "In offline mode: only cached tracks should be included in queue actions",
-        "Individual song cells should still show detail view on tap (no swipe actions)",
       ]
     ),
   ]
