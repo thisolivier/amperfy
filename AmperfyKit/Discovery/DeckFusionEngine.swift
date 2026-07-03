@@ -55,6 +55,10 @@ public struct DeckDealResult: Sendable {
 /// (which does touch storage) runs back on the caller's queue after both
 /// child tasks are awaited, for the same reason.
 public final class DeckFusionEngine: @unchecked Sendable {
+  /// Playlists above this track count are never dealt as candidates — matches
+  /// the sidecar's server-side MAX_CANDIDATE_PLAYLIST_TRACKS default.
+  public static let megaPlaylistTrackCeiling = 300
+
   private let familiarPool: FamiliarPoolProviding
   private let adventurousPool: AdventurousPoolProviding
   private let storage: LibraryStorage
@@ -142,6 +146,13 @@ public final class DeckFusionEngine: @unchecked Sendable {
         storage: storage,
         account: account
       )
+    }.filter { candidate in
+      // Mega-playlists (folder playlists, Spotify liked-songs imports) are
+      // containers, not curated collections — never worth recommending
+      // (user feedback, build-57 test drive). The sidecar applies the same
+      // ceiling server-side (MAX_CANDIDATE_PLAYLIST_TRACKS); this covers the
+      // on-device Adventurous pool too. Seeds are unaffected.
+      candidate.kind != .playlist || candidate.trackCount <= Self.megaPlaylistTrackCeiling
     }
 
     return DeckDealResult(candidates: candidates, degradedPools: degradedPools)
