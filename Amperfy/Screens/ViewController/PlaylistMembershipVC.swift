@@ -23,8 +23,8 @@ import AmperfyKit
 import UIKit
 
 /// Bare table showing which user playlists contain a given song.
-/// Presented as a sheet from the song `...` menu's "In Playlists" action.
-/// Tapping a row dismisses the sheet and navigates to that playlist's detail.
+/// Pushed from the song `...` menu's "Show in Playlists" action.
+/// Tapping a row pushes that playlist's detail; popping back returns here.
 class PlaylistMembershipVC: UITableViewController {
   private var playlists: [Playlist]
   private let onSelect: (Playlist) -> ()
@@ -43,11 +43,6 @@ class PlaylistMembershipVC: UITableViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     title = "Show in Playlists"
-    navigationItem.rightBarButtonItem = UIBarButtonItem(
-      barButtonSystemItem: .done,
-      target: self,
-      action: #selector(doneTapped)
-    )
     tableView.register(
       UINib(nibName: PlaylistTableCell.typeName, bundle: nil),
       forCellReuseIdentifier: PlaylistTableCell.typeName
@@ -77,11 +72,6 @@ class PlaylistMembershipVC: UITableViewController {
     }
   }
 
-  @objc
-  private func doneTapped() {
-    dismiss(animated: true)
-  }
-
   // MARK: - Table data source
 
   override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -103,8 +93,8 @@ class PlaylistMembershipVC: UITableViewController {
 
   override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
     let playlist = playlists[indexPath.row]
-    dismiss(animated: true) { [onSelect] in
-      onSelect(playlist)
-    }
+    // Pushed screen: the detail lands on top, so popping back returns here —
+    // the traversal the push style exists for.
+    onSelect(playlist)
   }
 }

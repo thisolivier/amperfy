@@ -37,6 +37,21 @@ class EntityPreviewActionBuilder {
   private var playerIndexCb: GetPlayerIndexCallback?
   private var appDelegate: AppDelegate
 
+  /// Present from here, never from `rootView` directly: when actions run from
+  /// inside a modal (e.g. a track's menu inside the Related Tracks sheet),
+  /// `rootView` is deliberately the UNDERLYING screen so pushes land on the
+  /// main nav stack — but that VC is already presenting the modal, so a
+  /// `present` on it is silently rejected by UIKit ("Show in Playlists" doing
+  /// nothing from Related Tracks, user-reported). Walk to the topmost
+  /// presented controller instead.
+  private var presentationRoot: UIViewController {
+    var presenter: UIViewController = rootView
+    while let presented = presenter.presentedViewController, !presented.isBeingDismissed {
+      presenter = presented
+    }
+    return presenter
+  }
+
   private var entityPlayables: [AbstractPlayable] {
     let playables = entityContainer.playables
       .filterCached(dependigOn: appDelegate.storage.settings.user.isOfflineMode)
@@ -682,7 +697,7 @@ class EntityPreviewActionBuilder {
       let selectPlaylistVC = AppStoryboard.Main
         .segueToPlaylistSelector(account: account, itemsToAdd: self.entityPlayables.filterSongs())
       let selectPlaylistNav = UINavigationController(rootViewController: selectPlaylistVC)
-      self.rootView.present(selectPlaylistNav, animated: true)
+      self.presentationRoot.present(selectPlaylistNav, animated: true)
     }
   }
 
@@ -728,8 +743,15 @@ class EntityPreviewActionBuilder {
         hostingSplitVC.pushNavLibrary(vc: detailVC)
       }
     }
-    let navigationController = UINavigationController(rootViewController: membershipVC)
-    rootView.present(navigationController, animated: true)
+    // Pushed, not presented (user-settled 2026-07-03): only short-lived modal
+    // prompts get presented; membership traverses onward into playlist details.
+    if let popupPlayer = rootView as? PopupPlayerVC {
+      popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: membershipVC)
+    } else if let navController = rootView.navigationController {
+      navController.pushViewController(membershipVC, animated: true)
+    } else if let hostingSplitVC = AppDelegate.mainWindowHostVC {
+      hostingSplitVC.pushNavLibrary(vc: membershipVC)
+    }
 
     if needsSync {
       let librarySyncer = appDelegate.getMeta(account.info).librarySyncer
@@ -778,8 +800,16 @@ class EntityPreviewActionBuilder {
         seedSongTitle: song.title ?? "Unknown",
         originRootView: self.rootView
       )
-      let navigationController = UINavigationController(rootViewController: relatedTracksVC)
-      self.rootView.present(navigationController, animated: true)
+      // Pushed, not presented (user-settled 2026-07-03): Related Tracks is a
+      // page with deep onward traversals, so it belongs on the nav stack —
+      // same routing fallbacks as the membership flow below.
+      if let popupPlayer = self.rootView as? PopupPlayerVC {
+        popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: relatedTracksVC)
+      } else if let navController = self.rootView.navigationController {
+        navController.pushViewController(relatedTracksVC, animated: true)
+      } else if let hostingSplitVC = AppDelegate.mainWindowHostVC {
+        hostingSplitVC.pushNavLibrary(vc: relatedTracksVC)
+      }
     }
   }
 
@@ -899,7 +929,7 @@ class EntityPreviewActionBuilder {
       alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
         // do nothing
       }))
-      self.rootView.present(alert, animated: true, completion: nil)
+      self.presentationRoot.present(alert, animated: true, completion: nil)
     }
   }
 
@@ -929,7 +959,7 @@ class EntityPreviewActionBuilder {
       alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
         // do nothing
       }))
-      self.rootView.present(alert, animated: true, completion: nil)
+      self.presentationRoot.present(alert, animated: true, completion: nil)
     }
   }
 
@@ -963,7 +993,7 @@ class EntityPreviewActionBuilder {
     }
 
     if let descriptionVC = descriptionVC {
-      rootView.present(descriptionVC, animated: true)
+      presentationRoot.present(descriptionVC, animated: true)
     }
   }
 
@@ -986,7 +1016,7 @@ class EntityPreviewActionBuilder {
       lyricsAccount: lyricsAccount,
       on: rootView
     )
-    rootView.present(lyricsVC, animated: true)
+    presentationRoot.present(lyricsVC, animated: true)
   }
 
   private func createCopyIdToClipboardAction() -> UIMenu {

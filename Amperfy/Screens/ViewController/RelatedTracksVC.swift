@@ -24,7 +24,8 @@ import CoreData
 import UIKit
 
 /// Shows top 20 related tracks for a given song, ranked by adjacency score.
-/// Presented from the song context menu's "Related Tracks" action.
+/// Pushed from the song context menu's "Related Tracks" action (a page with
+/// deep onward traversals, so never presented modally).
 class RelatedTracksVC: UITableViewController {
   private let seedSongId: String
   private let seedSongTitle: String
@@ -45,11 +46,6 @@ class RelatedTracksVC: UITableViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     title = "Related Tracks"
-    navigationItem.rightBarButtonItem = UIBarButtonItem(
-      barButtonSystemItem: .done,
-      target: self,
-      action: #selector(doneTapped)
-    )
     tableView.register(nibName: PlayableTableCell.typeName)
     tableView.rowHeight = PlayableTableCell.rowHeight
     setupToolbar()
@@ -57,6 +53,20 @@ class RelatedTracksVC: UITableViewController {
     Task { @MainActor in
       await loadRelatedTracks()
     }
+  }
+
+  override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    if !relatedSongs.isEmpty {
+      navigationController?.setToolbarHidden(false, animated: animated)
+    }
+  }
+
+  override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    // Pushed onto a shared stack: never leave our toolbar behind for the
+    // screens beneath (or above) us.
+    navigationController?.setToolbarHidden(true, animated: animated)
   }
 
   private func showLoadingState() {
@@ -95,9 +105,68 @@ class RelatedTracksVC: UITableViewController {
 
     relatedSongs = songs
     sourceInfoByIndex = sourceInfoMap
+    if let seedSongMO = fetchSongMO(songId: seedSongId, in: context) {
+      installSeedHeader(seedSong: Song(managedObject: seedSongMO))
+    }
     tableView.reloadData()
     updateContentState()
     updateToolbarState()
+  }
+
+  /// "Related Tracks To:" header (user-specced 2026-07-03): themed title with
+  /// the seed track as a rounded badge — the standard row UI minus its
+  /// options (…) control, non-interactive.
+  private func installSeedHeader(seedSong: Song) {
+    let container = UIView()
+
+    let titleLabel = UILabel()
+    titleLabel.text = "Related Tracks To:"
+    let titleSize = UIFont.preferredFont(forTextStyle: .title2).pointSize
+    titleLabel.font = .systemFont(ofSize: titleSize, weight: .bold)
+    titleLabel.textColor = view.tintColor
+    titleLabel.translatesAutoresizingMaskIntoConstraints = false
+
+    let badge = UIView()
+    badge.backgroundColor = .secondarySystemGroupedBackground
+    badge.layer.cornerRadius = 12
+    badge.layer.masksToBounds = true
+    badge.translatesAutoresizingMaskIntoConstraints = false
+
+    guard let seedCell = UINib(nibName: PlayableTableCell.typeName, bundle: nil)
+      .instantiate(withOwner: nil).first as? PlayableTableCell else { return }
+    seedCell.display(playable: seedSong, playContextCb: nil, rootView: self)
+    seedCell.optionsButton.isHidden = true
+    seedCell.isUserInteractionEnabled = false
+    seedCell.backgroundColor = .clear
+    seedCell.translatesAutoresizingMaskIntoConstraints = false
+
+    badge.addSubview(seedCell)
+    container.addSubview(titleLabel)
+    container.addSubview(badge)
+
+    NSLayoutConstraint.activate([
+      titleLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+      titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+      titleLabel.trailingAnchor.constraint(
+        lessThanOrEqualTo: container.trailingAnchor, constant: -20
+      ),
+      badge.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 10),
+      badge.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+      badge.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
+      badge.heightAnchor.constraint(equalToConstant: PlayableTableCell.rowHeight),
+      seedCell.topAnchor.constraint(equalTo: badge.topAnchor),
+      seedCell.leadingAnchor.constraint(equalTo: badge.leadingAnchor, constant: 4),
+      seedCell.trailingAnchor.constraint(equalTo: badge.trailingAnchor, constant: -4),
+      seedCell.bottomAnchor.constraint(equalTo: badge.bottomAnchor),
+    ])
+
+    let headerHeight = 12 + ceil(titleSize * 1.25) + 10 + PlayableTableCell.rowHeight + 8
+    container.frame = CGRect(
+      x: 0, y: 0,
+      width: tableView.bounds.width,
+      height: headerHeight
+    )
+    tableView.tableHeaderView = container
   }
 
   private func fetchSongMO(
@@ -125,11 +194,6 @@ class RelatedTracksVC: UITableViewController {
     } else {
       contentUnavailableConfiguration = nil
     }
-  }
-
-  @objc
-  private func doneTapped() {
-    dismiss(animated: true)
   }
 
   // MARK: - Play context
