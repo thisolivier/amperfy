@@ -53,6 +53,20 @@ struct AuditionDeckEmptySectionCellContent: View {
   let isButtonEnabled: Bool
   let action: (() -> ())?
 
+  /// Matches `HomeVC.itemWidth` (the fixed `.absolute` group width every
+  /// Home widget card uses, `private` there so duplicated here). Applied as
+  /// an explicit `.frame(width:)` below because `UIHostingConfiguration`
+  /// does not reliably learn the cell's real width from
+  /// `UICollectionViewCompositionalLayout` in time for its first layout
+  /// pass — without this, `ContentUnavailableView`'s text collapses to its
+  /// narrowest possible measurement (one word/hyphenated-fragment per line)
+  /// instead of wrapping normally within the card. A `maxWidth: .infinity`
+  /// frame alone does not fix this: it only bounds how wide the view may
+  /// grow if offered more space, and the negotiation never offers more.
+  /// (Bug diagnosed in Discovery-D1a; ported here since D4's
+  /// `AuditionDeckEmptySectionCellContent` hosts SwiftUI the same way.)
+  static let cardWidth: CGFloat = 160
+
   var body: some View {
     Group {
       if let buttonTitle, let action {
@@ -73,6 +87,8 @@ struct AuditionDeckEmptySectionCellContent: View {
         ContentUnavailableView(title, systemImage: systemImage, description: Text(description))
       }
     }
+    .frame(width: Self.cardWidth)
+    .multilineTextAlignment(.center)
     .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary))
   }
 }
