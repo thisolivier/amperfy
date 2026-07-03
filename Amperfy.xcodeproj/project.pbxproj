@@ -544,9 +544,11 @@ A5C0D50000000000000010B2 /* ArtworkImageLoader.swift in Sources */ = {isa = PBXB
 		A5B0510000000000000050A0 /* WholeAlbumPredicates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0520000000000000050A0 /* WholeAlbumPredicates.swift */; };
 		A5B0610000000000000050A0 /* WholeAlbumPredicatesTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0620000000000000050A0 /* WholeAlbumPredicatesTest.swift */; };
 		A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0720000000000000050A0 /* RecentTracksQuery.swift */; };
+		A5B0730000000000000050A0 /* RecentTracksPlaybackResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0740000000000000050A0 /* RecentTracksPlaybackResolver.swift */; };
 		A5B0810000000000000050A0 /* RecentTracksDetailVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0820000000000000050A0 /* RecentTracksDetailVC.swift */; };
 		A5B0910000000000000050A0 /* RecentTracksQueryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0920000000000000050A0 /* RecentTracksQueryTest.swift */; };
 		A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */; };
+		A5B0950000000000000050A0 /* RecentTracksPlaybackResolverTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0960000000000000050A0 /* RecentTracksPlaybackResolverTest.swift */; };
 		A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */; };
 		A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */; };
 		A5B0A50000000000000050A0 /* PlaylistMembershipVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */; };
@@ -1236,9 +1238,11 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 		A5B0520000000000000050A0 /* WholeAlbumPredicates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholeAlbumPredicates.swift; sourceTree = "<group>"; };
 		A5B0620000000000000050A0 /* WholeAlbumPredicatesTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholeAlbumPredicatesTest.swift; sourceTree = "<group>"; };
 		A5B0720000000000000050A0 /* RecentTracksQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksQuery.swift; sourceTree = "<group>"; };
+		A5B0740000000000000050A0 /* RecentTracksPlaybackResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksPlaybackResolver.swift; sourceTree = "<group>"; };
 		A5B0820000000000000050A0 /* RecentTracksDetailVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksDetailVC.swift; sourceTree = "<group>"; };
 		A5B0920000000000000050A0 /* RecentTracksQueryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksQueryTest.swift; sourceTree = "<group>"; };
 		A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumFetchedResultsControllerTest.swift; sourceTree = "<group>"; };
+		A5B0960000000000000050A0 /* RecentTracksPlaybackResolverTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksPlaybackResolverTest.swift; sourceTree = "<group>"; };
 		A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQuery.swift; sourceTree = "<group>"; };
 		A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQueryTest.swift; sourceTree = "<group>"; };
 		A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipVC.swift; sourceTree = "<group>"; };
@@ -1539,6 +1543,7 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 				50120A2026280C9200B037B1 /* FetchedResultsControllers.swift */,
 				A5B0520000000000000050A0 /* WholeAlbumPredicates.swift */,
 				A5B0720000000000000050A0 /* RecentTracksQuery.swift */,
+				A5B0740000000000000050A0 /* RecentTracksPlaybackResolver.swift */,
 			);
 			path = ResultController;
 			sourceTree = "<group>";
@@ -2431,6 +2436,7 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 				A5B0620000000000000050A0 /* WholeAlbumPredicatesTest.swift */,
 				A5B0920000000000000050A0 /* RecentTracksQueryTest.swift */,
 				A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */,
+				A5B0960000000000000050A0 /* RecentTracksPlaybackResolverTest.swift */,
 			);
 			path = ResultController;
 			sourceTree = "<group>";
@@ -3013,6 +3019,7 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 				50C9D672284FAA4D007F18D0 /* BasicFetchedResultsController.swift in Sources */,
 				A5B0510000000000000050A0 /* WholeAlbumPredicates.swift in Sources */,
 				A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */,
+				A5B0730000000000000050A0 /* RecentTracksPlaybackResolver.swift in Sources */,
 				A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */,
 				A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */,
 				A5B0E10000000000000050A0 /* PlaylistFolderStore.swift in Sources */,
@@ -3210,6 +3217,7 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 				A5B0610000000000000050A0 /* WholeAlbumPredicatesTest.swift in Sources */,
 				A5B0910000000000000050A0 /* RecentTracksQueryTest.swift in Sources */,
 				A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */,
+				A5B0950000000000000050A0 /* RecentTracksPlaybackResolverTest.swift in Sources */,
 				A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */,
 				6B54DADE2AD80F4769973080 /* TrackAdjacencyStoreTest.swift in Sources */,
 				A5B0B30000000000000050A0 /* PinnedPlaylistStoreTest.swift in Sources */,

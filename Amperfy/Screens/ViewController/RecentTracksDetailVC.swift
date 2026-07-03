@@ -284,9 +284,19 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
         playable: song,
         playContextCb: { [weak self] cellArg in
           guard let self,
-                let path = self.tableView.indexPath(for: cellArg)
+                let tappedPlayable = (cellArg as? PlayableTableCell)?.playable
           else { return nil }
-          return makePlayContext(startIndex: path.row)
+          // Resolve by the cell's originally-bound song identity, not by its
+          // current table position: `songs` may have been wholesale-replaced
+          // by a `refreshSongs()` reload that raced this tap, so re-deriving
+          // an index here and indexing into the (possibly new) `songs` array
+          // can silently resolve to the wrong song. See
+          // `RecentTracksPlaybackResolver` for details.
+          return RecentTracksPlaybackResolver.resolvePlayContext(
+            tappedSongId: tappedPlayable.id,
+            name: "Recently Added Tracks",
+            currentSongs: songs
+          )
         },
         rootView: self
       )
@@ -312,7 +322,21 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
 
   override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
     tableView.deselectRow(at: indexPath, animated: true)
-    appDelegate.player.play(context: makePlayContext(startIndex: indexPath.row))
+    // Resolve by the tapped CELL's currently-bound song identity, not by
+    // `indexPath.row` indexing into `songs` directly: `songs` may have been
+    // wholesale-replaced by a `refreshSongs()` reload that raced this tap.
+    // `cellForRow(at:)` reflects whatever `reloadData()` last configured
+    // that visible cell with, which is the correct, consistent value to
+    // resolve against here. See `RecentTracksPlaybackResolver` for details.
+    guard let tappedCell = tableView.cellForRow(at: indexPath) as? PlayableTableCell,
+          let tappedPlayable = tappedCell.playable,
+          let playContext = RecentTracksPlaybackResolver.resolvePlayContext(
+            tappedSongId: tappedPlayable.id,
+            name: "Recently Added Tracks",
+            currentSongs: songs
+          )
+    else { return }
+    appDelegate.player.play(context: playContext)
   }
 
   override func tableView(

@@ -89,7 +89,7 @@ class PlayableTableCell: BasicTableCell {
   private var style = PlayableTableCellStyle.none
   private var playerIndexCb: GetPlayerIndexFromTableCellCallback?
   private var playContextCb: GetPlayContextFromTableCellCallback?
-  private var playable: AbstractPlayable?
+  private(set) var playable: AbstractPlayable?
   private var download: Download?
   private var rootView: UIViewController?
   private var playIndicator: PlayIndicator?
