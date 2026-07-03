@@ -105,7 +105,12 @@ public final class NeedleDropSpritePlayer: ObservableObject {
 
   /// Pauses playback in place without clearing `currentSlice`, used by the Riding/AutoAuditioning
   /// -> PausedAudition transition (§3.2).
+  ///
+  /// Also bumps `_seekGeneration` so a zero-tolerance seek still in flight from a prior
+  /// `seekAndPlay` cannot resurrect playback via its completion handler's `player.play()` after
+  /// this call returns (same race `stop()` closes; see its doc comment for the full story).
   public func pause() {
+    _seekGenerationLock.withLock { _seekGeneration += 1 }
     player.pause()
   }
 
@@ -115,7 +120,15 @@ public final class NeedleDropSpritePlayer: ObservableObject {
   }
 
   /// Stops playback and discards any in-flight latency callback (e.g. card swiped away).
+  ///
+  /// Also bumps `_seekGeneration` before pausing. `seekAndPlay` issues a zero-tolerance seek
+  /// whose completion handler only calls `player.play()` if `_seekGeneration` still matches the
+  /// generation captured at seek-start; without this bump, a seek in flight when `stop()` fires
+  /// (realistically tens-to-hundreds of ms for a real audio file) would still be "current" once it
+  /// completes and would call `player.play()` after the caller believed playback had stopped —
+  /// e.g. resuming a scrub's audio after the deck has already switched to the main player.
   public func stop() {
+    _seekGenerationLock.withLock { _seekGeneration += 1 }
     player.pause()
     _pendingAudibleStartLock.withLock { _pendingAudibleStart = nil }
   }

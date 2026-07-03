@@ -92,7 +92,7 @@ public final class StandaloneAmperfyKit: @unchecked Sendable {
 
   @MainActor
   public static func create() -> StandaloneAmperfyKit {
-    let configuration = CoreDataConfiguration()  // default: no container group, read-write
+    let configuration = CoreDataConfiguration() // default: no container group, read-write
     let coreDataManager = CoreDataPersistentManager(configuration: configuration)
     let persistentStorage = PersistentStorage(coreDataManager: coreDataManager)
 
@@ -151,7 +151,8 @@ public final class StandaloneAmperfyKit: @unchecked Sendable {
     serverUrl: String,
     username: String,
     password: String
-  ) async throws -> BackenApiType {
+  ) async throws
+    -> BackenApiType {
     var credentials = LoginCredentials(
       serverUrl: serverUrl,
       username: username,

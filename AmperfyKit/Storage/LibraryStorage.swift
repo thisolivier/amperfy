@@ -1757,6 +1757,24 @@ public class LibraryStorage: PlayableFileCachable {
     return songs ?? [Song]()
   }
 
+  /// Most-recently-played distinct songs, newest first, capped at `limit`.
+  /// Used by the Audition Deck's `.recentHistory` seed (Discovery sprint D4,
+  /// design doc OQ-4 — resolved server-side-agnostically: the client already
+  /// tracks plays locally via `AbstractPlayable.countPlayed()`, no new sync
+  /// needed). Songs that have never been played (`lastPlayedDate == nil`) are
+  /// excluded.
+  public func getRecentlyPlayedSongs(for account: Account, limit: Int) -> [Song] {
+    let fetchRequest = SongMO.lastPlayedDateSortedFetchRequest
+    fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+      getFetchPredicate(forAccount: account),
+      NSPredicate(format: "%K != nil", #keyPath(SongMO.lastPlayedDate)),
+    ])
+    fetchRequest.fetchLimit = limit
+    let foundSongs = try? context.fetch(fetchRequest)
+    let songs = foundSongs?.compactMap { Song(managedObject: $0) }
+    return songs ?? [Song]()
+  }
+
   public func getSong(for account: Account, id: String) -> Song? {
     let fetchRequest: NSFetchRequest<SongMO> = SongMO.fetchRequest()
     fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
@@ -1945,6 +1963,32 @@ public class LibraryStorage: PlayableFileCachable {
     fetchRequest.fetchLimit = 1
     let playlists = try? context.fetch(fetchRequest)
     return playlists?.lazy.compactMap { Playlist(library: self, managedObject: $0) }.first
+  }
+
+  /// Reverse lookup: every playlist that contains the given song id, deduped.
+  /// A straightforward `PlaylistItemMO` fetch over the existing membership
+  /// table — no new index/table added, per Discovery sprint D4's "don't
+  /// over-build" constraint at current library scale (~11k tracks).
+  public func getPlaylists(for account: Account, containingSongId songId: String) -> [Playlist] {
+    let fetchRequest: NSFetchRequest<PlaylistItemMO> = PlaylistItemMO.fetchRequest()
+    fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+      getFetchPredicate(forAccount: account),
+      NSPredicate(
+        format: "%K == %@",
+        #keyPath(PlaylistItemMO.playable.id),
+        NSString(string: songId)
+      ),
+    ])
+    let foundItems = try? context.fetch(fetchRequest)
+    var seenPlaylistIds = Set<NSManagedObjectID>()
+    var playlists = [Playlist]()
+    for item in foundItems ?? [] {
+      let playlistObjectId = item.playlist.objectID
+      if seenPlaylistIds.insert(playlistObjectId).inserted {
+        playlists.append(Playlist(library: self, managedObject: item.playlist))
+      }
+    }
+    return playlists
   }
 
   func getPlaylist(viaPlaylistFromOtherContext: Playlist) -> Playlist? {

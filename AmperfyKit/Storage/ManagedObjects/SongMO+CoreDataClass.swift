@@ -165,4 +165,25 @@ extension SongMO: CoreDataIdentifyable {
     ]
     return fetchRequest
   }
+
+  /// Most-recently-played first. Used by the Audition Deck's `.recentHistory`
+  /// seed (Discovery sprint D4) — `lastPlayedDate` is bumped by
+  /// `AbstractPlayable.countPlayed()` on every play.
+  static var lastPlayedDateSortedFetchRequest: NSFetchRequest<SongMO> {
+    let fetchRequest: NSFetchRequest<SongMO> = SongMO.fetchRequest()
+    fetchRequest.sortDescriptors = [
+      NSSortDescriptor(key: #keyPath(SongMO.lastPlayedDate), ascending: false),
+      NSSortDescriptor(
+        key: Self.identifierKeyString,
+        ascending: true,
+        selector: #selector(NSString.localizedStandardCompare)
+      ),
+      NSSortDescriptor(
+        key: "id",
+        ascending: true,
+        selector: #selector(NSString.localizedStandardCompare)
+      ),
+    ]
+    return fetchRequest
+  }
 }

@@ -232,7 +232,7 @@ class RelatedTracksVC: UITableViewController {
   private func updateToolbarState() {
     let hasItems = !relatedSongs.isEmpty
     toolbarItems?.forEach { item in
-      if item.style != .plain { return }  // skip flex spacers
+      if item.style != .plain { return } // skip flex spacers
       item.isEnabled = hasItems
     }
     navigationController?.setToolbarHidden(false, animated: false)
@@ -291,20 +291,22 @@ class RelatedTracksVC: UITableViewController {
       )
       appDelegate.player.appendUserQueue(playables: filteredTracks)
     })
-    alert.addAction(UIAlertAction(title: "Insert to Context Queue", style: .default) { [weak self] _ in
-      guard let self else { return }
-      Haptics.success.vibrate(
-        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
-      )
-      appDelegate.player.insertContextQueue(playables: filteredTracks)
-    })
-    alert.addAction(UIAlertAction(title: "Append to Context Queue", style: .default) { [weak self] _ in
-      guard let self else { return }
-      Haptics.success.vibrate(
-        isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
-      )
-      appDelegate.player.appendContextQueue(playables: filteredTracks)
-    })
+    alert
+      .addAction(UIAlertAction(title: "Insert to Context Queue", style: .default) { [weak self] _ in
+        guard let self else { return }
+        Haptics.success.vibrate(
+          isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
+        )
+        appDelegate.player.insertContextQueue(playables: filteredTracks)
+      })
+    alert
+      .addAction(UIAlertAction(title: "Append to Context Queue", style: .default) { [weak self] _ in
+        guard let self else { return }
+        Haptics.success.vibrate(
+          isHapticsEnabled: appDelegate.storage.settings.user.isHapticsEnabled
+        )
+        appDelegate.player.appendContextQueue(playables: filteredTracks)
+      })
     alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
     alert.popoverPresentationController?.barButtonItem = sender
     present(alert, animated: true)

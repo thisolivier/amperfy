@@ -121,7 +121,25 @@ class AlbumDetailVC: SingleSnapshotFetchedResultsTableViewController<SongMO> {
 
     optionsButton = UIBarButtonItem.createOptionsBarButton()
     optionsButton.menu = UIMenu.lazyMenu {
-      EntityPreviewActionBuilder(container: self.album, on: self).createMenuActions()
+      var actions = EntityPreviewActionBuilder(container: self.album, on: self).createMenuActions()
+
+      // Discovery-D4 entry point (design doc §2: "Find similar albums").
+      // Depends on `AuditionDeckHostVC(seed:defaultKind:)`, built in
+      // parallel by another agent in this sprint and not necessarily
+      // present yet — written against its documented init signature.
+      let findSimilarAction = UIAction(
+        title: "Find similar albums",
+        image: UIImage(systemName: "rectangle.stack.badge.play")
+      ) { [weak self] _ in
+        guard let self else { return }
+        present(
+          AuditionDeckHostVC(seed: .album(id: album.id), defaultKind: .album),
+          animated: true
+        )
+      }
+      actions.insert(findSimilarAction, at: 0)
+
+      return actions
     }
     navigationItem.rightBarButtonItem = optionsButton
 
