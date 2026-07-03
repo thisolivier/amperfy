@@ -9,6 +9,13 @@
 /* Begin PBXBuildFile section */
 		A5C0D60000000000000020A2 /* ReadOnlyNoOpImplementations.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0D60000000000000020A1 /* ReadOnlyNoOpImplementations.swift */; };
 A5C0D50000000000000010B2 /* ArtworkImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */; };
+		A5C0D70000000000000010F2 /* NeedleDropManifest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0D70000000000000010F1 /* NeedleDropManifest.swift */; };
+		A5C0D70000000000000020F2 /* NeedleDropSpritePlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0D70000000000000020F1 /* NeedleDropSpritePlayer.swift */; };
+		A5C0D70000000000000025F2 /* NeedleDropBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0D70000000000000025F1 /* NeedleDropBarController.swift */; };
+		A5C0D70000000000000030F2 /* NeedleDropBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0D70000000000000030F1 /* NeedleDropBar.swift */; };
+		A5C0D70000000000000040F2 /* NeedleDropStubFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0D70000000000000040F1 /* NeedleDropStubFixture.swift */; };
+		A5C0D70000000000000050F2 /* NeedleDropLatencyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0D70000000000000050F1 /* NeedleDropLatencyTest.swift */; };
+		A5C0D70000000000000060F2 /* needle_drop_stub_sprite.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A5C0D70000000000000060F1 /* needle_drop_stub_sprite.m4a */; };
 		A5C0D40000000000000010A1 /* RoundedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5077F95222283FED0099CA91 /* RoundedImage.swift */; };
 		A5C0D40000000000000010A2 /* EntityImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504AE7B327BECFF300571BA5 /* EntityImageView.swift */; };
 		A5C0D40000000000000010A3 /* EntityImageView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 504AE7B127BECFDD00571BA5 /* EntityImageView.xib */; };
@@ -671,6 +678,13 @@ A5C0D50000000000000010B2 /* ArtworkImageLoader.swift in Sources */ = {isa = PBXB
 /* Begin PBXFileReference section */
 		A5C0D60000000000000020A1 /* ReadOnlyNoOpImplementations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadOnlyNoOpImplementations.swift; sourceTree = "<group>"; };
 A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkImageLoader.swift; sourceTree = "<group>"; };
+		A5C0D70000000000000010F1 /* NeedleDropManifest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedleDropManifest.swift; sourceTree = "<group>"; };
+		A5C0D70000000000000020F1 /* NeedleDropSpritePlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedleDropSpritePlayer.swift; sourceTree = "<group>"; };
+		A5C0D70000000000000025F1 /* NeedleDropBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedleDropBarController.swift; sourceTree = "<group>"; };
+		A5C0D70000000000000030F1 /* NeedleDropBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedleDropBar.swift; sourceTree = "<group>"; };
+		A5C0D70000000000000040F1 /* NeedleDropStubFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedleDropStubFixture.swift; sourceTree = "<group>"; };
+		A5C0D70000000000000050F1 /* NeedleDropLatencyTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedleDropLatencyTest.swift; sourceTree = "<group>"; };
+		A5C0D70000000000000060F1 /* needle_drop_stub_sprite.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = needle_drop_stub_sprite.m4a; sourceTree = "<group>"; };
 		43FBE27E250D4DFD00D5F9B3 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		5002565625E69DC700674CE1 /* SpinnerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinnerViewController.swift; sourceTree = "<group>"; };
 		5003D8F62678DD39006946BF /* SsAlbumParserPreCreatedArtistsTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SsAlbumParserPreCreatedArtistsTest.swift; sourceTree = "<group>"; };
@@ -1815,6 +1829,7 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 			children = (
 				5095F98B23C8389E008B0805 /* MusicPlayerTest.swift */,
 				5011712D27453D1300B7C08D /* PlayQueueHandlerTest.swift */,
+				A5C0D70000000000000050F1 /* NeedleDropLatencyTest.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -1941,8 +1956,18 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 				50B798AC23B7E73D00551E62 /* CoreDataHelper.swift */,
 				50B798AE23B7ED6200551E62 /* CoreDataSeeder.swift */,
 				50DB118626650D630033BFFA /* UnitTestHelper.swift */,
+				A5C0D70000000000000040F1 /* NeedleDropStubFixture.swift */,
+				A5C0D70000000000000060G1 /* TestAssets */,
 			);
 			path = Helper;
+			sourceTree = "<group>";
+		};
+		A5C0D70000000000000060G1 /* TestAssets */ = {
+			isa = PBXGroup;
+			children = (
+				A5C0D70000000000000060F1 /* needle_drop_stub_sprite.m4a */,
+			);
+			path = TestAssets;
 			sourceTree = "<group>";
 		};
 		50BA92F221CC26BE00E5901D /* Storage */ = {
@@ -2409,11 +2434,23 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 			path = API;
 			sourceTree = "<group>";
 		};
+		A5C0D70000000000000010G1 /* NeedleDrop */ = {
+			isa = PBXGroup;
+			children = (
+				A5C0D70000000000000010F1 /* NeedleDropManifest.swift */,
+				A5C0D70000000000000020F1 /* NeedleDropSpritePlayer.swift */,
+				A5C0D70000000000000025F1 /* NeedleDropBarController.swift */,
+				A5C0D70000000000000030F1 /* NeedleDropBar.swift */,
+			);
+			path = NeedleDrop;
+			sourceTree = "<group>";
+		};
 		50F8CA2B21FA48770084F8D8 /* Player */ = {
 			isa = PBXGroup;
 			children = (
 				50D54B602E30F90D0078631E /* AudioVisualizerKit */,
 				50AB3B452F03119800556CE4 /* AudioVisualizerViews */,
+				A5C0D70000000000000010G1 /* NeedleDrop */,
 				5011712F27565B2A00B7C08D /* PlayerFacade.swift */,
 				50C9D6E5284FABCB007F18D0 /* AudioPlayer.swift */,
 				508FDE4921F44E91005A0724 /* BackendAudioPlayer.swift */,
@@ -2668,6 +2705,7 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A5C0D70000000000000060F2 /* needle_drop_stub_sprite.m4a in Resources */,
 				50BE5D632850F4F600156FC6 /* album_example_2.xml in Resources */,
 				50AE79BA2C1F69A00085CBB3 /* OpenSubsonicExtensions_example_1.xml in Resources */,
 				50BE5D7D2850F50700156FC6 /* catalogs.xml in Resources */,
@@ -2961,6 +2999,10 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 			files = (
 				A5C0D60000000000000020A2 /* ReadOnlyNoOpImplementations.swift in Sources */,
 				A5C0D50000000000000010B2 /* ArtworkImageLoader.swift in Sources */,
+				A5C0D70000000000000010F2 /* NeedleDropManifest.swift in Sources */,
+				A5C0D70000000000000020F2 /* NeedleDropSpritePlayer.swift in Sources */,
+				A5C0D70000000000000025F2 /* NeedleDropBarController.swift in Sources */,
+				A5C0D70000000000000030F2 /* NeedleDropBar.swift in Sources */,
 				50C9D68E284FAA6C007F18D0 /* MusicFolderMO+CoreDataClass.swift in Sources */,
 				50C9D684284FAA6C007F18D0 /* LogEntryMO+CoreDataClass.swift in Sources */,
 				50C9D6C9284FAB0C007F18D0 /* EventNotificationHandler.swift in Sources */,
@@ -3195,6 +3237,8 @@ A5C0D50000000000000010B1 /* ArtworkImageLoader.swift */ = {isa = PBXFileReferenc
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A5C0D70000000000000040F2 /* NeedleDropStubFixture.swift in Sources */,
+				A5C0D70000000000000050F2 /* NeedleDropLatencyTest.swift in Sources */,
 				50BE5D6D2850F4FB00156FC6 /* SsDirectoriesExample1ParserTest.swift in Sources */,
 				50BE5D6F2850F4FB00156FC6 /* SsPingParserTest.swift in Sources */,
 				50BE5D6C2850F4FB00156FC6 /* SsAlbumParserPreCreatedArtistsTest.swift in Sources */,
