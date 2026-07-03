@@ -12,7 +12,8 @@ import SwiftUI
 /// start playback, so the host can run the same close path as the X button (`deckWillClose()` then
 /// `dismiss(animated:)`).
 struct AuditionDeckCardView: View {
-  @ObservedObject var controller: AuditionDeckController
+  @ObservedObject
+  var controller: AuditionDeckController
   let candidate: DeckCandidate
   let isCurrent: Bool
   /// 1-based position + total dealt candidates, for the design §7 accessibility label ("Card <i>
@@ -23,9 +24,12 @@ struct AuditionDeckCardView: View {
   let onOpen: (DeckCandidate) -> ()
   let onRequestDismiss: () -> ()
 
-  @StateObject private var auditionModel = AuditionDeckCardAuditionModel()
-  @State private var autoAuditionTrigger = false
-  @AppStorage("amperfy.fork.discovery.autoplayPreviews") private var autoplayPreviews = true
+  @StateObject
+  private var auditionModel = AuditionDeckCardAuditionModel()
+  @State
+  private var autoAuditionTrigger = false
+  @AppStorage("amperfy.fork.discovery.autoplayPreviews")
+  private var autoplayPreviews = true
 
   private var container: PlayableContainable? { controller.resolveEntity(candidate) }
   private var theme: ThemePreference {

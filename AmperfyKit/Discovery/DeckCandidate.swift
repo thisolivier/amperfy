@@ -51,11 +51,17 @@ public struct DeckProvenance: Equatable, Sendable {
   public let seedRef: String
   /// Human-readable seed name for the evidence line template.
   public let seedTitle: String
+  /// Set only when the deal's seed was `.recentHistory` (integration pass, design §5.2's third
+  /// evidence-line template — "Because you've been playing <artist>"): the most-common artist
+  /// among the resolved recent-plays seed songs (see `DeckSeedResolver`), or `nil` if no seed song
+  /// had a resolvable artist. `nil` for `.playlist`/`.album` seeds — never fabricated, per design.
+  public let seedArtist: String?
 
-  public init(pool: DeckPool, seedRef: String, seedTitle: String) {
+  public init(pool: DeckPool, seedRef: String, seedTitle: String, seedArtist: String? = nil) {
     self.pool = pool
     self.seedRef = seedRef
     self.seedTitle = seedTitle
+    self.seedArtist = seedArtist
   }
 }
 

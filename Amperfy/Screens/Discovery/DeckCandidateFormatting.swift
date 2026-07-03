@@ -25,16 +25,21 @@ enum DeckCandidateFormatting {
     return "\(minutes) Min"
   }
 
-  /// Evidence line templates (design §5.2). `DeckPool` — per the exact data-layer interface this
-  /// sprint was handed — only distinguishes `.adjacency`/`.similar`; it carries no third "history"
-  /// case, and `DeckProvenance` carries no artist field. That means the design doc's third
-  /// template ("Because you've been playing <artist>") can never be cleanly derived from the
-  /// given interfaces, even when the deck's *seed* was `.recentHistory` — the candidate's
-  /// *provenance* is still adjacency-or-similar regardless of what seeded the deal. Per this
-  /// sprint's own instruction ("if you can't derive <artist> cleanly... fall back to the
-  /// adjacency/similar templates using seedTitle rather than inventing text"), this intentionally
-  /// implements only the two pool-based templates.
+  /// Evidence line templates (design §5.2): adjacency pool → `Close match to "<seed>"`;
+  /// similar-songs pool → `A new direction from "<seed>"`; history seed →
+  /// `Because you've been playing <artist>`.
+  ///
+  /// **Integration pass note:** `DeckPool` only ever distinguishes `.adjacency`/`.similar` — a
+  /// candidate's *pool* provenance is orthogonal to what *seeded* the deal, so the third template
+  /// is selected via `provenance.seedArtist` (only ever non-nil for a `.recentHistory` seed —
+  /// see `DeckSeedResolver`), not via `provenance.pool`. This takes priority over the two
+  /// pool-based templates whenever it's available; when a `.recentHistory` seed has no resolvable
+  /// artist, `seedArtist` is `nil` and this falls back to the pool-based templates (using
+  /// `seedTitle`, "your recent listening") rather than fabricating an artist name.
   static func evidenceLine(for provenance: DeckProvenance) -> String {
+    if let seedArtist = provenance.seedArtist {
+      return "Because you\u{2019}ve been playing \(seedArtist)"
+    }
     switch provenance.pool {
     case .adjacency:
       return "Close match to \u{201C}\(provenance.seedTitle)\u{201D}"

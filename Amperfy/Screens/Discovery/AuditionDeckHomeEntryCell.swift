@@ -17,7 +17,7 @@ import UIKit
 final class AuditionDeckHomeEntryCell: UICollectionViewCell {
   static let reuseID = "AuditionDeckHomeEntryCell"
 
-  func configureFindMore(isEnabled: Bool, action: @escaping () -> Void) {
+  func configureFindMore(isEnabled: Bool, action: @escaping () -> ()) {
     contentConfiguration = UIHostingConfiguration {
       AuditionDeckFindMoreCellContent(isEnabled: isEnabled, action: action)
     }
@@ -30,7 +30,7 @@ final class AuditionDeckHomeEntryCell: UICollectionViewCell {
     systemImage: String,
     buttonTitle: String?,
     isButtonEnabled: Bool,
-    action: (() -> Void)?
+    action: (() -> ())?
   ) {
     contentConfiguration = UIHostingConfiguration {
       AuditionDeckEmptySectionCellContent(

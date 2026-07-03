@@ -15,13 +15,16 @@ import UIKit
 /// telling the caller the value has "settled" (design §5.4: "On change:
 /// debounce 400ms -> regenerate un-swiped cards").
 struct AuditionDeckBlendSlider: View {
-  @Binding var blend: Double
-  let onSettled: (Double) -> Void
+  @Binding
+  var blend: Double
+  let onSettled: (Double) -> ()
 
-  @State private var debounceTask: Task<Void, Never>?
-  @State private var wasAboveMidpoint: Bool
+  @State
+  private var debounceTask: Task<(), Never>?
+  @State
+  private var wasAboveMidpoint: Bool
 
-  init(blend: Binding<Double>, onSettled: @escaping (Double) -> Void) {
+  init(blend: Binding<Double>, onSettled: @escaping (Double) -> ()) {
     self._blend = blend
     self.onSettled = onSettled
     self._wasAboveMidpoint = State(initialValue: blend.wrappedValue >= 0.5)
@@ -53,7 +56,7 @@ struct AuditionDeckBlendSlider: View {
   private var accessibilityBlendDescription: String {
     switch blend {
     case ..<0.33: "Familiar"
-    case 0.33...0.67: "Balanced"
+    case 0.33 ... 0.67: "Balanced"
     default: "Adventurous"
     }
   }

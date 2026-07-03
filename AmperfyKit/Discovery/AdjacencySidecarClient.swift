@@ -67,7 +67,8 @@ public final class AdjacencySidecarClient: FamiliarPoolProviding {
     seedCollection: (id: String, kind: DeckCandidateKind)?,
     kind: DeckCandidateKind,
     count: Int
-  ) async throws -> [ScoredCandidate] {
+  ) async throws
+    -> [ScoredCandidate] {
     guard let requestURL = makeRequestURL(
       seedSongIds: seedSongIds,
       seedCollection: seedCollection,
@@ -116,7 +117,8 @@ public final class AdjacencySidecarClient: FamiliarPoolProviding {
     seedCollection: (id: String, kind: DeckCandidateKind)?,
     kind: DeckCandidateKind,
     count: Int
-  ) -> URL? {
+  )
+    -> URL? {
     guard let baseURL, var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
     else { return nil }
 
@@ -131,7 +133,10 @@ public final class AdjacencySidecarClient: FamiliarPoolProviding {
     } else {
       guard !seedSongIds.isEmpty else { return nil }
       components.path = "/similar-from-history"
-      queryItems.append(URLQueryItem(name: "seedSongIds", value: seedSongIds.joined(separator: ",")))
+      queryItems.append(URLQueryItem(
+        name: "seedSongIds",
+        value: seedSongIds.joined(separator: ",")
+      ))
     }
 
     components.queryItems = queryItems

@@ -37,11 +37,21 @@ public struct DeckSeedResolution: Sendable, Equatable {
   /// Human-readable name for the evidence-line template (design §5.2):
   /// the collection's name, or "your recent listening" for history.
   public let seedTitle: String
+  /// Only set for `.recentHistory` seeds — see `DeckProvenance.seedArtist`'s doc comment. `nil`
+  /// for `.playlist`/`.album` seeds (not applicable), and also `nil` for a `.recentHistory` seed
+  /// whose resolved songs have no known artist.
+  public let seedArtist: String?
 
-  public init(seedSongIds: [String], seedCollectionId: String?, seedTitle: String) {
+  public init(
+    seedSongIds: [String],
+    seedCollectionId: String?,
+    seedTitle: String,
+    seedArtist: String? = nil
+  ) {
     self.seedSongIds = seedSongIds
     self.seedCollectionId = seedCollectionId
     self.seedTitle = seedTitle
+    self.seedArtist = seedArtist
   }
 }
 
@@ -87,7 +97,8 @@ enum DeckSeedResolver {
       return DeckSeedResolution(
         seedSongIds: songs.map(\.id),
         seedCollectionId: nil,
-        seedTitle: "your recent listening"
+        seedTitle: "your recent listening",
+        seedArtist: mostCommonArtistName(among: songs)
       )
     }
   }
@@ -99,5 +110,23 @@ enum DeckSeedResolver {
       songIds.append(playable.id)
     }
     return songIds
+  }
+
+  /// Design §5.2's third evidence-line template needs one representative artist name for a
+  /// `.recentHistory` seed. Most-common artist among the resolved recent plays (`songs`, already
+  /// ordered most-recent-first by `getRecentlyPlayedSongs`) — this reads as "a pattern you've been
+  /// in" rather than just naming whoever happened to play last. Ties broken by recency: `songs`'
+  /// ordering means `firstSeenOrder`'s earliest entries are also the most-recently-played, and
+  /// `max(by:)` keeps the first element on a tie. Returns `nil` (never fabricated) if no seed song
+  /// has a resolvable artist.
+  private static func mostCommonArtistName(among songs: [Song]) -> String? {
+    var counts: [String: Int] = [:]
+    var firstSeenOrder: [String] = []
+    for song in songs {
+      guard let name = song.artist?.name, !name.isEmpty else { continue }
+      if counts[name] == nil { firstSeenOrder.append(name) }
+      counts[name, default: 0] += 1
+    }
+    return firstSeenOrder.max { counts[$0, default: 0] < counts[$1, default: 0] }
   }
 }

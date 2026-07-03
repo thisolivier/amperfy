@@ -14,7 +14,8 @@ struct AuditionDeckTopBar: View {
   let refreshBannerVisible: Bool
   let blend: Double
   let degradedPools: Set<DeckPool>
-  @Binding var isBlendPanelExpanded: Bool
+  @Binding
+  var isBlendPanelExpanded: Bool
   let onClose: () -> ()
 
   var body: some View {

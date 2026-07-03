@@ -53,7 +53,7 @@ class OnDeviceAdventurousPoolProviderTest: XCTestCase {
   var coreDataHelper: CoreDataHelper!
   var library: LibraryStorage!
   var account: Account!
-  var fakeService: FakeTrackAdjacencyQuerying!
+  private var fakeService: FakeTrackAdjacencyQuerying!
 
   override func setUp() async throws {
     coreDataHelper = CoreDataHelper()
@@ -84,7 +84,11 @@ class OnDeviceAdventurousPoolProviderTest: XCTestCase {
   }
 
   private func makeProvider() -> OnDeviceAdventurousPoolProvider {
-    OnDeviceAdventurousPoolProvider(storage: library, account: account, adjacencyService: fakeService)
+    OnDeviceAdventurousPoolProvider(
+      storage: library,
+      account: account,
+      adjacencyService: fakeService
+    )
   }
 
   // MARK: - dataAvailable

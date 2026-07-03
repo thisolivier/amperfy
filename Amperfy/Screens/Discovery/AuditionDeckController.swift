@@ -35,14 +35,22 @@ final class AuditionDeckController: ObservableObject {
   static let deckLengthDefaultsKey = "amperfy.fork.discovery.deckLength"
   static let defaultDeckLength = 10
 
-  @Published var lifecycleState: AuditionDeckLifecycleState = .dealing
-  @Published var isRefreshing = false
-  @Published var isExtending = false
-  @Published var refreshBannerVisible = false
-  @Published var candidates: [DeckCandidate] = []
-  @Published var scrollPositionId: String?
-  @Published var degradedPools: Set<DeckPool> = []
-  @Published var blend: Double
+  @Published
+  var lifecycleState: AuditionDeckLifecycleState = .dealing
+  @Published
+  var isRefreshing = false
+  @Published
+  var isExtending = false
+  @Published
+  var refreshBannerVisible = false
+  @Published
+  var candidates: [DeckCandidate] = []
+  @Published
+  var scrollPositionId: String?
+  @Published
+  var degradedPools: Set<DeckPool> = []
+  @Published
+  var blend: Double
 
   let audio: AuditionDeckAudioCoordinator
 
@@ -118,7 +126,11 @@ final class AuditionDeckController: ObservableObject {
   func resolveEntity(_ candidate: DeckCandidate) -> PlayableContainable? {
     switch candidate.kind {
     case .album:
-      return storage.getAlbum(for: account, id: candidate.collectionId, isDetailFaultResolution: true)
+      return storage.getAlbum(
+        for: account,
+        id: candidate.collectionId,
+        isDetailFaultResolution: true
+      )
     case .playlist:
       return storage.getPlaylist(for: account, id: candidate.collectionId)
     }
@@ -144,7 +156,10 @@ final class AuditionDeckController: ObservableObject {
     guard let containable = resolveEntity(candidate) else { return }
     audio.stopAllSpritePlayers()
     audio.markPlayHandedOffToMainPlayer()
-    player.playShuffled(context: PlayContext(containable: containable, playables: containable.playables))
+    player.playShuffled(context: PlayContext(
+      containable: containable,
+      playables: containable.playables
+    ))
   }
 
   func addToQueue(candidate: DeckCandidate) {

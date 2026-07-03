@@ -34,6 +34,7 @@ enum DeckCandidateResolver {
   static func resolve(
     _ tagged: PoolTaggedCandidate,
     seedRef: String,
+    seedArtist: String? = nil,
     storage: LibraryStorage,
     account: Account
   )
@@ -41,7 +42,8 @@ enum DeckCandidateResolver {
     let provenance = DeckProvenance(
       pool: tagged.pool,
       seedRef: seedRef,
-      seedTitle: tagged.scored.seedTitle
+      seedTitle: tagged.scored.seedTitle,
+      seedArtist: seedArtist
     )
 
     switch tagged.scored.kind {

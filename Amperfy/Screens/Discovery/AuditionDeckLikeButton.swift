@@ -15,9 +15,12 @@ import UIKit
 /// fully-initialized `self`, which isn't available yet inside this view's
 /// `init` (where we read the initial liked state). Same underlying lookup,
 /// just usable pre-`self`.
+@MainActor
 private var currentAppDelegate: AppDelegate {
   (UIApplication.shared.delegate as! AppDelegate)
 }
+
+// MARK: - AuditionDeckLikeButton
 
 /// Heart-icon like control, branching on `DeckCandidateKind` per design
 /// §5.2 / OQ-2: albums use the real Subsonic-star favourite plumbing
@@ -37,8 +40,10 @@ public struct AuditionDeckLikeButton: View {
   let kind: DeckCandidateKind
   let account: Account
 
-  @State private var liked: Bool
-  @State private var couldNotSaveChipVisible = false
+  @State
+  private var liked: Bool
+  @State
+  private var couldNotSaveChipVisible = false
 
   public init(collectionId: String, kind: DeckCandidateKind, account: Account) {
     self.collectionId = collectionId
@@ -96,6 +101,7 @@ public struct AuditionDeckLikeButton: View {
       // Local-only store, no network round trip -> no failure path to
       // revert from (§5.2: UI is identical regardless of backing).
       PinnedPlaylistStore.shared.toggle(collectionId)
+      if liked { fireLikeSuccessHaptic() }
 
     case .album:
       Task { @MainActor in
@@ -107,6 +113,7 @@ public struct AuditionDeckLikeButton: View {
         let syncer = currentAppDelegate.getMeta(account.info).librarySyncer
         do {
           try await album.remoteToggleFavorite(syncer: syncer)
+          if liked { fireLikeSuccessHaptic() }
         } catch {
           withAnimation { liked = previousLiked }
           // `Album.remoteToggleFavorite` flips `isFavorite` optimistically
@@ -122,6 +129,15 @@ public struct AuditionDeckLikeButton: View {
         }
       }
     }
+  }
+
+  /// Design §7: "like success light impact" — fired once the like actually takes (playlist:
+  /// immediately, no failure path; album: only after the remote favourite call succeeds, not on
+  /// the optimistic flip that might get reverted). Direct `UIImpactFeedbackGenerator` call, no
+  /// shared Haptics abstraction — matches this codebase's existing convention (confirmed absent in
+  /// two prior sprints).
+  private func fireLikeSuccessHaptic() {
+    UIImpactFeedbackGenerator(style: .light).impactOccurred()
   }
 
   private func showCouldNotSaveChip() async {

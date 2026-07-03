@@ -17,13 +17,16 @@ import SwiftUI
 /// responsible for dismissing the deck and pushing the real detail screen; this view only reports
 /// *which* candidate was opened.
 struct AuditionDeckView: View {
-  @ObservedObject var controller: AuditionDeckController
+  @ObservedObject
+  var controller: AuditionDeckController
   let account: Account
   let onOpenCandidate: (DeckCandidate) -> ()
   let onRequestDismiss: () -> ()
 
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @State private var isBlendPanelExpanded = false
+  @Environment(\.accessibilityReduceMotion)
+  private var reduceMotion
+  @State
+  private var isBlendPanelExpanded = false
 
   private static let endCardId = "audition-deck-end-card"
 
@@ -84,13 +87,18 @@ struct AuditionDeckView: View {
       )
     case let .error(message):
       AuditionDeckErrorView(message: message, onRetry: { Task { await controller.redeal() } })
-    case .populated, .refreshing, .extended:
+    case .extended, .populated, .refreshing:
       cardScrollView
     }
   }
 
   private var cardScrollView: some View {
-    ScrollView(.vertical) {
+    // Captured as a local `let` (rather than read directly inside `scrollTransition`'s closure
+    // below): `scrollTransition`'s closure is `@Sendable`, and `reduceMotion` is a main-actor-
+    // isolated `@Environment` property on this view — a plain local `Bool` copy crosses that
+    // boundary cleanly since `Bool` is `Sendable`.
+    let reduceMotionSnapshot = reduceMotion
+    return ScrollView(.vertical) {
       LazyVStack(spacing: 0) {
         ForEach(Array(controller.candidates.enumerated()), id: \.element.id) { index, candidate in
           AuditionDeckCardView(
@@ -105,9 +113,9 @@ struct AuditionDeckView: View {
           )
           .containerRelativeFrame(.vertical)
           .scrollTransition { content, phase in
-            reduceMotion ? content : content
-              .scaleEffect(phase.isIdentity ? 1 : 0.96)
-              .opacity(phase.isIdentity ? 1 : 0.8)
+            content
+              .scaleEffect(reduceMotionSnapshot || phase.isIdentity ? 1 : 0.96)
+              .opacity(reduceMotionSnapshot || phase.isIdentity ? 1 : 0.8)
           }
           .id(candidate.collectionId)
         }

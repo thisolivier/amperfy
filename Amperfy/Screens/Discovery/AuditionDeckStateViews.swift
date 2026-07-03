@@ -31,7 +31,8 @@ struct AuditionDeckDealingView: View {
 /// beneath it (`AuditionDeckBlendSlider`, the blend-panel agent's file, used directly — moving it
 /// re-deals per §3.1's "Empty -- slider moved --> Dealing").
 struct AuditionDeckEmptyView: View {
-  @Binding var blend: Double
+  @Binding
+  var blend: Double
   let onBlendSettled: (Double) -> ()
 
   var body: some View {

@@ -69,6 +69,14 @@ public final class DeckFusionEngine: @unchecked Sendable {
     self.storage = storage
   }
 
+  /// `@MainActor`: matches this method's own documented invariant above — the seed resolution and
+  /// storage/account reads happen synchronously "on the caller's queue" (in practice, the caller is
+  /// always `AuditionDeckController`, itself `@MainActor`). Isolating `deal` to the caller's actor
+  /// removes the need to send non-`Sendable` `Account`/`LibraryStorage` across an isolation
+  /// boundary at all — the two pool fetches below still run concurrently as child tasks (via
+  /// `async let`) because `fetchFamiliarOutcome`/`fetchAdventurousOutcome` are themselves
+  /// `nonisolated` and only ever receive plain `Sendable` values (ids/strings/counts).
+  @MainActor
   public func deal(
     seed: DeckSeed,
     kind: DeckCandidateKind,
@@ -85,6 +93,7 @@ public final class DeckFusionEngine: @unchecked Sendable {
     }
     let seedRef = resolution.seedCollectionId ?? ""
     let seedTitle = resolution.seedTitle
+    let seedArtist = resolution.seedArtist
     let seedSongIds = resolution.seedSongIds
     let seedCollectionParam: (id: String, kind: DeckCandidateKind)? = resolution
       .seedCollectionId.map { (id: $0, kind: kind) }
@@ -129,6 +138,7 @@ public final class DeckFusionEngine: @unchecked Sendable {
       DeckCandidateResolver.resolve(
         $0,
         seedRef: seedRef,
+        seedArtist: seedArtist,
         storage: storage,
         account: account
       )

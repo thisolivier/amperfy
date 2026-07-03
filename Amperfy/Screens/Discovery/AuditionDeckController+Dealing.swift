@@ -104,7 +104,8 @@ extension AuditionDeckController {
     keeping keptIds: Set<String>,
     afterIndex currentIndex: Int,
     freshCandidates: [DeckCandidate]
-  ) -> [DeckCandidate] {
+  )
+    -> [DeckCandidate] {
     var freshQueue = freshCandidates
     var rebuilt: [DeckCandidate] = []
     rebuilt.reserveCapacity(candidates.count)

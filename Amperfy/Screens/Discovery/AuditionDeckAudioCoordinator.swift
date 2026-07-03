@@ -24,7 +24,12 @@ final class AuditionDeckAudioCoordinator {
 
   private var spritePlayers: [String: NeedleDropSpritePlayer] = [:]
   private var spriteSubscriptions: [String: AnyCancellable] = [:]
-  private var backgroundObserverToken: NSObjectProtocol?
+  /// `nonisolated(unsafe)`: only read/written from `init`/`deinit` (never concurrently), and
+  /// `deinit` on an `@MainActor` class is itself `nonisolated` by default in Swift 6 — matches the
+  /// same accommodation already used elsewhere in this codebase (e.g.
+  /// `AmperfyKit/Player/NeedleDrop/NeedleDropSpritePlayer.swift`) for state that's provably
+  /// single-threaded in practice but not statically Sendable.
+  nonisolated(unsafe) private var backgroundObserverToken: NSObjectProtocol?
 
   init(player: PlayerFacade) {
     self.player = player
@@ -37,7 +42,7 @@ final class AuditionDeckAudioCoordinator {
     // is a fresh addition, not a reuse of an established pattern. `willResignActiveNotification`
     // (not `didEnterBackgroundNotification`) so audio actually stops the instant the app loses
     // focus (e.g. Control Center, incoming call), not only once fully backgrounded.
-    backgroundObserverToken = NotificationCenter.default.addObserver(
+    self.backgroundObserverToken = NotificationCenter.default.addObserver(
       forName: UIApplication.willResignActiveNotification,
       object: nil,
       queue: .main
@@ -57,7 +62,11 @@ final class AuditionDeckAudioCoordinator {
   /// Returns the single sprite player owned for `candidateId`, creating it on first use. Reused
   /// across relayouts of the same card so paused/riding state survives scroll-position churn
   /// within the prefetch window.
-  func spritePlayer(for candidateId: String, manifest: NeedleDropManifest) -> NeedleDropSpritePlayer {
+  func spritePlayer(
+    for candidateId: String,
+    manifest: NeedleDropManifest
+  )
+    -> NeedleDropSpritePlayer {
     if let existing = spritePlayers[candidateId] { return existing }
     let newPlayer = NeedleDropSpritePlayer(spriteURL: manifest.spriteURL)
     spritePlayers[candidateId] = newPlayer

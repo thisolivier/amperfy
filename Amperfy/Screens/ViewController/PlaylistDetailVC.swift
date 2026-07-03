@@ -191,8 +191,8 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
         image: UIImage(systemName: "rectangle.stack.badge.play")
       ) { [weak self] _ in
         guard let self else { return }
-        self.present(
-          AuditionDeckHostVC(seed: .playlist(id: self.playlist.id), defaultKind: .playlist),
+        present(
+          AuditionDeckHostVC(seed: .playlist(id: playlist.id), defaultKind: .playlist),
           animated: true
         )
       }

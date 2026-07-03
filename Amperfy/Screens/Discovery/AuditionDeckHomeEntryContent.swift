@@ -10,11 +10,13 @@
 
 import SwiftUI
 
+// MARK: - AuditionDeckFindMoreCellContent
+
 /// Section-end trailing cell: "same cell size as siblings... centered
 /// sparkle.magnifyingglass icon + 'Find more' label" (design §5.6).
 struct AuditionDeckFindMoreCellContent: View {
   let isEnabled: Bool
-  let action: () -> Void
+  let action: () -> ()
 
   var body: some View {
     Button(action: action) {
@@ -38,6 +40,8 @@ struct AuditionDeckFindMoreCellContent: View {
   }
 }
 
+// MARK: - AuditionDeckEmptySectionCellContent
+
 /// Empty-section replacement card: `ContentUnavailableView` styled to the
 /// widget card, per-section copy, optional action button (design §5.6 /
 /// §2 — "Recently added" gets no button, favourite sections do).
@@ -47,7 +51,7 @@ struct AuditionDeckEmptySectionCellContent: View {
   let systemImage: String
   let buttonTitle: String?
   let isButtonEnabled: Bool
-  let action: (() -> Void)?
+  let action: (() -> ())?
 
   var body: some View {
     Group {

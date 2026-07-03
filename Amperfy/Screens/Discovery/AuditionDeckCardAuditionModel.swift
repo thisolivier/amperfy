@@ -13,8 +13,10 @@ import Foundation
 /// "what slice is playing right now."
 @MainActor
 final class AuditionDeckCardAuditionModel: ObservableObject {
-  @Published private(set) var availability: NeedleDropSpriteAvailability = .loading
-  @Published private(set) var currentSlice: NeedleDropSlice?
+  @Published
+  private(set) var availability: NeedleDropSpriteAvailability = .loading
+  @Published
+  private(set) var currentSlice: NeedleDropSlice?
 
   private(set) var spritePlayer: NeedleDropSpritePlayer?
   private var sliceSubscription: AnyCancellable?
@@ -30,7 +32,11 @@ final class AuditionDeckCardAuditionModel: ObservableObject {
     account: Account,
     audio: AuditionDeckAudioCoordinator
   ) async {
-    let result = await DeckSpriteManifestFetcher.fetch(collectionId: candidateId, kind: kind, account: account)
+    let result = await DeckSpriteManifestFetcher.fetch(
+      collectionId: candidateId,
+      kind: kind,
+      account: account
+    )
     apply(result, candidateId: candidateId, audio: audio)
   }
 
@@ -42,7 +48,11 @@ final class AuditionDeckCardAuditionModel: ObservableObject {
   ) async {
     guard hasFetchFailedOnce else { return }
     hasFetchFailedOnce = false
-    let result = await DeckSpriteManifestFetcher.fetch(collectionId: candidateId, kind: kind, account: account)
+    let result = await DeckSpriteManifestFetcher.fetch(
+      collectionId: candidateId,
+      kind: kind,
+      account: account
+    )
     apply(result, candidateId: candidateId, audio: audio)
   }
 

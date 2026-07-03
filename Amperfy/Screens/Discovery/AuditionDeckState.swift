@@ -34,7 +34,7 @@ enum AuditionDeckUIState: Equatable {
   case error(message: String)
 }
 
-// MARK: - Degraded pool messaging
+// MARK: - AuditionDeckDegradedPoolMessage
 
 /// Blend chip / panel copy for the partial-degradation edge case (design §8): one pool
 /// unreachable is NOT the Error state, it's a `Populated` deck with a degraded-pool banner.

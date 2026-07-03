@@ -38,11 +38,13 @@ enum HomeCellItem: Hashable {
 
   var playableContainable: PlayableContainable? {
     switch self {
-    case .content(let item): item.playableContainable
+    case let .content(item): item.playableContainable
     case .auxiliary: nil
     }
   }
 }
+
+// MARK: - HomeAuxiliaryEntryKind
 
 enum HomeAuxiliaryEntryKind: Hashable {
   /// Section-end trailing cell shown after real content.
@@ -50,6 +52,8 @@ enum HomeAuxiliaryEntryKind: Hashable {
   /// Whole-section replacement shown when a section has zero items.
   case emptySectionCard
 }
+
+// MARK: - HomeAuxiliaryEntry
 
 /// A single auxiliary (non-content) Home cell. Carries its own identity
 /// (`id`) so repeated `applySnapshot()` calls produce a fresh, distinct

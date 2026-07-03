@@ -21,8 +21,12 @@ struct AuditionDeckCardArtworkView: View {
       .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
       .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
       .overlay(alignment: .topTrailing) {
-        AuditionDeckLikeButton(collectionId: candidate.collectionId, kind: candidate.kind, account: account)
-          .offset(x: 8, y: -8)
+        AuditionDeckLikeButton(
+          collectionId: candidate.collectionId,
+          kind: candidate.kind,
+          account: account
+        )
+        .offset(x: 8, y: -8)
       }
   }
 

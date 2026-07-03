@@ -1,20 +1,6 @@
 import AmperfyKit
 import Foundation
 
-// MARK: - AuditionDeckSpritePort
-
-/// `AdjacencySidecarSettings` (the data-layer agent's expected settings type) did not exist
-/// anywhere in the tree when this file was written, so there was nothing to read a configured
-/// port from. Falls back to the documented prod port (`docs/contracts/adjacency-sidecar-api.md`
-/// §1, `CLAUDE.md`'s infra table). See `DeckSpriteManifestFetcher`'s doc comment for the fuller
-/// reasoning on why this sprint wrote its own fetch instead of depending on that not-yet-built
-/// type's exact method signature.
-enum AuditionDeckSpritePort {
-  /// TODO(integration): replace with `AdjacencySidecarSettings.shared.port` once that type lands,
-  /// so QA (port 8788) resolves correctly too — this constant only ever resolves prod.
-  static let value = 8787
-}
-
 // MARK: - DeckSpriteManifestResult
 
 enum DeckSpriteManifestResult: Equatable {
@@ -38,12 +24,18 @@ enum DeckSpriteManifestResult: Equatable {
 /// down) HTTP contract. If `AdjacencySidecarClient` grows a sprite-manifest method during
 /// integration, this whole `enum` can be deleted in favor of it — nothing outside this file
 /// depends on its internals, only on `DeckSpriteManifestResult`.
+/// `@MainActor`: its only caller, `AuditionDeckCardAuditionModel`, is itself `@MainActor` — see
+/// `DeckFusionEngine.deal`'s doc comment (`AmperfyKit/Discovery/DeckFusionEngine.swift`) for the
+/// same reasoning applied to the other spot in this sprint where a non-`Sendable` `Account` is
+/// read synchronously by a caller-isolated async function.
+@MainActor
 enum DeckSpriteManifestFetcher {
   static func fetch(
     collectionId: String,
     kind: DeckCandidateKind,
     account: Account
-  ) async -> DeckSpriteManifestResult {
+  ) async
+    -> DeckSpriteManifestResult {
     guard let url = manifestURL(collectionId: collectionId, kind: kind, account: account) else {
       return .failed
     }
@@ -60,19 +52,21 @@ enum DeckSpriteManifestFetcher {
     }
   }
 
-  /// Host from the active account's server URL, port from `AuditionDeckSpritePort` — mirrors the
-  /// base-URL derivation the prompt describes for `AdjacencySidecarClient`
-  /// (`http://{host}:{port}`, contract §1).
+  /// Host from the active account's server URL, port from `AdjacencySidecarSettings.shared`
+  /// (integration pass: this previously hardcoded 8787, which resolved prod but not QA's 8788)
+  /// — mirrors the base-URL derivation `AdjacencySidecarClient` uses (`http://{host}:{port}`,
+  /// contract §1).
   private static func manifestURL(
     collectionId: String,
     kind: DeckCandidateKind,
     account: Account
-  ) -> URL? {
+  )
+    -> URL? {
     guard let host = URL(string: account.serverUrl)?.host else { return nil }
     var components = URLComponents()
     components.scheme = "http"
     components.host = host
-    components.port = AuditionDeckSpritePort.value
+    components.port = AdjacencySidecarSettings.shared.port
     components.path = "/sprite-manifest"
     components.queryItems = [
       URLQueryItem(name: "collectionId", value: collectionId),

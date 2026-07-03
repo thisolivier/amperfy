@@ -11,6 +11,8 @@
 import AmperfyKit
 import SwiftUI
 
+// MARK: - AuditionDeckBlendPanel
+
 /// The expandable blend control panel shown under the deck's top bar when
 /// the blend chip (`AuditionDeckBlendChip`) is tapped.
 ///
@@ -30,13 +32,16 @@ import SwiftUI
 /// `.auditionDeckBlendPanelDismissOverlay(isExpanded:)` view modifier
 /// (bottom of this file) to the deck's background/card content instead.
 public struct AuditionDeckBlendPanel: View {
-  @Binding var blend: Double
+  @Binding
+  var blend: Double
   let degradedPools: Set<DeckPool>
-  let onBlendSettled: (Double) -> Void
-  let onDealMore: () -> Void
+  let onBlendSettled: (Double) -> ()
+  let onDealMore: () -> ()
 
-  @AppStorage("amperfy.fork.discovery.deckLength") private var deckLength: Int = 10
-  @AppStorage("amperfy.fork.discovery.autoplayPreviews") private var autoplayPreviews: Bool = true
+  @AppStorage("amperfy.fork.discovery.deckLength")
+  private var deckLength: Int = 10
+  @AppStorage("amperfy.fork.discovery.autoplayPreviews")
+  private var autoplayPreviews: Bool = true
 
   /// - Parameters:
   ///   - blend: Current blend value, 0 (adjacency-only) ... 1 (similar-only).
@@ -52,8 +57,8 @@ public struct AuditionDeckBlendPanel: View {
   public init(
     blend: Binding<Double>,
     degradedPools: Set<DeckPool>,
-    onBlendSettled: @escaping (Double) -> Void,
-    onDealMore: @escaping () -> Void
+    onBlendSettled: @escaping (Double) -> (),
+    onDealMore: @escaping () -> ()
   ) {
     self._blend = blend
     self.degradedPools = degradedPools

@@ -37,7 +37,8 @@ private final class FakeFamiliarPool: FamiliarPoolProviding, @unchecked Sendable
     seedCollection: (id: String, kind: DeckCandidateKind)?,
     kind: DeckCandidateKind,
     count: Int
-  ) async throws -> [ScoredCandidate] {
+  ) async throws
+    -> [ScoredCandidate] {
     if let errorToThrow { throw errorToThrow }
     return Array(results.prefix(count))
   }
@@ -69,8 +70,8 @@ class DeckFusionEngineTest: XCTestCase {
   var coreDataHelper: CoreDataHelper!
   var library: LibraryStorage!
   var account: Account!
-  var familiarPool: FakeFamiliarPool!
-  var adventurousPool: FakeAdventurousPool!
+  private var familiarPool: FakeFamiliarPool!
+  private var adventurousPool: FakeAdventurousPool!
   var engine: DeckFusionEngine!
 
   override func setUp() async throws {

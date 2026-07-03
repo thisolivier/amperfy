@@ -39,9 +39,15 @@ class DeckSeedResolverTest: XCTestCase {
   }
 
   @discardableResult
-  private func makeSong(id: String) -> Song {
+  private func makeSong(id: String, artistName: String? = nil) -> Song {
     let song = library.createSong(account: account)
     song.id = id
+    if let artistName {
+      let artist = library.createArtist(account: account)
+      artist.id = "artist-\(artistName)"
+      artist.name = artistName
+      song.artist = artist
+    }
     return song
   }
 
@@ -151,6 +157,52 @@ class DeckSeedResolverTest: XCTestCase {
     XCTAssertEqual(resolution.seedSongIds, ["played-new", "played-old"])
     XCTAssertNil(resolution.seedCollectionId)
     XCTAssertEqual(resolution.seedTitle, "your recent listening")
+    // Design §5.2's third evidence-line template ("Because you've been playing <artist>") is
+    // never fabricated: no seed song here has an artist, so this must stay nil, not a guess.
+    XCTAssertNil(resolution.seedArtist)
+  }
+
+  /// Design §5.2's history evidence-line template needs one representative artist.
+  /// `DeckSeedResolver` picks the most-common artist among the resolved recent plays, breaking
+  /// ties by recency (the most-recently-played of the tied artists wins).
+  func testHistorySeedArtistIsMostCommonAmongSeedSongsTiebreakingByRecency() {
+    let oldestByArtistA = makeSong(id: "h-a1", artistName: "Artist A")
+    let midByArtistB = makeSong(id: "h-b1", artistName: "Artist B")
+    let newerByArtistA = makeSong(id: "h-a2", artistName: "Artist A")
+    let newestByArtistB = makeSong(id: "h-b2", artistName: "Artist B")
+    oldestByArtistA.lastTimePlayed = Date(timeIntervalSince1970: 1000)
+    midByArtistB.lastTimePlayed = Date(timeIntervalSince1970: 2000)
+    newerByArtistA.lastTimePlayed = Date(timeIntervalSince1970: 3000)
+    newestByArtistB.lastTimePlayed = Date(timeIntervalSince1970: 4000)
+    library.saveContext()
+
+    let resolution = DeckSeedResolver.resolve(
+      seed: .recentHistory,
+      storage: library,
+      account: account,
+      historyLimit: 20
+    )
+
+    // Both artists appear twice (a tie) — "Artist B" wins because its most-recent play
+    // ("h-b2") is more recent than "Artist A"'s most-recent play ("h-a2").
+    XCTAssertEqual(resolution.seedArtist, "Artist B")
+  }
+
+  func testAlbumAndPlaylistSeedsNeverSetSeedArtist() {
+    let songA = makeSong(id: "s-a", artistName: "Should Not Appear")
+    makeAlbum(id: "al-no-artist", name: "Album", songs: [songA])
+    makePlaylist(id: "pl-no-artist", name: "Playlist", songs: [songA])
+    library.saveContext()
+
+    let albumResolution = DeckSeedResolver.resolve(
+      seed: .album(id: "al-no-artist"), storage: library, account: account
+    )
+    let playlistResolution = DeckSeedResolver.resolve(
+      seed: .playlist(id: "pl-no-artist"), storage: library, account: account
+    )
+
+    XCTAssertNil(albumResolution.seedArtist)
+    XCTAssertNil(playlistResolution.seedArtist)
   }
 
   func testHistorySeedRespectsLimit() {

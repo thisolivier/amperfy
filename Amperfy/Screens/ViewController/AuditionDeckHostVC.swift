@@ -119,17 +119,11 @@ class AuditionDeckHostVC: UIViewController {
     return appDelegate.storage.main.library.getAccount(info: activeAccountInfo)
   }
 
-  /// INTEGRATION POINT: placeholder construction. `AdjacencySidecarClient`
-  /// (`FamiliarPoolProviding`) and `OnDeviceAdventurousPoolProvider` (`AdventurousPoolProviding`)
-  /// are the data-layer agent's types (`AmperfyKit/Discovery/`) — their real `init` signatures
-  /// were not settled when this file was written. Swap this factory's two constructor calls for
-  /// the real ones during the integration pass; nothing else in this sprint's files depends on
-  /// how `DeckFusionEngine` gets built.
   private func makeDeckController(account: Account) -> AuditionDeckController {
     let storage = appDelegate.storage.main.library
     let fusionEngine = DeckFusionEngine(
-      familiarPool: AdjacencySidecarClient(),
-      adventurousPool: OnDeviceAdventurousPoolProvider(),
+      familiarPool: AdjacencySidecarClient(serverUrl: account.serverUrl),
+      adventurousPool: OnDeviceAdventurousPoolProvider(storage: storage, account: account),
       storage: storage
     )
     let likeCoordinator = AuditionDeckLikeCoordinator(storage: storage, account: account)

@@ -132,8 +132,8 @@ class AlbumDetailVC: SingleSnapshotFetchedResultsTableViewController<SongMO> {
         image: UIImage(systemName: "rectangle.stack.badge.play")
       ) { [weak self] _ in
         guard let self else { return }
-        self.present(
-          AuditionDeckHostVC(seed: .album(id: self.album.id), defaultKind: .album),
+        present(
+          AuditionDeckHostVC(seed: .album(id: album.id), defaultKind: .album),
           animated: true
         )
       }

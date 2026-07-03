@@ -215,7 +215,7 @@ final class HomeVC: UICollectionViewController {
       HomeCellItem
     >(collectionView: collectionView) { collectionView, indexPath, item in
       switch item {
-      case .content(let homeItem):
+      case let .content(homeItem):
         let cell = collectionView.dequeueReusableCell(
           withReuseIdentifier: AlbumCollectionCell.typeName,
           for: indexPath
@@ -228,7 +228,7 @@ final class HomeVC: UICollectionViewController {
         )
         return cell
 
-      case .auxiliary(let entry):
+      case let .auxiliary(entry):
         let cell = collectionView.dequeueReusableCell(
           withReuseIdentifier: AuditionDeckHomeEntryCell.reuseID,
           for: indexPath
@@ -324,8 +324,10 @@ final class HomeVC: UICollectionViewController {
     for section in visibleSections {
       let items = sharedHome.data[section] ?? []
       let showsEmptyCard = items.isEmpty &&
-        (Self.sectionsWithFindMoreDoors.contains(section) ||
-          Self.sectionsWithNoButtonEmptyState.contains(section))
+        (
+          Self.sectionsWithFindMoreDoors.contains(section) ||
+            Self.sectionsWithNoButtonEmptyState.contains(section)
+        )
       if showsEmptyCard {
         snapshot.appendItems(
           [.auxiliary(.init(kind: .emptySectionCard, section: section))],

@@ -18,7 +18,8 @@ import SwiftUI
 public struct AuditionDeckBlendChip: View {
   let blend: Double
   let degradedPools: Set<DeckPool>
-  @Binding var isPanelExpanded: Bool
+  @Binding
+  var isPanelExpanded: Bool
 
   public init(blend: Double, degradedPools: Set<DeckPool>, isPanelExpanded: Binding<Bool>) {
     self.blend = blend
@@ -30,7 +31,7 @@ public struct AuditionDeckBlendChip: View {
   var label: String {
     switch blend {
     case ..<0.33: "Familiar"
-    case 0.33...0.67: "Balanced"
+    case 0.33 ... 0.67: "Balanced"
     default: "Adventurous"
     }
   }
@@ -61,6 +62,9 @@ public struct AuditionDeckBlendChip: View {
     .buttonStyle(.plain)
     .accessibilityLabel("Blend: \(label)")
     .accessibilityValue(degradedPools.isEmpty ? "" : "Some recommendation sources unavailable")
-    .accessibilityHint(isPanelExpanded ? "Double tap to close blend controls" : "Double tap to open blend controls")
+    .accessibilityHint(
+      isPanelExpanded ? "Double tap to close blend controls" :
+        "Double tap to open blend controls"
+    )
   }
 }

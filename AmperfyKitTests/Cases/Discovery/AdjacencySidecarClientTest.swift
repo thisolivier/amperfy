@@ -61,12 +61,13 @@ class AdjacencySidecarClientTest: XCTestCase {
     configuration.protocolClasses = [StubURLProtocol.self]
     session = URLSession(configuration: configuration)
     settings = AdjacencySidecarSettings(
-      defaults: UserDefaults(suiteName: "AdjacencySidecarClientTest-\(UUID().uuidString)")
+      defaults: UserDefaults(suiteName: "AdjacencySidecarClientTest-\(UUID().uuidString)")!
     )
     lastRequest = nil
   }
 
-  private func makeClient(serverUrl: String = "http://navidrome.local:4533") -> AdjacencySidecarClient {
+  private func makeClient(serverUrl: String = "http://navidrome.local:4533")
+    -> AdjacencySidecarClient {
     AdjacencySidecarClient(serverUrl: serverUrl, settings: settings, session: session)
   }
 
@@ -208,7 +209,7 @@ private func XCTAssertThrowsErrorAsync<T: Sendable>(
   _ expression: @autoclosure () async throws -> T,
   file: StaticString = #filePath,
   line: UInt = #line,
-  _ errorHandler: (Error) -> Void = { _ in }
+  _ errorHandler: (Error) -> () = { _ in }
 ) async {
   do {
     _ = try await expression()
