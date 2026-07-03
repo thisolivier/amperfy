@@ -14,9 +14,18 @@ struct AuditionDeckBackgroundView: View {
     ZStack {
       Color.black
       if let container {
-        EntityArtworkView(container: container, theme: theme)
-          .aspectRatio(contentMode: .fill)
-          .blur(radius: 60)
+        // The artwork lives in an .overlay of Color.clear rather than directly in
+        // the ZStack: .aspectRatio(.fill) makes the image REPORT its filled size
+        // (e.g. 730×730 for a square cover on a 402×730 screen) and .clipped()
+        // only clips drawing, not layout — so a direct child inflates the whole
+        // deck's root ZStack and every card in it. Overlay content never
+        // affects the base's layout size. Seen live during the solo QA round.
+        Color.clear
+          .overlay(
+            EntityArtworkView(container: container, theme: theme)
+              .aspectRatio(contentMode: .fill)
+              .blur(radius: 60)
+          )
           .clipped()
           .id(container.id)
           .transition(.opacity)
