@@ -181,6 +181,23 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
       }
 
       actions.insert(UIMenu(options: .displayInline, children: favouriteActions), at: 0)
+
+      // Discovery-D4 entry point (design doc §2: "Find similar playlists").
+      // Depends on `AuditionDeckHostVC(seed:defaultKind:)`, built in
+      // parallel by another agent in this sprint and not necessarily
+      // present yet — written against its documented init signature.
+      let findSimilarAction = UIAction(
+        title: "Find similar playlists",
+        image: UIImage(systemName: "rectangle.stack.badge.play")
+      ) { [weak self] _ in
+        guard let self else { return }
+        self.present(
+          AuditionDeckHostVC(seed: .playlist(id: self.playlist.id), defaultKind: .playlist),
+          animated: true
+        )
+      }
+      actions.insert(findSimilarAction, at: 1)
+
       return actions
     }
     favouriteButton = UIBarButtonItem(

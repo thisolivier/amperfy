@@ -29,7 +29,7 @@ import UIKit
 final class HomeVC: UICollectionViewController {
   // MARK: - Properties
 
-  private var dataSource: UICollectionViewDiffableDataSource<HomeSection, HomeItem>!
+  private var dataSource: UICollectionViewDiffableDataSource<HomeSection, HomeCellItem>!
   private let log = OSLog(subsystem: "Amperfy", category: "HomeVC")
 
   private static let itemWidth: CGFloat = 160.0
@@ -197,6 +197,10 @@ final class HomeVC: UICollectionViewController {
       forCellWithReuseIdentifier: AlbumCollectionCell.typeName
     )
     collectionView.register(
+      AuditionDeckHomeEntryCell.self,
+      forCellWithReuseIdentifier: AuditionDeckHomeEntryCell.reuseID
+    )
+    collectionView.register(
       SectionHeaderView.self,
       forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
       withReuseIdentifier: SectionHeaderView.reuseID
@@ -208,19 +212,30 @@ final class HomeVC: UICollectionViewController {
   private func configureDataSource() {
     dataSource = UICollectionViewDiffableDataSource<
       HomeSection,
-      HomeItem
+      HomeCellItem
     >(collectionView: collectionView) { collectionView, indexPath, item in
-      let cell = collectionView.dequeueReusableCell(
-        withReuseIdentifier: AlbumCollectionCell.typeName,
-        for: indexPath
-      ) as! AlbumCollectionCell
-      cell.display(
-        container: item.playableContainable,
-        rootView: self,
-        itemWidth: Self.itemWidth,
-        initialIndexPath: indexPath
-      )
-      return cell
+      switch item {
+      case .content(let homeItem):
+        let cell = collectionView.dequeueReusableCell(
+          withReuseIdentifier: AlbumCollectionCell.typeName,
+          for: indexPath
+        ) as! AlbumCollectionCell
+        cell.display(
+          container: homeItem.playableContainable,
+          rootView: self,
+          itemWidth: Self.itemWidth,
+          initialIndexPath: indexPath
+        )
+        return cell
+
+      case .auxiliary(let entry):
+        let cell = collectionView.dequeueReusableCell(
+          withReuseIdentifier: AuditionDeckHomeEntryCell.reuseID,
+          for: indexPath
+        ) as! AuditionDeckHomeEntryCell
+        self.configureEntryCell(cell, kind: entry.kind, section: entry.section)
+        return cell
+      }
     }
 
     dataSource.supplementaryViewProvider = { collectionView, kind, indexPath in
@@ -270,20 +285,37 @@ final class HomeVC: UICollectionViewController {
   /// removed from this set per sprint Amp-1 (Director Review Round 1): once
   /// the widget is added to the home screen it must always render, even
   /// when `HomeManager.updateRecentTracks()` legitimately produces an empty
-  /// (or short) result — visibility is no longer coupled to whether the
-  /// underlying query matched anything. `.favouriteAlbums`,
-  /// `.favouriteArtists`, and `.favouritePlaylists` keep the original
-  /// empty-hiding behaviour for B-2 and remain opted in below. Sections are
-  /// opted in explicitly — most Home sections have an init-time placeholder
-  /// or synchronous population path and never transit through an
-  /// empty-but-visible state, so the default continues to render an empty
-  /// section header as before.
+  /// (or short) result. `.favouriteAlbums` and `.favouritePlaylists` were
+  /// removed from this set per sprint Discovery-D4: they now render the
+  /// designed empty-section "Find more" card (§5.6) instead of hiding, see
+  /// `sectionsWithFindMoreDoors` below. `.favouriteArtists` keeps the
+  /// original B-2 hide-when-empty behaviour and remains opted in — there is
+  /// no Discovery deck for artists, so it has no designed empty state to
+  /// show instead.
   private static let sectionsHiddenWhenEmpty: Set<HomeSection> = [
-    .favouriteAlbums, .favouriteArtists, .favouritePlaylists,
+    .favouriteArtists,
   ]
 
+  /// Sections that get the full Discovery-D4 "Find more" door treatment
+  /// (design §5.6/§2): a section-end trailing cell when populated, and an
+  /// empty-section `ContentUnavailableView` card with a "Find more" button
+  /// when empty. Both seed the deck from `.recentHistory` (design §2's
+  /// entry table) and default to the matching candidate kind for the
+  /// section (albums vs. playlists).
+  private static let sectionsWithFindMoreDoors: Set<HomeSection> = [
+    .favouriteAlbums, .favouritePlaylists,
+  ]
+
+  /// `.recentTracks` ("Recently Added Tracks") gets only the empty-section
+  /// card, with no button and no trailing cell — design §2: "nothing to
+  /// seed and Amperfy doesn't ingest." It was already exempt from
+  /// `sectionsHiddenWhenEmpty` (see above), so before this sprint an empty
+  /// library just showed a bare header with no cells; this adds the
+  /// designed empty-state card in that gap.
+  private static let sectionsWithNoButtonEmptyState: Set<HomeSection> = [.recentTracks]
+
   private func applySnapshot(animated: Bool = true) {
-    var snapshot = NSDiffableDataSourceSnapshot<HomeSection, HomeItem>()
+    var snapshot = NSDiffableDataSourceSnapshot<HomeSection, HomeCellItem>()
     let visibleSections = sharedHome.orderedVisibleSections.filter { section in
       guard Self.sectionsHiddenWhenEmpty.contains(section) else { return true }
       return !(sharedHome.data[section]?.isEmpty ?? true)
@@ -291,10 +323,33 @@ final class HomeVC: UICollectionViewController {
     snapshot.appendSections(visibleSections)
     for section in visibleSections {
       let items = sharedHome.data[section] ?? []
-      snapshot.appendItems(items, toSection: section)
+      let showsEmptyCard = items.isEmpty &&
+        (Self.sectionsWithFindMoreDoors.contains(section) ||
+          Self.sectionsWithNoButtonEmptyState.contains(section))
+      if showsEmptyCard {
+        snapshot.appendItems(
+          [.auxiliary(.init(kind: .emptySectionCard, section: section))],
+          toSection: section
+        )
+      } else {
+        snapshot.appendItems(items.map { HomeCellItem.content($0) }, toSection: section)
+        if !items.isEmpty, Self.sectionsWithFindMoreDoors.contains(section) {
+          snapshot.appendItems(
+            [.auxiliary(.init(kind: .findMoreTrailingCell, section: section))],
+            toSection: section
+          )
+        }
+      }
     }
     dataSource.apply(snapshot, animatingDifferences: animated)
   }
+
+  // Discovery-D4 "Find more" entry-point logic (cell configuration, per-
+  // section copy, the empty-library guard, presenting the deck) lives in
+  // `HomeVC+DiscoveryEntryPoints.swift`, following this codebase's existing
+  // convention of splitting view-controller logic into `VC+Topic.swift`
+  // extension files (e.g. `AlbumsCommonVCInteractions.swift`) rather than
+  // growing a single already-large file further.
 
   @objc
   private func refreshOfflineMode() {
