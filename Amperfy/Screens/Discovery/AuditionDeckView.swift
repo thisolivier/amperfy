@@ -112,7 +112,12 @@ struct AuditionDeckView: View {
             onOpen: onOpenCandidate,
             onRequestDismiss: onRequestDismiss
           )
-          .containerRelativeFrame(.vertical)
+          // Both axes: with only .vertical, the horizontal proposal is left
+          // unspecified, so a card sizes to its ideal width — which overflows
+          // the screen once the Needle Drop bar is Ready (segments + readout
+          // give the card a large ideal width). Seen live as 730pt-wide cards
+          // on a 402pt screen during the solo QA round.
+          .containerRelativeFrame([.horizontal, .vertical])
           .scrollTransition { content, phase in
             content
               .scaleEffect(reduceMotionSnapshot || phase.isIdentity ? 1 : 0.96)
@@ -128,7 +133,7 @@ struct AuditionDeckView: View {
           onDealMore: { Task { await controller.dealMore() } },
           onDone: close
         )
-        .containerRelativeFrame(.vertical)
+        .containerRelativeFrame([.horizontal, .vertical])
         .id(Self.endCardId)
       }
       .scrollTargetLayout()

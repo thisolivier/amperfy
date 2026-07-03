@@ -453,11 +453,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       .loginCredentials {
       let folderApi: NavidromeServerApi? = (loginCredentials.backendApi == .subsonic)
         ? NavidromeServerApi(credentials: loginCredentials) : nil
-      let accountMO = storage.main.library.getAccount(info: activeAccountInfo).accountManagedObject
+      let activeAccount = storage.main.library.getAccount(info: activeAccountInfo)
+      // Accounts persisted before serverUrl/userName were stored on the entity carry
+      // only hashes; the Discovery sidecar client derives its host from
+      // account.serverUrl, so heal existing installs here on launch.
+      if activeAccount.backfillIdentityIfMissing(from: loginCredentials) {
+        storage.main.saveContext()
+      }
       PlaylistFolderStore.shared.configure(
         context: storage.main.context,
         navidromeApi: folderApi,
-        account: accountMO
+        account: activeAccount.accountManagedObject
       )
     }
 

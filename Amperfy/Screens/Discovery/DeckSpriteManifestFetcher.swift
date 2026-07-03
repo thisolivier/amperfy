@@ -46,7 +46,10 @@ enum DeckSpriteManifestFetcher {
       if http.statusCode == 404 { return .unavailable }
       guard (200 ..< 300).contains(http.statusCode) else { return .failed }
       let manifest = try JSONDecoder().decode(NeedleDropManifest.self, from: data)
-      return .ready(manifest)
+      // Contract §3.3 allows spriteUrl to be relative ("/sprite-audio?...").
+      // A relative URL decodes fine but AVPlayer silently can't load it — no
+      // request, no audio — so resolve it against the URL we fetched from.
+      return .ready(manifest.resolvingSpriteURL(against: url))
     } catch {
       return .failed
     }

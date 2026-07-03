@@ -103,6 +103,21 @@ public class Account {
     assignInfo(info: info)
   }
 
+  /// Backfill for accounts persisted before serverUrl/userName were stored on the
+  /// entity (only their hashes were). Consumers such as the Discovery sidecar client
+  /// derive their host from `serverUrl`, so an empty value silently disables them.
+  /// Returns true when a backfill was applied and the context needs saving.
+  @discardableResult
+  public func backfillIdentityIfMissing(from credentials: LoginCredentials) -> Bool {
+    guard serverUrl.isEmpty || userName.isEmpty else { return false }
+    assignAccount(
+      serverUrl: credentials.serverUrl,
+      userName: credentials.username,
+      apiType: credentials.backendApi
+    )
+    return true
+  }
+
   public func assignInfo(info: AccountInfo) {
     managedObject.serverHash = info.serverHash
     managedObject.userHash = info.userHash

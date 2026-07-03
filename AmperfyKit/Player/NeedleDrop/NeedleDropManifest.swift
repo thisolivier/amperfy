@@ -75,3 +75,21 @@ extension NeedleDropManifest: Decodable {
     case slices = "tracks"
   }
 }
+
+extension NeedleDropManifest {
+  /// The manifest's `spriteUrl` may be server-relative per contract §3.3
+  /// (`/sprite-audio?...`) — a form `URL(string:)` decodes without complaint but
+  /// `AVPlayer` cannot load (no scheme/host, so it fails silently with no network
+  /// request). Resolve it against the URL the manifest was fetched from; an
+  /// already-absolute spriteURL is returned unchanged.
+  public func resolvingSpriteURL(against manifestURL: URL) -> NeedleDropManifest {
+    guard spriteURL.scheme == nil else { return self }
+    guard let resolved = URL(string: spriteURL.relativeString, relativeTo: manifestURL)?
+      .absoluteURL else { return self }
+    return NeedleDropManifest(
+      collectionId: collectionId,
+      spriteURL: resolved,
+      slices: slices
+    )
+  }
+}
