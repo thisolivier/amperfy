@@ -29,11 +29,21 @@ import XCTest
 
 private final class StubURLProtocol: URLProtocol {
   nonisolated(unsafe) static var handler: ((URLRequest) -> (Int, Data?))?
+  /// When set, `startLoading` reports this as a transport-level failure
+  /// (connection refused / timeout / etc.) instead of running `handler` —
+  /// this is what a genuinely-unreachable server looks like at the
+  /// `URLSession` layer, distinct from a reachable server answering with a
+  /// non-2xx status code.
+  nonisolated(unsafe) static var connectionError: Error?
 
   override class func canInit(with request: URLRequest) -> Bool { true }
   override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
   override func startLoading() {
+    if let connectionError = Self.connectionError {
+      client?.urlProtocol(self, didFailWithError: connectionError)
+      return
+    }
     let (statusCode, data) = Self.handler?(request) ?? (200, Data())
     let response = HTTPURLResponse(
       url: request.url!,
@@ -64,6 +74,7 @@ class AdjacencySidecarClientTest: XCTestCase {
       defaults: UserDefaults(suiteName: "AdjacencySidecarClientTest-\(UUID().uuidString)")!
     )
     lastRequest = nil
+    StubURLProtocol.connectionError = nil
   }
 
   private func makeClient(serverUrl: String = "http://navidrome.local:4533")
@@ -76,6 +87,13 @@ class AdjacencySidecarClientTest: XCTestCase {
       self?.lastRequest = request
       return (statusCode, body?.data(using: .utf8))
     }
+  }
+
+  private func stubConnectionFailure() {
+    StubURLProtocol.connectionError = NSError(
+      domain: NSURLErrorDomain,
+      code: NSURLErrorCannotConnectToHost
+    )
   }
 
   // MARK: - URL construction
@@ -161,6 +179,50 @@ class AdjacencySidecarClientTest: XCTestCase {
 
   func testNon2xxThrowsUnreachable() async {
     stub(statusCode: 500, body: nil)
+
+    await XCTAssertThrowsErrorAsync(
+      try await makeClient().fetchCandidates(
+        seedSongIds: [],
+        seedCollection: (id: "seed", kind: .album),
+        kind: .album,
+        count: 10
+      )
+    ) { error in
+      XCTAssertEqual(error as? DeckPoolError, .unreachable)
+    }
+  }
+
+  /// `/similar-collections` and `/similar-from-history` never 404 for a
+  /// legitimate zero-match seed — confirmed by reading the real
+  /// adjacency-sidecar source (`server.py`'s `_handle_similar_collections`/
+  /// `_handle_similar_from_history` always call `_send_json(...)` with the
+  /// default `status=200`, even when the underlying query returns an empty
+  /// list; 404 is reserved for entirely unrecognized routes). So a 404
+  /// actually observed here means the request hit the wrong path/host
+  /// entirely (routing/config bug), not "no matches" — `.unreachable` is
+  /// the correct classification, matching the doc comment on
+  /// `AdjacencySidecarClient.fetchCandidates`.
+  func testNotFoundThrowsUnreachable() async {
+    stub(statusCode: 404, body: #"{"error":"Not found"}"#)
+
+    await XCTAssertThrowsErrorAsync(
+      try await makeClient().fetchCandidates(
+        seedSongIds: [],
+        seedCollection: (id: "seed", kind: .album),
+        kind: .album,
+        count: 10
+      )
+    ) { error in
+      XCTAssertEqual(error as? DeckPoolError, .unreachable)
+    }
+  }
+
+  /// A genuine transport failure (connection refused, timeout, DNS
+  /// failure, ...) — the case the "unreachable" pool-degraded state is
+  /// actually meant to represent, as distinct from a reachable server
+  /// answering with a non-2xx status.
+  func testConnectionFailureThrowsUnreachable() async {
+    stubConnectionFailure()
 
     await XCTAssertThrowsErrorAsync(
       try await makeClient().fetchCandidates(

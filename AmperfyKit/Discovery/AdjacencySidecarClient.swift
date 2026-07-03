@@ -88,8 +88,29 @@ public final class AdjacencySidecarClient: FamiliarPoolProviding {
 
     guard let httpResponse = response as? HTTPURLResponse,
           (200 ..< 300).contains(httpResponse.statusCode) else {
-      // Any non-2xx is unreachable for these two endpoints — unlike
-      // sprite-manifest, there is no meaningful 404 case here.
+      // Any non-2xx is unreachable for these two endpoints — CONFIRMED
+      // against the real server source (server/adjacency-sidecar/server.py,
+      // `_handle_similar_collections` / `_handle_similar_from_history`),
+      // not just assumed: both handlers always respond via `_send_json(...)`
+      // with the default `status=200`, even when the underlying query
+      // (collections_query.get_similar_playlists/get_similar_albums,
+      // history_query.get_similar_from_history) returns an empty list for a
+      // seed with zero matches — a legitimate "no matches" seed comes back
+      // as `200 []`, decoded below to an empty array, never a 404. 404 on
+      // these routes only happens via `do_GET`'s catch-all for entirely
+      // unrecognized paths (a routing/config bug on the client's side, e.g.
+      // wrong host/port), so treating it as `.unreachable` here is correct
+      // — unlike sprite-manifest, there is genuinely no "not-yet-rendered"
+      // style 404 case for these two endpoints. (Investigated 2026-07 as
+      // part of chasing a QA false "degraded pool" report from card 1 of
+      // every deck; this policy was cleared as the cause — see
+      // AdjacencySidecarClientTest's 404/connection-failure cases. The
+      // leading suspect for that report instead is environmental:
+      // `AdjacencySidecarSettings.port` defaults to 8787/prod with no
+      // settings UI yet to switch a QA device to 8788 — see
+      // AdjacencySidecarSettings.swift and the same class of bug already
+      // found/fixed for the sprite-manifest port in
+      // Amperfy/Screens/Discovery/DeckSpriteManifestFetcher.swift's history.)
       throw DeckPoolError.unreachable
     }
 
