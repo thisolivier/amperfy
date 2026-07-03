@@ -37,6 +37,24 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 57,
+      date: "2026-07-03",
+      title: "Build 57 — Discovery: Audition Deck + Needle Drop",
+      whatsNew: [
+        "New Discovery experience: 'Find similar playlists' and 'Find similar albums' in the playlist/album detail menus deal a full-screen deck of recommended collections",
+        "Each card has a Needle Drop bar — drag across it to audition ~1.5s slices of every track, like running a thumb across a crate of vinyl; cards auto-audition as you swipe",
+        "Blend slider mixes Familiar (close matches from your library's listening patterns) with Adventurous (new directions) recommendations",
+        "Like button, Play-from-track handoff to the main player, deal-more, and 'Find more' doors on Home widget sections",
+      ],
+      testingFocus: [
+        "Open 'Find similar playlists' on a playlist you know well — do the recommendations make sense, and do evidence lines read honestly?",
+        "Drag the Needle Drop bar: audio slices should start near-instantly and follow your finger; releasing should keep riding through tracks",
+        "Tap Play mid-audition — the main player should take over with the picked track, and sprite audio must stop dead",
+        "Album previews render on first visit lazily: a card may say 'Preview unavailable' once, then have a working bar next time you open a deck for it",
+        "Swipe fast between cards — audio must never come from two sources at once",
+      ]
+    ),
+    ReleaseNote(
       id: 56,
       date: "2026-07-02",
       title: "Build 56 — Fixed wrong song playing from Recently Added Tracks",
@@ -101,40 +119,6 @@ enum ReleaseNotes {
         "Playlists tab (offline): partially cached playlist should show 'N cached · M Songs · Xm'",
         "Playlists tab (offline): fully cached playlist should show 'Cached · M Songs · Xm'",
         "Recently Added Tracks: pull down to refresh after new songs sync",
-      ]
-    ),
-    ReleaseNote(
-      id: 50,
-      date: "2026-05-18",
-      title: "Build 50 — Offline playlist filtering",
-      whatsNew: [
-        "Playlists with no cached songs are now hidden in offline mode — only playlists with at least one downloaded song appear",
-        "Fully cached playlists show a checkmark in the playlist list when offline mode is active",
-        "Switching offline mode on/off in Settings immediately updates the playlist list on return",
-      ],
-      testingFocus: [
-        "Enable offline mode → Playlists tab: playlists with zero cached songs should not appear",
-        "A playlist with all songs cached should show a checkmark instead of the disclosure arrow",
-        "A playlist with some (but not all) songs cached should show the normal disclosure arrow",
-        "Disable offline mode → all playlists should reappear, no checkmarks",
-        "Toggle offline mode multiple times — the list should update correctly each time",
-      ]
-    ),
-    ReleaseNote(
-      id: 47,
-      date: "2026-04-17",
-      title: "Build 47 — Home screen fix",
-      whatsNew: [
-        "Fixed a critical bug where empty home screen sections (e.g. Favourite Albums with no favourites) caused section headers to display data from the wrong section",
-        "Empty sections in the 'hidden when empty' set (Recently Added Tracks, Favourite Albums, Favourite Artists, Favourite Playlists) now correctly hide without shifting other sections",
-        "Tap handling on home screen sections now correctly routes to the right detail view",
-      ],
-      testingFocus: [
-        "Home screen: each section header should match its content — e.g. 'Newest Albums' header shows albums, not genres or tracks",
-        "If you have no Favourite Albums/Artists/Playlists, those sections should be completely hidden (no header, no row)",
-        "Tapping an album in Newest Albums should open that album's detail view",
-        "Tapping a tile in Recently Added Tracks should open the recent tracks detail",
-        "Add a favourite album → return to Home → Favourite Albums section should appear with correct content",
       ]
     ),
   ]
