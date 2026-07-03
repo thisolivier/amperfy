@@ -65,6 +65,12 @@ struct AuditionDeckCardView: View {
       )
     }
     .onChange(of: isCurrent) { _, becameCurrent in handleCurrentChange(becameCurrent) }
+    // The deck's FIRST card is current from the moment it exists, so
+    // `.onChange(of: isCurrent)` never fires for it and it sat silent —
+    // the opening moment of the experience (design §5.3's auto-audition)
+    // only worked for swiped-to cards. Run the same settle path on
+    // appearance when already current.
+    .onAppear { if isCurrent { handleCurrentChange(true) } }
     .onDisappear {
       controller.audio.releaseSpritePlayer(
         for: candidate.collectionId, currentCandidateId: controller.scrollPositionId

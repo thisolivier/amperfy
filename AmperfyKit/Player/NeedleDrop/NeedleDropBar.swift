@@ -70,6 +70,14 @@ public struct NeedleDropBar: View {
     .onChange(of: autoAuditionTrigger) { _, newValue in
       if newValue { controller.startAutoAuditioning() }
     }
+    // A bar re-mounted by the caller's `.id(availability.identityKey)` AFTER the
+    // trigger already flipped true (the settle delay racing the manifest fetch)
+    // is a fresh instance — `.onChange` never fires on it. Honor an
+    // already-true trigger on appearance; `startAutoAuditioning` is state-guarded
+    // (`.idle` only), so this can't double-start or interrupt a scrub.
+    .onAppear {
+      if autoAuditionTrigger { controller.startAutoAuditioning() }
+    }
     .onDisappear { controller.stop() }
   }
 
