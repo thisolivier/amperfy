@@ -55,6 +55,10 @@ public struct DeckDealResult: Sendable {
 /// (which does touch storage) runs back on the caller's queue after both
 /// child tasks are awaited, for the same reason.
 public final class DeckFusionEngine: @unchecked Sendable {
+  /// Playlists above this track count are never dealt as candidates — matches
+  /// the sidecar's server-side MAX_CANDIDATE_PLAYLIST_TRACKS default.
+  public static let megaPlaylistTrackCeiling = 300
+
   private let familiarPool: FamiliarPoolProviding
   private let adventurousPool: AdventurousPoolProviding
   private let storage: LibraryStorage
@@ -98,17 +102,23 @@ public final class DeckFusionEngine: @unchecked Sendable {
     let seedCollectionParam: (id: String, kind: DeckCandidateKind)? = resolution
       .seedCollectionId.map { (id: $0, kind: kind) }
 
+    // Over-fetch by the exclusion count (bounded): the pools rank globally and
+    // know nothing about session de-dupe, so requesting exactly `count` means a
+    // refresh/deal-more whose exclusions overlap the top-N can come back with
+    // nothing even though fresh candidates exist further down the ranking —
+    // observed live as a blend-change collapsing a 9-card deck to 2.
+    let poolFetchCount = min(count + excludeSet.count, 60)
     async let familiarOutcome = fetchFamiliarOutcome(
       seedSongIds: seedSongIds,
       seedCollection: seedCollectionParam,
       kind: kind,
-      count: count
+      count: poolFetchCount
     )
     async let adventurousOutcome = fetchAdventurousOutcome(
       seedSongIds: seedSongIds,
       kind: kind,
       excluding: excludeSet,
-      count: count
+      count: poolFetchCount
     )
     let (familiarResult, adventurousResult) = await (familiarOutcome, adventurousOutcome)
 
@@ -142,6 +152,13 @@ public final class DeckFusionEngine: @unchecked Sendable {
         storage: storage,
         account: account
       )
+    }.filter { candidate in
+      // Mega-playlists (folder playlists, Spotify liked-songs imports) are
+      // containers, not curated collections — never worth recommending
+      // (user feedback, build-57 test drive). The sidecar applies the same
+      // ceiling server-side (MAX_CANDIDATE_PLAYLIST_TRACKS); this covers the
+      // on-device Adventurous pool too. Seeds are unaffected.
+      candidate.kind != .playlist || candidate.trackCount <= Self.megaPlaylistTrackCeiling
     }
 
     return DeckDealResult(candidates: candidates, degradedPools: degradedPools)

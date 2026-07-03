@@ -94,8 +94,7 @@ class AuditionDeckHostVC: UIViewController {
   /// trace without also owning those entry-point call sites (another agent's files).
   private func openCandidate(_ candidate: DeckCandidate) {
     guard let account = resolveActiveAccount() else { return }
-    let targetNavigationController = (presentingViewController as? UINavigationController)
-      ?? presentingViewController?.navigationController
+    let targetNavigationController = resolveTargetNavigationController()
     controller?.deckWillClose()
     dismiss(animated: true) {
       guard let entity = self.controller?.resolveEntity(candidate) else { return }
@@ -112,6 +111,23 @@ class AuditionDeckHostVC: UIViewController {
         )
       }
     }
+  }
+
+  /// A full-screen modal's `presentingViewController` is the presentation
+  /// context's root — on this app's main UI that is the tab bar controller,
+  /// not the navigation controller the entry point lives in. The original
+  /// direct cast therefore always resolved nil and "Open" silently dismissed
+  /// without navigating (user-reported on build 57). Walk through the tab
+  /// bar's selection to the real navigation stack.
+  private func resolveTargetNavigationController() -> UINavigationController? {
+    var candidate = presentingViewController
+    if let tabBarController = candidate as? UITabBarController {
+      candidate = tabBarController.selectedViewController
+    }
+    if let navigationController = candidate as? UINavigationController {
+      return navigationController
+    }
+    return candidate?.navigationController
   }
 
   private func resolveActiveAccount() -> Account? {
