@@ -7,6 +7,19 @@ import SwiftUI
 /// `docs/ux/amperfy-needle-drop-deck-v1-design.md` §5.3 for the full anatomy/gesture spec this
 /// view implements. This is a standalone control — it owns no knowledge of any surrounding deck
 /// or card (out of scope for this sprint).
+///
+/// ## `@StateObject` identity contract
+/// `_controller` is a `@StateObject`: SwiftUI runs its `wrappedValue:` initializer closure
+/// exactly once per view identity and ignores it on every later re-render, even though
+/// `NeedleDropBar` itself is a `View` struct re-constructed with fresh `availability`/
+/// `spritePlayer` arguments on every parent re-render. A caller that constructs this view once
+/// while `availability` is still `.loading` (the normal shape of an async manifest fetch) and
+/// expects it to later reflect `.unavailable`/`.ready` **must** give the call site a
+/// `.id(availability.identityKey)` modifier (see `NeedleDropSpriteAvailability.identityKey`) so
+/// SwiftUI treats the resolved state as a fresh identity and rebuilds the controller — picking up
+/// the caller's now-real `spritePlayer` too — instead of freezing forever at whatever snapshot
+/// existed at first construction. `AuditionDeckCardView.needleDropSection` is the reference
+/// caller implementation of this pattern.
 public struct NeedleDropBar: View {
   @StateObject
   private var controller: NeedleDropBarController

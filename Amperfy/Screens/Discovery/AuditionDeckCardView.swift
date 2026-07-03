@@ -74,11 +74,17 @@ struct AuditionDeckCardView: View {
 
   private var needleDropSection: some View {
     VStack(alignment: .leading, spacing: 4) {
+      // `.id(...)` forces SwiftUI to rebuild `NeedleDropBar`'s `@StateObject` controller whenever
+      // `availability` changes case (Loading -> Unavailable/Ready, or a retried fetch's
+      // Unavailable -> Ready) instead of freezing at whatever snapshot existed when the bar was
+      // first constructed while the fetch in `.task(id:)` above was still in flight — see
+      // `NeedleDropBar`'s doc comment and `NeedleDropSpriteAvailability.identityKey`.
       NeedleDropBar(
         availability: auditionModel.availability,
         spritePlayer: auditionModel.spritePlayer,
         autoAuditionTrigger: autoAuditionTrigger
       )
+      .id(auditionModel.availability.identityKey)
       auditionReadout
     }
   }

@@ -29,6 +29,30 @@ public enum NeedleDropSpriteAvailability {
   case ready(NeedleDropManifest)
 }
 
+extension NeedleDropSpriteAvailability {
+  /// Stable per-state identity a caller can key a SwiftUI `.id(...)` modifier on so a
+  /// `NeedleDropBar`'s `@StateObject`-owned `NeedleDropBarController` gets rebuilt from scratch
+  /// whenever `availability` meaningfully changes case, instead of freezing at whatever snapshot
+  /// existed when the bar was first constructed — `@StateObject`'s `wrappedValue:` closure only
+  /// ever runs once per view identity, and `NeedleDropBarController` has no update path of its
+  /// own (`availability`/`spritePlayer` are only ever consumed in `init`). This covers every real
+  /// transition a caller can hit: Loading -> Unavailable, Loading -> Ready, and — because a
+  /// failed fetch can retry once and later succeed — Unavailable -> Ready too. Two `.ready`
+  /// values for the same collection compare equal so a redundant re-apply of an identical
+  /// manifest doesn't tear down an in-progress audition. See `NeedleDropBar`'s doc comment and
+  /// `AuditionDeckCardView.needleDropSection` for the reference caller usage.
+  public var identityKey: String {
+    switch self {
+    case .loading:
+      return "loading"
+    case .unavailable:
+      return "unavailable"
+    case let .ready(manifest):
+      return "ready-\(manifest.collectionId)"
+    }
+  }
+}
+
 // MARK: - NeedleDropBarController
 
 /// Owns the Needle Drop bar's interaction state machine and drives slice-to-slice playback via a
