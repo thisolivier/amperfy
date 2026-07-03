@@ -123,6 +123,10 @@ public final class StandaloneAmperfyKit: @unchecked Sendable {
     let accountInfo = Account.createInfo(credentials: credentials)
     let account = library.getAccount(info: accountInfo)
 
+    if account.backfillIdentityIfMissing(from: credentials) {
+      storage.main.saveContext()
+    }
+
     // Set up backend proxy with stored credentials
     let backendProxy = BackendProxy(
       networkMonitor: networkMonitor,
@@ -177,8 +181,14 @@ public final class StandaloneAmperfyKit: @unchecked Sendable {
     backendProxy.selectedApi = authenticatedApiType
 
     let account = library.getAccount(info: accountInfo)
-    let updatedAccountInfo = Account.createInfo(credentials: credentials)
-    account.assignInfo(info: updatedAccountInfo)
+    // assignAccount (not just assignInfo) so the entity's serverUrl/userName are
+    // populated — consumers like the Discovery sidecar client derive their host
+    // from account.serverUrl, which stays empty forever under assignInfo alone.
+    account.assignAccount(
+      serverUrl: credentials.serverUrl,
+      userName: username,
+      apiType: authenticatedApiType
+    )
     storage.main.saveContext()
 
     storage.settings.accounts.login(credentials)
