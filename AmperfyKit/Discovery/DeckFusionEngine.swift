@@ -102,17 +102,23 @@ public final class DeckFusionEngine: @unchecked Sendable {
     let seedCollectionParam: (id: String, kind: DeckCandidateKind)? = resolution
       .seedCollectionId.map { (id: $0, kind: kind) }
 
+    // Over-fetch by the exclusion count (bounded): the pools rank globally and
+    // know nothing about session de-dupe, so requesting exactly `count` means a
+    // refresh/deal-more whose exclusions overlap the top-N can come back with
+    // nothing even though fresh candidates exist further down the ranking —
+    // observed live as a blend-change collapsing a 9-card deck to 2.
+    let poolFetchCount = min(count + excludeSet.count, 60)
     async let familiarOutcome = fetchFamiliarOutcome(
       seedSongIds: seedSongIds,
       seedCollection: seedCollectionParam,
       kind: kind,
-      count: count
+      count: poolFetchCount
     )
     async let adventurousOutcome = fetchAdventurousOutcome(
       seedSongIds: seedSongIds,
       kind: kind,
       excluding: excludeSet,
-      count: count
+      count: poolFetchCount
     )
     let (familiarResult, adventurousResult) = await (familiarOutcome, adventurousOutcome)
 
