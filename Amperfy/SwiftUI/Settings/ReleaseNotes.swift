@@ -37,6 +37,24 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 60,
+      date: "2026-07-04",
+      title: "Build 60 — Discovery deck v2",
+      whatsNew: [
+        "The recommendation deck is now a normal page: it slides in, and tapping a card opens that collection — going back returns to your deck exactly as you left it, no re-deal",
+        "Cleaner cards: no more Play/menu buttons or blend slider — just the card, the needle-drop bar, and a like button in the corner",
+        "The page uses your theme (gradient background, accent title: 'Recommended Playlists from …') instead of the forced-dark look",
+        "Previews no longer auto-play — the needle-drop bar plays only when you touch it",
+        "Recommendations now come from the server-side engine by default (quality-verified against the on-device one), with automatic fallback when you're away from the server",
+      ],
+      testingFocus: [
+        "Find similar playlists → tap a card → back: you should land on the same deck, same position, instantly",
+        "Check the deck matches your theme (gradient + accent title) in both light and dark",
+        "Cards should be silent until you drag the needle-drop bar (home network: previews are pre-rendered now, bars should show segments)",
+        "Like from the card corner; open a card; play from inside the collection — back should still return to the deck",
+      ]
+    ),
+    ReleaseNote(
       id: 59,
       date: "2026-07-03",
       title: "Build 59 — Related Tracks becomes a real page",
@@ -98,22 +116,6 @@ enum ReleaseNotes {
         "Open Recently Added Tracks, let new tracks sync in or pull-to-refresh, then tap a track — the song that plays should always match the one you tapped",
         "Tap a track immediately after switching between 'Top N' and 'Last M days' modes, or after adjusting the count stepper — playback should still match the tapped row",
         "General regression: tapping any track in this list should behave exactly as before when no refresh has just happened",
-      ]
-    ),
-    ReleaseNote(
-      id: 55,
-      date: "2026-07-01",
-      title: "Build 55 — Recently added tracks widget always renders",
-      whatsNew: [
-        "Recently Added Tracks no longer disappears from the Home screen — once you've added it, it always shows",
-        "The widget shows up to 10 of your most recently added individually-added/single-ish tracks, regardless of how old the newest ones are",
-        "Whole albums are still deliberately excluded from this widget (see the separate recent-albums section) — a library whose recent additions are all whole albums will correctly show an empty (but present) widget",
-      ],
-      testingFocus: [
-        "Home screen: Recently Added Tracks should always appear once added to Home, even on a lightly-used or freshly-synced library",
-        "A library with only whole-album recent additions (no individual singles/loose tracks) should show an empty Recently Added Tracks widget, not a hidden one",
-        "A library with fewer than 10 qualifying (non-whole-album) songs should show everything it has in the widget",
-        "Tapping a tile in Recently Added Tracks should still open the recent tracks detail view as before",
       ]
     ),
   ]
