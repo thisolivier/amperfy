@@ -22,10 +22,6 @@ struct AuditionDeckCardView: View {
 
   @StateObject
   private var auditionModel = AuditionDeckCardAuditionModel()
-  @State
-  private var autoAuditionTrigger = false
-  @AppStorage("amperfy.fork.discovery.autoplayPreviews")
-  private var autoplayPreviews = true
 
   private var container: PlayableContainable? { controller.resolveEntity(candidate) }
   private var theme: ThemePreference {
@@ -70,9 +66,8 @@ struct AuditionDeckCardView: View {
     }
     .onChange(of: isCurrent) { _, becameCurrent in handleCurrentChange(becameCurrent) }
     // The deck's FIRST card is current from the moment it exists, so
-    // `.onChange(of: isCurrent)` never fires for it and it sat silent —
-    // the opening moment of the experience (design §5.3's auto-audition)
-    // only worked for swiped-to cards. Run the same settle path on
+    // `.onChange(of: isCurrent)` never fires for it. Run the same
+    // became-current path (single-active-player + failed-fetch retry) on
     // appearance when already current.
     .onAppear { if isCurrent { handleCurrentChange(true) } }
     .onDisappear {
@@ -91,8 +86,7 @@ struct AuditionDeckCardView: View {
       // `NeedleDropBar`'s doc comment and `NeedleDropSpriteAvailability.identityKey`.
       NeedleDropBar(
         availability: auditionModel.availability,
-        spritePlayer: auditionModel.spritePlayer,
-        autoAuditionTrigger: autoAuditionTrigger
+        spritePlayer: auditionModel.spritePlayer
       )
       .id(auditionModel.availability.identityKey)
       auditionReadout
@@ -122,24 +116,17 @@ struct AuditionDeckCardView: View {
     .foregroundStyle(Color.white.opacity(0.8))
   }
 
+  /// Deck v2: NO auto-play (user-settled 2026-07-03, supersedes design §5.3's auto-audition
+  /// default-ON). Becoming current only enforces the single-active-sprite-player invariant and
+  /// retries a previously-failed manifest fetch — the bar stays silent until touched.
   private func handleCurrentChange(_ becameCurrent: Bool) {
-    guard becameCurrent else {
-      autoAuditionTrigger = false
-      return
-    }
+    guard becameCurrent else { return }
     controller.audio.stopAllSpritePlayers(except: candidate.collectionId)
     Task {
       await auditionModel.retryOnceIfNeeded(
         candidateId: candidate.collectionId, kind: candidate.kind,
         account: account, audio: controller.audio
       )
-    }
-    guard autoplayPreviews else { return }
-    Task {
-      // Design §5.3: "after a 400ms settle delay, start Riding from slice 1."
-      try? await Task.sleep(nanoseconds: 400_000_000)
-      guard controller.scrollPositionId == candidate.collectionId else { return }
-      autoAuditionTrigger = true
     }
   }
 }

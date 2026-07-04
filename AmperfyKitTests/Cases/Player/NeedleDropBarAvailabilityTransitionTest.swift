@@ -67,10 +67,11 @@ final class NeedleDropBarAvailabilityTransitionTest: XCTestCase {
     // pointed at no URL) — never this instance.
     XCTAssertTrue(resolvedController.spritePlayer === resolvedSpritePlayer)
 
-    // Phase 4: trigger playback exactly the way the real deck does — the "card settles" auto-
-    // audition hook (`AuditionDeckCardView.handleCurrentChange`'s 400ms-delayed
-    // `autoAuditionTrigger = true` -> `NeedleDropBar`'s `.onChange` -> `controller
-    // .startAutoAuditioning()`).
+    // Phase 4: start playback via `startAutoAuditioning()`. Deck v2 removed the deck's
+    // auto-audition-on-settle path (no production caller drives this anymore — the bar is
+    // touch-driven only), but the API remains as this harness's programmatic play trigger: it is
+    // the only way to start real playback without synthesizing SwiftUI drag gestures, and the
+    // remount-freshness mechanism under test is identical for a touch-started audition.
     resolvedController.startAutoAuditioning()
     XCTAssertEqual(resolvedController.state, .autoAuditioning)
 

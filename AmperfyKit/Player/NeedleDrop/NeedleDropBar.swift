@@ -25,35 +25,33 @@ public struct NeedleDropBar: View {
   private var controller: NeedleDropBarController
   @State
   private var isDragging = false
-  private let autoAuditionTrigger: Bool
 
   /// Normal path: a sprite manifest is already in hand (Ready state).
   public init(
     manifest: NeedleDropManifest,
-    spritePlayer: NeedleDropSpritePlayer? = nil,
-    autoAuditionTrigger: Bool = false
+    spritePlayer: NeedleDropSpritePlayer? = nil
   ) {
     self.init(
       availability: .ready(manifest),
-      spritePlayer: spritePlayer,
-      autoAuditionTrigger: autoAuditionTrigger
+      spritePlayer: spritePlayer
     )
   }
 
   /// Lets a caller render the LoadingSprite/Unavailable states correctly even though no fetch
-  /// pipeline exists yet in this sprint. `autoAuditionTrigger`: flip false -> true to fire the
-  /// Ready -> AutoAuditioning transition (D4's "card settles" hook; nothing drives this
-  /// automatically here).
+  /// pipeline exists yet in this sprint.
+  ///
+  /// Deck v2 (user-settled 2026-07-03, no auto-play): the `autoAuditionTrigger` hook that let a
+  /// caller fire the Ready -> AutoAuditioning transition is removed — the bar is touch-driven
+  /// only. `NeedleDropBarController.startAutoAuditioning()` itself remains (D3a's harness/tests
+  /// exercise it); no production caller drives it.
   public init(
     availability: NeedleDropSpriteAvailability,
-    spritePlayer: NeedleDropSpritePlayer? = nil,
-    autoAuditionTrigger: Bool = false
+    spritePlayer: NeedleDropSpritePlayer? = nil
   ) {
     _controller = StateObject(wrappedValue: NeedleDropBarController(
       availability: availability,
       spritePlayer: spritePlayer
     ))
-    self.autoAuditionTrigger = autoAuditionTrigger
   }
 
   public var body: some View {
@@ -66,17 +64,6 @@ public struct NeedleDropBar: View {
       default:
         interactiveBar
       }
-    }
-    .onChange(of: autoAuditionTrigger) { _, newValue in
-      if newValue { controller.startAutoAuditioning() }
-    }
-    // A bar re-mounted by the caller's `.id(availability.identityKey)` AFTER the
-    // trigger already flipped true (the settle delay racing the manifest fetch)
-    // is a fresh instance — `.onChange` never fires on it. Honor an
-    // already-true trigger on appearance; `startAutoAuditioning` is state-guarded
-    // (`.idle` only), so this can't double-start or interrupt a scrub.
-    .onAppear {
-      if autoAuditionTrigger { controller.startAutoAuditioning() }
     }
     .onDisappear { controller.stop() }
   }
