@@ -144,16 +144,12 @@ extension HomeVC {
   /// history; the deck's default candidate kind matches the section so a
   /// tap from the playlists row deals playlists, not albums.
   ///
-  /// Depends on `AuditionDeckHostVC(seed:defaultKind:)`, built in parallel
-  /// by another agent in this sprint and not necessarily present yet — see
-  /// sprint-Discovery-D4's brief. This call site is written against its
-  /// documented signature.
+  /// Deck v2: the deck PUSHES onto Home's navigation stack (user-settled
+  /// push-navigation rule) — see `pushAuditionDeck` in
+  /// `AuditionDeckHostVC.swift` for the routing fallbacks.
   func presentAuditionDeck(seededFrom section: HomeSection) {
     let defaultKind: DeckCandidateKind = section == .favouritePlaylists ? .playlist : .album
-    present(
-      AuditionDeckHostVC(seed: .recentHistory, defaultKind: defaultKind),
-      animated: true
-    )
+    pushAuditionDeck(seed: .recentHistory, defaultKind: defaultKind)
   }
 
   /// Empty-library guard (design §2): "if the library has no plays ... 'Find

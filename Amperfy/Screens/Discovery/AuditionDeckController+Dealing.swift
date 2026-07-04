@@ -5,18 +5,51 @@ import Foundation
 
 /// Split out of `AuditionDeckController.swift` to keep both files comfortably under the project's
 /// ~200-line convention — this is the deck's whole dealing/refresh/Deal-More flow (design
-/// §3.1/§4.2/§8), which is enough logic on its own to earn a file.
+/// §3.1/§4.2/§8).
+///
+/// **Deck v2 pool policy (algorithm parity proven, docs/qa/adjacency-parity-report.md):** every
+/// deal runs the fusion engine at effective blend 0.0 — Familiar/sidecar only. If the familiar
+/// pool comes back degraded (unreachable/failed, per `DeckDealResult.degradedPools`), the deal is
+/// silently retried at blend 1.0 — the on-device Adventurous pool. No degraded-warning UI; both
+/// pools down is still the Error state.
 extension AuditionDeckController {
-  func deal(seed: DeckSeed, kind: DeckCandidateKind, blend: Double) async {
-    currentSeed = seed
-    currentKind = kind
-    self.blend = blend
-    lifecycleState = .dealing
+  /// Fusion-engine blend for the primary deal: 0.0 = Familiar (sidecar) only.
+  private static let sidecarBlend = 0.0
+  /// Fusion-engine blend for the fallback deal: 1.0 = Adventurous (on-device) only.
+  private static let onDeviceFallbackBlend = 1.0
 
-    let result = await fusionEngine.deal(
-      seed: seed, kind: kind, blend: blend, count: deckLength,
+  /// One deal round at the Deck v2 pool policy above. Also publishes `degradedPools` (kept for
+  /// internal state/error detection — the warning chip UI is gone).
+  private func dealFromPools(
+    seed: DeckSeed,
+    kind: DeckCandidateKind,
+    count: Int
+  ) async
+    -> DeckDealResult {
+    let sidecarResult = await fusionEngine.deal(
+      seed: seed, kind: kind, blend: Self.sidecarBlend, count: count,
       excludeIds: excludeIds, account: account
     )
+    guard sidecarResult.degradedPools.contains(.adjacency) else {
+      degradedPools = sidecarResult.degradedPools
+      return sidecarResult
+    }
+    let fallbackResult = await fusionEngine.deal(
+      seed: seed, kind: kind, blend: Self.onDeviceFallbackBlend, count: count,
+      excludeIds: excludeIds, account: account
+    )
+    // Surface the sidecar's degradation alongside the fallback's own report so
+    // `isBothPoolsDown` still recognizes the everything-unreachable case.
+    degradedPools = fallbackResult.degradedPools.union([.adjacency])
+    return fallbackResult
+  }
+
+  func deal(seed: DeckSeed, kind: DeckCandidateKind) async {
+    currentSeed = seed
+    currentKind = kind
+    lifecycleState = .dealing
+
+    let result = await dealFromPools(seed: seed, kind: kind, count: deckLength)
     applyDealtCandidates(result, appending: false)
 
     if candidates.isEmpty {
@@ -29,13 +62,11 @@ extension AuditionDeckController {
     }
   }
 
-  /// Re-deals with the same seed/kind as the last `deal(...)` call, optionally at a new blend.
-  /// Covers two design §4.2 transitions with one method: Error state's "Retry" (no blend change —
-  /// pass `nil`) and Empty state's "slider moved" (`Empty -- slider moved --> Dealing`, a fresh
-  /// deal rather than a `refresh()`, since there are no existing candidates to pin/replace).
-  func redeal(blend newBlend: Double? = nil) async {
+  /// Re-deals with the same seed/kind as the last `deal(...)` call — the Error state's "Retry"
+  /// (design §4.2).
+  func redeal() async {
     guard let seed = currentSeed, let kind = currentKind else { return }
-    await deal(seed: seed, kind: kind, blend: newBlend ?? blend)
+    await deal(seed: seed, kind: kind)
   }
 
   /// Appends a fresh deal after the current last card (design §5.4/§5.5's "Deal <n> more").
@@ -43,19 +74,15 @@ extension AuditionDeckController {
   /// Guarded against re-entrancy via `dealingGate` (shared with `refresh()`, declared on
   /// `AuditionDeckController`) because both mutate
   /// `candidates`/`excludeIds`/`likedBeforeSessionIds`, and letting either run while the other is
-  /// still awaiting its own `fusionEngine.deal(...)` round trip is the confirmed bug this guard
-  /// closes: the slower call's eventual `candidates` write would otherwise be built against state
-  /// that predates the faster call's own mutation, silently discarding it.
+  /// still awaiting its own pool round trip is the confirmed bug this guard closes: the slower
+  /// call's eventual `candidates` write would otherwise be built against state that predates the
+  /// faster call's own mutation, silently discarding it.
   ///
   /// A same-kind collision (a duplicate "Deal more" tap landing while one is already in flight) is
   /// simply ignored (`ignoreIfSameKindInFlight: true`) — a second identical tap expresses no
-  /// "newer intent" a fresh fetch could serve, and the button is also
-  /// `.disabled(isExtending || isRefreshing)` at the UI layer for the same reason
-  /// (`AuditionDeckBlendPanel.swift`); this is the belt-and-braces version for any other caller,
-  /// e.g. `AuditionDeckEndCardView`'s own "Deal more" button, which this sprint's scope didn't
-  /// include wiring a disabled state for. A cross-kind collision (`refresh()` is running) waits
-  /// instead of cancelling — abandoning `refresh()` mid-flight would risk applying its pinning
-  /// logic against half-updated state, so it is simply left to finish first.
+  /// "newer intent" a fresh fetch could serve. A cross-kind collision (`refresh()` is running)
+  /// waits instead of cancelling — abandoning `refresh()` mid-flight would risk applying its
+  /// pinning logic against half-updated state, so it is simply left to finish first.
   func dealMore() async {
     guard let seed = currentSeed, let kind = currentKind else { return }
     await dealingGate.run(kind: .dealMore, ignoreIfSameKindInFlight: true) { [weak self] in
@@ -65,16 +92,12 @@ extension AuditionDeckController {
 
   private func performDealMore(seed: DeckSeed, kind: DeckCandidateKind) async {
     isExtending = true
-    let result = await fusionEngine.deal(
-      seed: seed, kind: kind, blend: blend, count: deckLength,
-      excludeIds: excludeIds, account: account
-    )
+    let result = await dealFromPools(seed: seed, kind: kind, count: deckLength)
     applyDealtCandidates(result, appending: true)
     isExtending = false
   }
 
   private func applyDealtCandidates(_ result: DeckDealResult, appending: Bool) {
-    degradedPools = result.degradedPools
     excludeIds.formUnion(result.candidates.map(\.collectionId))
     for candidate in result.candidates where likeCoordinator.isLiked(candidate) {
       likedBeforeSessionIds.insert(candidate.collectionId)
@@ -88,19 +111,14 @@ extension AuditionDeckController {
 
   /// The Refreshing flow (design §4.2/§8): already-swiped/current cards AND any
   /// liked-but-not-yet-swiped card are pinned in place; only truly-unswiped, unliked cards below
-  /// the current position regenerate.
+  /// the current position regenerate. Deck v2 note: with the blend UI removed nothing currently
+  /// calls this — it is retained blend/deal machinery (same pool policy as `deal`), not UI.
   ///
   /// Guarded against re-entrancy via `dealingGate`, shared with `dealMore()` — see that method's
-  /// doc comment for why the two share a gate. Unlike `dealMore()`, a same-kind collision here
-  /// does NOT ignore the newer call (`ignoreIfSameKindInFlight: false`): `blend` is a live
-  /// `@Published` property the slider mutates directly mid-drag (see the controller's type doc
-  /// comment), so simply waiting for an in-flight `refresh()` to finish and only THEN taking a
-  /// fresh `candidates`/`blend` snapshot already gives the newest slider position priority —
-  /// there's no need to cancel the older network round trip to achieve "the newest blend wins",
-  /// waiting achieves it for free. Crucially, the snapshot (`currentIndex`/`keptIndexedCandidates`)
-  /// is computed INSIDE the gate's operation closure, not before calling `run` — computing it
-  /// before would reintroduce the exact staleness bug this guard exists to fix, just gated behind
-  /// a queue instead of firing concurrently.
+  /// doc comment for why the two share a gate. Crucially, the snapshot
+  /// (`currentIndex`/`keptIndexedCandidates`) is computed INSIDE the gate's operation closure,
+  /// not before calling `run` — computing it before would reintroduce the exact staleness bug
+  /// this guard exists to fix, just gated behind a queue instead of firing concurrently.
   func refresh() async {
     guard let seed = currentSeed, let kind = currentKind else { return }
     var didRefresh = false
@@ -141,11 +159,7 @@ extension AuditionDeckController {
     keptIds: Set<String>
   ) async {
     isRefreshing = true
-    let result = await fusionEngine.deal(
-      seed: seed, kind: kind, blend: blend, count: replaceCount,
-      excludeIds: excludeIds, account: account
-    )
-    degradedPools = result.degradedPools
+    let result = await dealFromPools(seed: seed, kind: kind, count: replaceCount)
     excludeIds.formUnion(result.candidates.map(\.collectionId))
     for candidate in result.candidates where likeCoordinator.isLiked(candidate) {
       likedBeforeSessionIds.insert(candidate.collectionId)

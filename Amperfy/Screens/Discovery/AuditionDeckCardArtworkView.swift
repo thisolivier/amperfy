@@ -3,11 +3,9 @@ import SwiftUI
 
 // MARK: - AuditionDeckCardArtworkView
 
-/// Artwork block for one deck card (design §5.2): ~65% screen width, rounded 12pt, shadow, with
-/// the like button overlaid top-trailing, offset (8, −8) outward. The heart control itself is
-/// `AuditionDeckLikeButton` (the blend-panel/entry-points agent's file — found already built,
-/// self-contained, and explicitly documented as droppable into this exact spot) rather than a
-/// second implementation here.
+/// Artwork block for one deck card: ~65% screen width, rounded 12pt, shadow. Deck v2: the like
+/// button no longer overlays the artwork — it lives in the card's top-trailing corner
+/// (`AuditionDeckCardView`).
 struct AuditionDeckCardArtworkView: View {
   let candidate: DeckCandidate
   let container: PlayableContainable?
@@ -20,14 +18,6 @@ struct AuditionDeckCardArtworkView: View {
       .frame(width: UIScreen.main.bounds.width * 0.65)
       .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
       .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
-      .overlay(alignment: .topTrailing) {
-        AuditionDeckLikeButton(
-          collectionId: candidate.collectionId,
-          kind: candidate.kind,
-          account: account
-        )
-        .offset(x: 8, y: -8)
-      }
   }
 
   @ViewBuilder
