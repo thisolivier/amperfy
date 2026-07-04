@@ -15,23 +15,18 @@ import Foundation
 /// this target to use it.
 ///
 /// One instance == one deck session. It is created fresh by `AuditionDeckHostVC` each time the
-/// deck opens and discarded on dismiss — `excludeIds` and the session counters therefore live
-/// exactly as long as design §8's "session de-dupe... never reset until the deck is dismissed"
-/// requires, with no separate reset step needed.
+/// deck opens and discarded when the page pops — `excludeIds` and the session counters therefore
+/// live exactly as long as design §8's "session de-dupe... never reset until the deck is
+/// dismissed" requires, with no separate reset step needed.
 ///
-/// `blend` is a plain `@Published` property on purpose: the blend panel
-/// (`AuditionDeckBlendPanel.swift`, found already built) binds `$controller.blend` directly as its
-/// `Slider`'s two-way binding and calls `refresh()` itself once its own 400ms debounce settles —
-/// this controller does not auto-react to `blend` changing. Deck length is intentionally NOT
-/// mirrored as a controller property: `AuditionDeckBlendPanel` owns it via
-/// `@AppStorage("amperfy.fork.discovery.deckLength")`, so `dealMore()` reads that same
-/// `UserDefaults` key directly (`Self.deckLengthDefaultsKey`) rather than risking two
-/// independently-tracked copies drifting apart. This is a fragile string-literal coupling across
-/// two concurrently-written files — flagged in this sprint's report for the integration pass to
-/// double check against `AuditionDeckBlendPanel.swift`'s actual key if it changes.
+/// Deck v2: the blend UI (chip/panel/slider) is gone. The blend *machinery* is retained —
+/// `DeckFusionEngine.deal(blend:)` is unchanged — but this controller now drives it internally:
+/// sidecar-first (blend 0.0) with a silent on-device fallback (blend 1.0) when the familiar pool
+/// is degraded (see `AuditionDeckController+Dealing.swift`).
 @MainActor
 final class AuditionDeckController: ObservableObject {
-  /// Must match `AuditionDeckBlendPanel.swift`'s `@AppStorage` key exactly — see the type doc.
+  /// Historic `@AppStorage` key of the removed blend panel's deck-length picker — still honored
+  /// so an existing install's chosen deck length survives the Deck v2 UI removal.
   static let deckLengthDefaultsKey = "amperfy.fork.discovery.deckLength"
   static let defaultDeckLength = 10
 
@@ -49,8 +44,6 @@ final class AuditionDeckController: ObservableObject {
   var scrollPositionId: String?
   @Published
   var degradedPools: Set<DeckPool> = []
-  @Published
-  var blend: Double
 
   let audio: AuditionDeckAudioCoordinator
 
@@ -65,8 +58,6 @@ final class AuditionDeckController: ObservableObject {
       return .populated
     }
   }
-
-  var sessionAuditionedCount: Int { auditionedCandidateIds.count }
 
   /// "Likes made this session" (design §5.5): candidates currently liked that were NOT already
   /// liked at the moment they were dealt into this session. Computed live against
@@ -91,7 +82,6 @@ final class AuditionDeckController: ObservableObject {
   var currentSeed: DeckSeed?
   var currentKind: DeckCandidateKind?
   var excludeIds: Set<String> = []
-  var auditionedCandidateIds: Set<String> = []
   /// Snapshot of like state taken the moment each candidate was first dealt (initial deal or Deal
   /// More) — the baseline `sessionLikedCount` diffs against.
   var likedBeforeSessionIds: Set<String> = []
@@ -116,8 +106,7 @@ final class AuditionDeckController: ObservableObject {
     fusionEngine: DeckFusionEngine,
     storage: LibraryStorage,
     player: PlayerFacade,
-    likeCoordinator: AuditionDeckLikeCoordinator,
-    initialBlend: Double = 0.5
+    likeCoordinator: AuditionDeckLikeCoordinator
   ) {
     self.account = account
     self.fusionEngine = fusionEngine
@@ -125,14 +114,13 @@ final class AuditionDeckController: ObservableObject {
     self.player = player
     self.likeCoordinator = likeCoordinator
     self.audio = AuditionDeckAudioCoordinator(player: player)
-    self.blend = initialBlend
-    audio.onFirstAudition = { [weak self] candidateId in
-      self?.auditionedCandidateIds.insert(candidateId)
-    }
   }
 
-  // MARK: Entity resolution / playback
+  // MARK: Entity resolution
 
+  /// Deck v2 removed all in-deck playback (Play/Shuffle/queue) — playing happens after opening
+  /// the collection, so this controller's only entity work is resolving a candidate for the
+  /// card's artwork and the host's detail push.
   func resolveEntity(_ candidate: DeckCandidate) -> PlayableContainable? {
     switch candidate.kind {
     case .album:
@@ -146,37 +134,9 @@ final class AuditionDeckController: ObservableObject {
     }
   }
 
-  /// Hands off to the main player queue starting at `startTrackId` (or track 1 if nil), stops
-  /// sprite audio, and marks the audio handoff so `deckWillClose()` doesn't also resume whatever
-  /// was playing before the deck opened. Returns `false` if the entity couldn't be resolved.
-  @discardableResult
-  func play(candidate: DeckCandidate, startTrackId: String?) -> Bool {
-    guard let containable = resolveEntity(candidate) else { return false }
-    let playables = containable.playables
-    let index = startTrackId.flatMap { trackId in
-      playables.firstIndex(where: { $0.id == trackId })
-    } ?? 0
-    audio.stopAllSpritePlayers()
-    audio.markPlayHandedOffToMainPlayer()
-    player.play(context: PlayContext(containable: containable, index: index, playables: playables))
-    return true
-  }
-
-  func playShuffled(candidate: DeckCandidate) {
-    guard let containable = resolveEntity(candidate) else { return }
-    audio.stopAllSpritePlayers()
-    audio.markPlayHandedOffToMainPlayer()
-    player.playShuffled(context: PlayContext(
-      containable: containable,
-      playables: containable.playables
-    ))
-  }
-
-  func addToQueue(candidate: DeckCandidate) {
-    guard let containable = resolveEntity(candidate) else { return }
-    player.appendContextQueue(playables: containable.playables)
-  }
-
+  /// Deck v2: fired when the deck page POPS off the navigation stack (not on modal dismissal —
+  /// there is no modal anymore). `AuditionDeckHostVC.viewWillDisappear(isMovingFromParent:)`
+  /// is the caller.
   func deckWillClose() {
     audio.deckWillClose()
   }

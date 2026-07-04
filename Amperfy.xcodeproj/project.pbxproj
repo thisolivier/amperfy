@@ -22,7 +22,6 @@
 		43FBE27F250D4DFD00D5F9B3 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43FBE27E250D4DFD00D5F9B3 /* LaunchScreen.storyboard */; };
 		44DB00B6C0B2E3FDF350C597 /* AuditionDeckLikeCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D3EBE0D942D0D9781B748F6 /* AuditionDeckLikeCoordinator.swift */; };
 		4937E18D4C02B07CC752CCDE /* AuditionDeckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71A04779E439BF5FA292577E /* AuditionDeckView.swift */; };
-		4A04BAABB67429A9B4C68000 /* AuditionDeckCardActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 718284BBCC2E6ADE151A084F /* AuditionDeckCardActionsView.swift */; };
 		5003D8FB267B3390006946BF /* LibrarySyncPopupVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5003D8FA267B3390006946BF /* LibrarySyncPopupVC.swift */; };
 		5005938928E2D4EF008C8DF6 /* CommonCollectionSectionHeader.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5005938828E2D4EF008C8DF6 /* CommonCollectionSectionHeader.xib */; };
 		5005938B28E2D4FB008C8DF6 /* CommonCollectionSectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5005938A28E2D4FB008C8DF6 /* CommonCollectionSectionHeader.swift */; };
@@ -556,7 +555,6 @@
 		6C6E230EE32CE326EF14AEAD /* AuditionDeckAudioCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4DB249FE9138D441E466ED /* AuditionDeckAudioCoordinator.swift */; };
 		706790844DE32C4BDAFFEEC5 /* DeckSeedResolverTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = DADC71ACFD77D1D88398B31D /* DeckSeedResolverTest.swift */; };
 		70C85FEED8BFF2C4D7C8E82D /* PlaylistFolderMO+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F0DF2BE2466E004E8A817A /* PlaylistFolderMO+CoreDataClass.swift */; };
-		7A5A51BE08A1F54DB9B5F712 /* AuditionDeckBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C6D142B82DD2DBF61945DC /* AuditionDeckBackgroundView.swift */; };
 		800B481E7D1EC1CA254656DE /* AuditionDeckHomeEntryCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19159EC9692E5E8335F9B3AF /* AuditionDeckHomeEntryCell.swift */; };
 		864259F23712D9C0882B7164 /* AuditionDeckLikeButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F17190615965739DFBC379B /* AuditionDeckLikeButton.swift */; };
 		87BFF73D8D7492FDA67F5E0C /* DeckSpriteManifestFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4BD972F42FDD3F4140AC9D /* DeckSpriteManifestFetcher.swift */; };
@@ -564,7 +562,6 @@
 		894FB0FC15AFC1EA1E26F0CA /* DeckDealingGateTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDEC4BAA3E305AF27B3E4841 /* DeckDealingGateTest.swift */; };
 		8AC16E65905A94843000FC2B /* AuditionDeckHostVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = E633B9D463CF91B4F4EA54DB /* AuditionDeckHostVC.swift */; };
 		8BCD5E9AFFB2BB80C18514B6 /* AuditionDeckCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AE98C211B1EDEC684100C7C /* AuditionDeckCardView.swift */; };
-		8E2E0EFE976405B1FAE0D9C7 /* AuditionDeckBlendSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9C0CC32186ED6C2C739AF12 /* AuditionDeckBlendSlider.swift */; };
 		8F4B7A89BAF296AA9E84626A /* AdjacencySidecarSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90CF787F02567831D033FF1 /* AdjacencySidecarSettings.swift */; };
 		9AA73BEB5910364AD8BB9799 /* DeckCandidate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3EEB043DC7573126836BA9E /* DeckCandidate.swift */; };
 		9D6217A799F58ACCED4ECA72 /* AuditionDeckState.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEB24EEE355DC237CAE05931 /* AuditionDeckState.swift */; };
@@ -649,10 +646,7 @@
 		B138A4A9C5F7C42ADAC07ED3 /* AccountServerUrlBackfillTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A753325B9ED789446346DF94 /* AccountServerUrlBackfillTest.swift */; };
 		B2F8B8E9A45A498A99A3F3FB /* SettingEnumerations+UIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8527D8D392314291A9BE69CA /* SettingEnumerations+UIKit.swift */; };
 		C0A1B0032EEE000000000003 /* MacWindowHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A1B0022EEE000000000002 /* MacWindowHelper.swift */; };
-		CACD4DE451201590D5401507 /* AuditionDeckTopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E4A9A6BFD0A753D5B773DE9 /* AuditionDeckTopBar.swift */; };
-		D467C16B6E6F0BF6CFCB406E /* AuditionDeckBlendPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 602EE444E9EC6A22EB0693E2 /* AuditionDeckBlendPanel.swift */; };
 		DF4E1154B7ECE2AFA1BF3A00 /* LocalTrackAdjacencyComputer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2E3B058E28C8D26D7E496FE /* LocalTrackAdjacencyComputer.swift */; };
-		E01FF3F8913894A431867953 /* AuditionDeckBlendChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7EB48FA37AC9BE9D1FED35A /* AuditionDeckBlendChip.swift */; };
 		E19396E2D8F741C8F5E49C03 /* DeckFusionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42A0E721A0B9C71F75554C98 /* DeckFusionEngine.swift */; };
 		ECD033A8E82939B0F464186E /* DeckSeedResolution.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86519AE157CB31DDA0056DD3 /* DeckSeedResolution.swift */; };
 		ED2305EE261B919ED1909588 /* AuditionDeckController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EDD38E321F8AD36BC65C9C6 /* AuditionDeckController.swift */; };
@@ -734,7 +728,6 @@
 		27840FE68CA4450D50C8B30F /* AdjacencySidecarClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjacencySidecarClient.swift; sourceTree = "<group>"; };
 		27AE138D21A30D559C3E1232 /* EntityArtworkView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EntityArtworkView.swift; sourceTree = "<group>"; };
 		28F695A9B40CB080214A15DC /* AdventurousPoolProviding.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdventurousPoolProviding.swift; sourceTree = "<group>"; };
-		2E4A9A6BFD0A753D5B773DE9 /* AuditionDeckTopBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckTopBar.swift; sourceTree = "<group>"; };
 		40BA54924858ACBF2EF8EB73 /* AdjacencySidecarSettingsTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjacencySidecarSettingsTest.swift; sourceTree = "<group>"; };
 		42A0E721A0B9C71F75554C98 /* DeckFusionEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckFusionEngine.swift; sourceTree = "<group>"; };
 		43FBE27E250D4DFD00D5F9B3 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -1289,7 +1282,6 @@
 		54567B0942D948DCADE4FB21 /* Amperfy v51.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v51.xcdatamodel"; sourceTree = "<group>"; };
 		55BABDC494A4BA93B61B318B /* AuditionDeckEndCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckEndCardView.swift; sourceTree = "<group>"; };
 		590A639B44AC70AC88BDAF49 /* DeckBlendInterleaver.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckBlendInterleaver.swift; sourceTree = "<group>"; };
-		602EE444E9EC6A22EB0693E2 /* AuditionDeckBlendPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckBlendPanel.swift; sourceTree = "<group>"; };
 		631C166A2C6D3D9A0085F62E /* SettingsRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRow.swift; sourceTree = "<group>"; };
 		631C166C2C6D61110085F62E /* NavigationTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationTarget.swift; sourceTree = "<group>"; };
 		631C166E2C6D63510085F62E /* SettingsSection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsSection.swift; sourceTree = "<group>"; };
@@ -1305,9 +1297,7 @@
 		696DAAA5BCD39E9C53A52B2B /* AuditionDeckCardInfoView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckCardInfoView.swift; sourceTree = "<group>"; };
 		6B188FC8F903F08568D5CFA2 /* DeckCandidateResolver.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckCandidateResolver.swift; sourceTree = "<group>"; };
 		703B7B9D0B2EB79BC9AF31AE /* NeedleDropBarAvailabilityTransitionTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NeedleDropBarAvailabilityTransitionTest.swift; sourceTree = "<group>"; };
-		718284BBCC2E6ADE151A084F /* AuditionDeckCardActionsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckCardActionsView.swift; sourceTree = "<group>"; };
 		71A04779E439BF5FA292577E /* AuditionDeckView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckView.swift; sourceTree = "<group>"; };
-		74C6D142B82DD2DBF61945DC /* AuditionDeckBackgroundView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckBackgroundView.swift; sourceTree = "<group>"; };
 		7948E76FD76C6FA534930AF6 /* HomeVC+DiscoveryEntryPoints.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "HomeVC+DiscoveryEntryPoints.swift"; sourceTree = "<group>"; };
 		79A3A6DB3E79C8FC69237046 /* AuditionDeckController+Dealing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "AuditionDeckController+Dealing.swift"; sourceTree = "<group>"; };
 		8527D8D392314291A9BE69CA /* SettingEnumerations+UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingEnumerations+UIKit.swift"; sourceTree = "<group>"; };
@@ -1407,10 +1397,8 @@
 		E3EEB043DC7573126836BA9E /* DeckCandidate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckCandidate.swift; sourceTree = "<group>"; };
 		E633B9D463CF91B4F4EA54DB /* AuditionDeckHostVC.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckHostVC.swift; sourceTree = "<group>"; };
 		E63A9F9C82A0199DC6B62B08 /* RelatedTracksVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelatedTracksVC.swift; sourceTree = "<group>"; };
-		E9C0CC32186ED6C2C739AF12 /* AuditionDeckBlendSlider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckBlendSlider.swift; sourceTree = "<group>"; };
 		ECBB0A5656EAB6C63C3FACC2 /* OnDeviceAdventurousPoolProviderTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnDeviceAdventurousPoolProviderTest.swift; sourceTree = "<group>"; };
 		EEA6C7C94AAC46FA8A0C94CD /* SwipeActionSettings+UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SwipeActionSettings+UIKit.swift"; sourceTree = "<group>"; };
-		F7EB48FA37AC9BE9D1FED35A /* AuditionDeckBlendChip.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckBlendChip.swift; sourceTree = "<group>"; };
 		F90CF787F02567831D033FF1 /* AdjacencySidecarSettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjacencySidecarSettings.swift; sourceTree = "<group>"; };
 		FCDC42640928BC083027BE64 /* AuditionDeckStateViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckStateViews.swift; sourceTree = "<group>"; };
 		FE1F35FB3C0845E6B790E33C /* Utilities+UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Utilities+UIKit.swift"; sourceTree = "<group>"; };
@@ -2609,11 +2597,6 @@
 			isa = PBXGroup;
 			children = (
 				CA4DB249FE9138D441E466ED /* AuditionDeckAudioCoordinator.swift */,
-				74C6D142B82DD2DBF61945DC /* AuditionDeckBackgroundView.swift */,
-				F7EB48FA37AC9BE9D1FED35A /* AuditionDeckBlendChip.swift */,
-				602EE444E9EC6A22EB0693E2 /* AuditionDeckBlendPanel.swift */,
-				E9C0CC32186ED6C2C739AF12 /* AuditionDeckBlendSlider.swift */,
-				718284BBCC2E6ADE151A084F /* AuditionDeckCardActionsView.swift */,
 				E2A4F252AA1D448BC53A4989 /* AuditionDeckCardArtworkView.swift */,
 				A08C405FF2B6582B0533B793 /* AuditionDeckCardAuditionModel.swift */,
 				696DAAA5BCD39E9C53A52B2B /* AuditionDeckCardInfoView.swift */,
@@ -2627,7 +2610,6 @@
 				9D3EBE0D942D0D9781B748F6 /* AuditionDeckLikeCoordinator.swift */,
 				DEB24EEE355DC237CAE05931 /* AuditionDeckState.swift */,
 				FCDC42640928BC083027BE64 /* AuditionDeckStateViews.swift */,
-				2E4A9A6BFD0A753D5B773DE9 /* AuditionDeckTopBar.swift */,
 				71A04779E439BF5FA292577E /* AuditionDeckView.swift */,
 				994243E506160FFC119CE393 /* DeckCandidateFormatting.swift */,
 				0A4BD972F42FDD3F4140AC9D /* DeckSpriteManifestFetcher.swift */,
@@ -3156,11 +3138,6 @@
 				A5C0D40000000000000010A2 /* EntityImageView.swift in Sources */,
 				A5C0D40000000000000010A4 /* LibraryEntityImage.swift in Sources */,
 				6C6E230EE32CE326EF14AEAD /* AuditionDeckAudioCoordinator.swift in Sources */,
-				7A5A51BE08A1F54DB9B5F712 /* AuditionDeckBackgroundView.swift in Sources */,
-				E01FF3F8913894A431867953 /* AuditionDeckBlendChip.swift in Sources */,
-				D467C16B6E6F0BF6CFCB406E /* AuditionDeckBlendPanel.swift in Sources */,
-				8E2E0EFE976405B1FAE0D9C7 /* AuditionDeckBlendSlider.swift in Sources */,
-				4A04BAABB67429A9B4C68000 /* AuditionDeckCardActionsView.swift in Sources */,
 				5FAA0A4372E2C1880F959A4E /* AuditionDeckCardArtworkView.swift in Sources */,
 				3926042C87DCB8B17560B33C /* AuditionDeckCardAuditionModel.swift in Sources */,
 				EE3D6C735CD85D66DA44F719 /* AuditionDeckCardInfoView.swift in Sources */,
@@ -3174,7 +3151,6 @@
 				44DB00B6C0B2E3FDF350C597 /* AuditionDeckLikeCoordinator.swift in Sources */,
 				9D6217A799F58ACCED4ECA72 /* AuditionDeckState.swift in Sources */,
 				5467A0EFBA3C51CCF7BCBBD8 /* AuditionDeckStateViews.swift in Sources */,
-				CACD4DE451201590D5401507 /* AuditionDeckTopBar.swift in Sources */,
 				4937E18D4C02B07CC752CCDE /* AuditionDeckView.swift in Sources */,
 				65E635163D6AEC41A6766D23 /* DeckCandidateFormatting.swift in Sources */,
 				87BFF73D8D7492FDA67F5E0C /* DeckSpriteManifestFetcher.swift in Sources */,

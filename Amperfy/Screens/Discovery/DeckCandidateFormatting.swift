@@ -48,13 +48,6 @@ enum DeckCandidateFormatting {
     }
   }
 
-  /// Primary-action label (design §5.2): "Play" with no audition position, or
-  /// "Play from “<track>”" once a slice has been auditioned.
-  static func primaryActionLabel(auditionedTrackTitle: String?) -> String {
-    guard let auditionedTrackTitle else { return "Play" }
-    return "Play from \u{201C}\(auditionedTrackTitle)\u{201D}"
-  }
-
   /// Live audition readout (design §5.2): "“<track title>” — <artist>".
   static func auditionReadout(title: String, artist: String) -> String {
     "\u{201C}\(title)\u{201D} — \(artist)"

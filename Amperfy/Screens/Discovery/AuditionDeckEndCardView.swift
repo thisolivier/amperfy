@@ -2,10 +2,9 @@ import SwiftUI
 
 // MARK: - AuditionDeckEndCardView
 
-/// Final page of the deck (design §5.5): session summary + Deal more / Done. Same layout grammar
-/// as a deck card, minus artwork/bar.
+/// Final page of the deck: session summary + Deal more / Done. Deck v2: no audition tracking —
+/// the summary is "You liked <m>" only (user-settled 2026-07-03). Done pops the deck page.
 struct AuditionDeckEndCardView: View {
-  let auditionedCount: Int
   let likedCount: Int
   let dealMoreLabel: String
   let onDealMore: () -> ()
@@ -20,7 +19,7 @@ struct AuditionDeckEndCardView: View {
       Text("That's the deck")
         .font(.title2.bold())
 
-      Text("You auditioned \(auditionedCount) · liked \(likedCount)")
+      Text("You liked \(likedCount)")
         .font(.subheadline)
         .foregroundStyle(.secondary)
 

@@ -123,19 +123,16 @@ class AlbumDetailVC: SingleSnapshotFetchedResultsTableViewController<SongMO> {
     optionsButton.menu = UIMenu.lazyMenu {
       var actions = EntityPreviewActionBuilder(container: self.album, on: self).createMenuActions()
 
-      // Discovery-D4 entry point (design doc §2: "Find similar albums").
-      // Depends on `AuditionDeckHostVC(seed:defaultKind:)`, built in
-      // parallel by another agent in this sprint and not necessarily
-      // present yet — written against its documented init signature.
+      // Discovery entry point (design doc §2: "Find similar albums").
+      // Deck v2: the deck PUSHES onto this nav stack (user-settled
+      // push-navigation rule) — see `pushAuditionDeck` in
+      // `AuditionDeckHostVC.swift` for the routing fallbacks.
       let findSimilarAction = UIAction(
         title: "Find similar albums",
         image: UIImage(systemName: "rectangle.stack.badge.play")
       ) { [weak self] _ in
         guard let self else { return }
-        present(
-          AuditionDeckHostVC(seed: .album(id: album.id), defaultKind: .album),
-          animated: true
-        )
+        pushAuditionDeck(seed: .album(id: album.id), defaultKind: .album)
       }
       actions.insert(findSimilarAction, at: 0)
 

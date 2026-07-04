@@ -36,26 +36,10 @@ enum AuditionDeckUIState: Equatable {
 
 // MARK: - AuditionDeckDegradedPoolMessage
 
-/// Blend chip / panel copy for the partial-degradation edge case (design §8): one pool
-/// unreachable is NOT the Error state, it's a `Populated` deck with a degraded-pool banner.
+/// Partial-degradation handling (design §8, Deck v2): one pool unreachable is NOT the Error
+/// state — the deck silently falls back to the other pool (no warning chip UI anymore); only
+/// both pools down reaches Error.
 enum AuditionDeckDegradedPoolMessage {
-  static func text(for degradedPools: Set<DeckPool>) -> String? {
-    let isAdjacencyDown = degradedPools.contains(.adjacency)
-    let isSimilarDown = degradedPools.contains(.similar)
-    switch (isAdjacencyDown, isSimilarDown) {
-    case (true, false):
-      return "Close matches unavailable right now"
-    case (false, true):
-      return "New directions unavailable"
-    case (true, true):
-      // Both pools down at once is the Error state (see `isBothPoolsDown` below) — this case
-      // should not reach the banner, but a message is still returned defensively.
-      return "Recommendations unavailable right now"
-    case (false, false):
-      return nil
-    }
-  }
-
   /// `DeckPool` (per the exact data-layer interface this sprint was built against) has exactly
   /// two cases — `.adjacency` and `.similar` — so "both pools unreachable" (design §4.2's Error
   /// state trigger) is simply "the degraded set contains both of them."

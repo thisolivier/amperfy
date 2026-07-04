@@ -3,33 +3,25 @@ import SwiftUI
 
 // MARK: - AuditionDeckCardView
 
-/// One deck card (design §5.2): artwork+like, kicker/title/subtitle/evidence, the Needle Drop bar
-/// fed a real fetched manifest, the audition readout, and the primary action + more menu.
-///
-/// `onOpen`: the "Open" menu item hook back to UIKit navigation — `AuditionDeckHostVC` is
-/// responsible for dismissing the deck and pushing the real detail screen; this view only reports
-/// *which* candidate was opened. `onRequestDismiss`: fired after Play / Play from start / Shuffle
-/// start playback, so the host can run the same close path as the X button (`deckWillClose()` then
-/// `dismiss(animated:)`).
+/// One Deck v2 card: a rounded-corner card on the page's theme surface holding artwork,
+/// kicker/title/subtitle/evidence, and the Needle Drop bar. The like button sits in the card's
+/// top-trailing corner. The whole card is one tap target — tapping it opens the collection
+/// (`onOpen`; the host pushes the detail onto the same stack, deck stays alive beneath). All
+/// v1 playback controls (Play button, ··· menu) are gone: playing happens after opening.
 struct AuditionDeckCardView: View {
   @ObservedObject
   var controller: AuditionDeckController
   let candidate: DeckCandidate
   let isCurrent: Bool
   /// 1-based position + total dealt candidates, for the design §7 accessibility label ("Card <i>
-  /// of <n>, <kicker>, <title>") — the deck-wide "n of m" counter (§5.1) uses the same numbers.
+  /// of <n>, <kicker>, <title>").
   let position: Int
   let total: Int
   let account: Account
   let onOpen: (DeckCandidate) -> ()
-  let onRequestDismiss: () -> ()
 
   @StateObject
   private var auditionModel = AuditionDeckCardAuditionModel()
-  @State
-  private var autoAuditionTrigger = false
-  @AppStorage("amperfy.fork.discovery.autoplayPreviews")
-  private var autoplayPreviews = true
 
   private var container: PlayableContainable? { controller.resolveEntity(candidate) }
   private var theme: ThemePreference {
@@ -43,21 +35,29 @@ struct AuditionDeckCardView: View {
       )
       AuditionDeckCardInfoView(candidate: candidate)
       needleDropSection
-      AuditionDeckCardActionsView(
-        auditionedTrackTitle: auditionModel.currentSlice?.title,
-        onPlay: { play(startTrackId: auditionModel.auditionedTrackId) },
-        onPlayFromStart: { play(startTrackId: nil) },
-        onShuffle: shuffle,
-        onAddToQueue: { controller.addToQueue(candidate: candidate) },
-        onOpen: { onOpen(candidate) }
-      )
     }
-    .padding(.horizontal, 24)
+    .padding(20)
+    .padding(.top, 8)
+    .frame(maxWidth: .infinity)
+    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    .overlay(alignment: .topTrailing) {
+      AuditionDeckLikeButton(
+        collectionId: candidate.collectionId,
+        kind: candidate.kind,
+        account: account
+      )
+      .padding(6)
+    }
+    .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    .onTapGesture { onOpen(candidate) }
+    .padding(.horizontal, 20)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .accessibilityElement(children: .combine)
     .accessibilityLabel(
       "Card \(position) of \(total), \(DeckCandidateFormatting.kicker(for: candidate)), \(candidate.title)"
     )
+    .accessibilityHint("Opens this \(candidate.kind == .album ? "album" : "playlist")")
+    .accessibilityAddTraits(.isButton)
     .task(id: candidate.collectionId) {
       await auditionModel.load(
         candidateId: candidate.collectionId, kind: candidate.kind,
@@ -66,9 +66,8 @@ struct AuditionDeckCardView: View {
     }
     .onChange(of: isCurrent) { _, becameCurrent in handleCurrentChange(becameCurrent) }
     // The deck's FIRST card is current from the moment it exists, so
-    // `.onChange(of: isCurrent)` never fires for it and it sat silent —
-    // the opening moment of the experience (design §5.3's auto-audition)
-    // only worked for swiped-to cards. Run the same settle path on
+    // `.onChange(of: isCurrent)` never fires for it. Run the same
+    // became-current path (single-active-player + failed-fetch retry) on
     // appearance when already current.
     .onAppear { if isCurrent { handleCurrentChange(true) } }
     .onDisappear {
@@ -87,12 +86,19 @@ struct AuditionDeckCardView: View {
       // `NeedleDropBar`'s doc comment and `NeedleDropSpriteAvailability.identityKey`.
       NeedleDropBar(
         availability: auditionModel.availability,
-        spritePlayer: auditionModel.spritePlayer,
-        autoAuditionTrigger: autoAuditionTrigger
+        spritePlayer: auditionModel.spritePlayer
       )
       .id(auditionModel.availability.identityKey)
       auditionReadout
     }
+    // The bar's white segment capsules are frozen work (Needle Drop HALT) and assume a dark
+    // surface — give them one without forcing the page dark: a card-side dark inset strip.
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
+    .background(
+      Color.black.opacity(0.55),
+      in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+    )
   }
 
   @ViewBuilder
@@ -103,18 +109,18 @@ struct AuditionDeckCardView: View {
         Text(DeckCandidateFormatting.auditionReadout(title: slice.title, artist: slice.artist))
           .lineLimit(1)
       } else {
-        Text("Drag to needle-drop").foregroundStyle(.tertiary)
+        Text("Drag to needle-drop").foregroundStyle(Color.white.opacity(0.5))
       }
     }
     .font(.footnote)
-    .foregroundStyle(.secondary)
+    .foregroundStyle(Color.white.opacity(0.8))
   }
 
+  /// Deck v2: NO auto-play (user-settled 2026-07-03, supersedes design §5.3's auto-audition
+  /// default-ON). Becoming current only enforces the single-active-sprite-player invariant and
+  /// retries a previously-failed manifest fetch — the bar stays silent until touched.
   private func handleCurrentChange(_ becameCurrent: Bool) {
-    guard becameCurrent else {
-      autoAuditionTrigger = false
-      return
-    }
+    guard becameCurrent else { return }
     controller.audio.stopAllSpritePlayers(except: candidate.collectionId)
     Task {
       await auditionModel.retryOnceIfNeeded(
@@ -122,22 +128,5 @@ struct AuditionDeckCardView: View {
         account: account, audio: controller.audio
       )
     }
-    guard autoplayPreviews else { return }
-    Task {
-      // Design §5.3: "after a 400ms settle delay, start Riding from slice 1."
-      try? await Task.sleep(nanoseconds: 400_000_000)
-      guard controller.scrollPositionId == candidate.collectionId else { return }
-      autoAuditionTrigger = true
-    }
-  }
-
-  private func play(startTrackId: String?) {
-    guard controller.play(candidate: candidate, startTrackId: startTrackId) else { return }
-    onRequestDismiss()
-  }
-
-  private func shuffle() {
-    controller.playShuffled(candidate: candidate)
-    onRequestDismiss()
   }
 }
