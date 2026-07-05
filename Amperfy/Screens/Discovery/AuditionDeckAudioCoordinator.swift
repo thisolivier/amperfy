@@ -4,22 +4,26 @@ import UIKit
 
 // MARK: - AuditionDeckAudioCoordinator
 
-/// Owns everything audio-behavior-shaped from design §6, updated for Deck v2:
-/// - Main-player pause/resume handoff (pause on deck open if it was playing, resume when the
-///   deck page POPS — there is no in-deck Play anymore, so no handoff-to-main-player case).
+/// Owns everything audio-behavior-shaped from design §6, updated for Deck v2 + triage A1:
+/// - Main-player pause/resume handoff. Opening the deck leaves the main player ALONE
+///   (user-settled 2026-07-05); it is paused only when sprite audio actually starts over it, and
+///   resumed on page pop only if this session paused it and it is still paused at that moment —
+///   the state machine itself is `AmperfyKit.DeckMainPlayerHandoff` (extracted for testability).
 /// - The single-active-`NeedleDropSpritePlayer`-at-a-time invariant across cards.
 /// - Stopping sprite audio synchronously on card swipe, page pop, a detail pushed over the deck
 ///   (`AuditionDeckHostVC.viewWillDisappear`), and app-background.
 ///
 /// One instance is owned per deck session by `AuditionDeckController`. Deck v2 removed audition
-/// tracking (user-settled 2026-07-03): there is no first-audition callback and no per-candidate
-/// audition bookkeeping here.
+/// tracking (user-settled 2026-07-03); a minimal `$isPlaying` observation was re-added for A1 —
+/// it only feeds `DeckMainPlayerHandoff.spritePlaybackDidStart()`, no per-candidate bookkeeping.
 @MainActor
 final class AuditionDeckAudioCoordinator {
-  private let player: PlayerFacade
-  private let wasPlayingOnOpen: Bool
+  private let mainPlayerHandoff: DeckMainPlayerHandoff
 
   private var spritePlayers: [String: NeedleDropSpritePlayer] = [:]
+  /// One `$isPlaying` subscription per owned sprite player (created and released together with
+  /// it), firing `mainPlayerHandoff.spritePlaybackDidStart()` on every play-start.
+  private var spritePlayStartSubscriptions: [String: AnyCancellable] = [:]
   /// `nonisolated(unsafe)`: only read/written from `init`/`deinit` (never concurrently), and
   /// `deinit` on an `@MainActor` class is itself `nonisolated` by default in Swift 6 — matches the
   /// same accommodation already used elsewhere in this codebase (e.g.
@@ -28,11 +32,13 @@ final class AuditionDeckAudioCoordinator {
   nonisolated(unsafe) private var backgroundObserverToken: NSObjectProtocol?
 
   init(player: PlayerFacade) {
-    self.player = player
-    self.wasPlayingOnOpen = player.isPlaying
-    if wasPlayingOnOpen {
-      player.pause()
-    }
+    // A1 (user-settled 2026-07-05): opening the deck does NOT pause the main player anymore —
+    // the handoff pauses it only once sprite audio actually starts.
+    self.mainPlayerHandoff = DeckMainPlayerHandoff(
+      isMainPlayerPlaying: { player.isPlaying },
+      pauseMainPlayer: { player.pause() },
+      resumeMainPlayer: { player.play() }
+    )
     // `willResignActiveNotification` (not `didEnterBackgroundNotification`) so audio actually
     // stops the instant the app loses focus (e.g. Control Center, incoming call), not only once
     // fully backgrounded.
@@ -87,6 +93,15 @@ final class AuditionDeckAudioCoordinator {
         milliseconds: 0
       )
     }
+    // A1: pause the main player the moment sprite audio actually starts (never on deck open).
+    // `NeedleDropSpritePlayer` assigns `isPlaying = true` on every play-start transition, so
+    // this also re-pauses real playback the user started from a detail pushed over the deck if
+    // they come back and needle-drop again — sprite audio never plays over the main player.
+    spritePlayStartSubscriptions[candidateId] = newPlayer.$isPlaying
+      .filter { $0 }
+      .sink { [weak self] _ in
+        self?.mainPlayerHandoff.spritePlaybackDidStart()
+      }
     spritePlayers[candidateId] = newPlayer
     return newPlayer
   }
@@ -97,6 +112,7 @@ final class AuditionDeckAudioCoordinator {
     guard candidateId != currentCandidateId else { return }
     spritePlayers[candidateId]?.stop()
     spritePlayers.removeValue(forKey: candidateId)
+    spritePlayStartSubscriptions.removeValue(forKey: candidateId)
   }
 
   /// Stops every sprite player except (optionally) one — the single-active-player invariant.
@@ -109,13 +125,12 @@ final class AuditionDeckAudioCoordinator {
   }
 
   /// Call once, when the deck page pops off the navigation stack (back button or end-card Done)
-  /// — stops all sprite audio and resumes the main player if it was playing when the deck opened.
-  /// Calling `play()` when the main player is already playing (e.g. the user started real
-  /// playback from a detail screen pushed over the deck) is a no-op.
+  /// — stops all sprite audio, then resumes the main player only if this deck session paused it
+  /// (first sprite play) and it is still paused now. A main player that is PLAYING at close time
+  /// (e.g. the user started real playback from a detail screen pushed over the deck) is never
+  /// touched — see `DeckMainPlayerHandoff`.
   func deckWillClose() {
     stopAllSpritePlayers()
-    if wasPlayingOnOpen {
-      player.play()
-    }
+    mainPlayerHandoff.deckWillClose()
   }
 }

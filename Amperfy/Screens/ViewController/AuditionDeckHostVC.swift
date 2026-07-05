@@ -85,9 +85,10 @@ class AuditionDeckHostVC: UIViewController {
 
   /// Deck v2 audio semantics: sprite audio must never keep playing once this page is not the
   /// visible one. Leaving via POP (back button, end-card Done) is "deck closed" — run the full
-  /// close handoff (stop sprites + resume the main player if it was playing on entry and no
-  /// handoff happened). Leaving because a detail was PUSHED on top (card tap) only silences
-  /// sprite audio; the deck session stays alive for the pop back.
+  /// close handoff (stop sprites + resume the main player only if sprite audio was what paused
+  /// it and it is still paused; see `DeckMainPlayerHandoff`). Leaving because a detail was
+  /// PUSHED on top (card tap) only silences sprite audio; the deck session stays alive for the
+  /// pop back.
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
     if isMovingFromParent {
