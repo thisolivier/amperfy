@@ -648,6 +648,7 @@
 		AA000001MEMREP000000001 /* MemoryReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000002MEMREP000000001 /* MemoryReporter.swift */; };
 		AE61916CA3697B2E077A30D0 /* DefaultTrackAdjacencyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5039C99A8B8AE31EB36D1BE9 /* DefaultTrackAdjacencyService.swift */; };
 		B138A4A9C5F7C42ADAC07ED3 /* AccountServerUrlBackfillTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A753325B9ED789446346DF94 /* AccountServerUrlBackfillTest.swift */; };
+		BA771E7E5F1A4B0000000001 /* RecentTracksAccuracyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA771E7E5F1A4B0000000002 /* RecentTracksAccuracyTest.swift */; };
 		B2F8B8E9A45A498A99A3F3FB /* SettingEnumerations+UIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8527D8D392314291A9BE69CA /* SettingEnumerations+UIKit.swift */; };
 		C0A1B0032EEE000000000003 /* MacWindowHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A1B0022EEE000000000002 /* MacWindowHelper.swift */; };
 		DF4E1154B7ECE2AFA1BF3A00 /* LocalTrackAdjacencyComputer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2E3B058E28C8D26D7E496FE /* LocalTrackAdjacencyComputer.swift */; };
@@ -1395,6 +1396,7 @@
 		A5E0E420000000000000080A0 /* InlineFooterRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlineFooterRow.swift; sourceTree = "<group>"; };
 		A5F0F120000000000000090A0 /* EntityImageViewTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityImageViewTest.swift; sourceTree = "<group>"; };
 		A753325B9ED789446346DF94 /* AccountServerUrlBackfillTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AccountServerUrlBackfillTest.swift; sourceTree = "<group>"; };
+		BA771E7E5F1A4B0000000002 /* RecentTracksAccuracyTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecentTracksAccuracyTest.swift; sourceTree = "<group>"; };
 		AA000002MEMREP000000001 /* MemoryReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryReporter.swift; sourceTree = "<group>"; };
 		C0A1B0022EEE000000000002 /* MacWindowHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWindowHelper.swift; sourceTree = "<group>"; };
 		C1441B264B22F86ED2ADF326 /* TrackAdjacencyProtocols.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrackAdjacencyProtocols.swift; sourceTree = "<group>"; };
@@ -1912,6 +1914,7 @@
 				A517500500000000000001A0 /* StylingPresetStoreTest.swift */,
 				A5C0110000000000000050A0 /* GetRandomWholeAlbumsTest.swift */,
 				A753325B9ED789446346DF94 /* AccountServerUrlBackfillTest.swift */,
+				BA771E7E5F1A4B0000000002 /* RecentTracksAccuracyTest.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -3525,6 +3528,7 @@
 				FD97AC7E15E0F46B8A328F8F /* NeedleDropSpritePlayerStopRaceTest.swift in Sources */,
 				894FB0FC15AFC1EA1E26F0CA /* DeckDealingGateTest.swift in Sources */,
 				B138A4A9C5F7C42ADAC07ED3 /* AccountServerUrlBackfillTest.swift in Sources */,
+				BA771E7E5F1A4B0000000001 /* RecentTracksAccuracyTest.swift in Sources */,
 				01D9299E649B6FC9E5A30003 /* NeedleDropManifestSpriteURLTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

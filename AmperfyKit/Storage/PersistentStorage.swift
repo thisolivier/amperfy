@@ -50,6 +50,44 @@ public class CoreDataCompanion {
 public actor AsyncCoreDataAccessWrapper {
   let persistentContainer: NSPersistentContainer
 
+  /// All async writes share ONE background context per persistent container.
+  ///
+  /// The previous design created a fresh `newBackgroundContext()` for every `perform`
+  /// call. Concurrent sync operations (background newest-elements sync, Home screen
+  /// refresh, recent-albums sync, ...) therefore each built their create-if-missing
+  /// prefetch snapshot in isolation and could not see each other's pending inserts —
+  /// so several overlapping syncs of the same freshly-imported server song each
+  /// created their own SongMO row (the transient duplicate rows in Recently Added
+  /// Tracks; there is no Core Data uniqueness constraint on `SongMO.id`).
+  ///
+  /// Sharing a single context fixes creation, not just cleanup:
+  /// - `NSManagedObjectContext.perform` serializes all write bodies on the context's
+  ///   own queue, so two operations can never interleave a check-then-create.
+  /// - Fetches inside a body include the context's pending (even unsaved) inserts,
+  ///   so a prefetch always sees what the previous operation created.
+  ///
+  /// The context is reset after every operation so the long-lived context does not
+  /// accumulate registered objects (it is configured with
+  /// `retainsRegisteredObjects = true`).
+  private static let sharedContextRegistryLock = NSLock()
+  nonisolated(unsafe) private static let sharedContextRegistry = NSMapTable<
+    NSPersistentContainer,
+    NSManagedObjectContext
+  >(keyOptions: .weakMemory, valueOptions: .strongMemory)
+
+  nonisolated static func sharedBackgroundContext(for container: NSPersistentContainer)
+    -> NSManagedObjectContext {
+    sharedContextRegistryLock.lock()
+    defer { sharedContextRegistryLock.unlock() }
+    if let existingContext = sharedContextRegistry.object(forKey: container) {
+      return existingContext
+    }
+    let context = container.newBackgroundContext()
+    NSPersistentContainer.configureContext(context)
+    sharedContextRegistry.setObject(context, forKey: container)
+    return context
+  }
+
   init(persistentContainer: NSPersistentContainer) {
     self.persistentContainer = persistentContainer
   }
@@ -58,8 +96,7 @@ public actor AsyncCoreDataAccessWrapper {
     body: @escaping @Sendable (_ asyncCompanion: CoreDataCompanion) throws
       -> ()
   ) async throws {
-    let context = persistentContainer.newBackgroundContext()
-    NSPersistentContainer.configureContext(context)
+    let context = Self.sharedBackgroundContext(for: persistentContainer)
 
     await context.perform {
       let library = LibraryStorage(context: context)
@@ -70,6 +107,7 @@ public actor AsyncCoreDataAccessWrapper {
       } catch {
         library.saveContext()
       }
+      context.reset()
     }
   }
 
@@ -78,17 +116,18 @@ public actor AsyncCoreDataAccessWrapper {
       -> T
   ) async throws
     -> T where T: Sendable {
-    let context = persistentContainer.newBackgroundContext()
-    NSPersistentContainer.configureContext(context)
+    let context = Self.sharedBackgroundContext(for: persistentContainer)
 
     let syncRequestedValue = try await context.perform {
       let asyncCompanion = CoreDataCompanion(context: context)
       do {
         let asyncRequestedValue = try body(asyncCompanion)
         asyncCompanion.saveContext()
+        context.reset()
         return asyncRequestedValue
       } catch {
         asyncCompanion.saveContext()
+        context.reset()
         throw error
       }
     }

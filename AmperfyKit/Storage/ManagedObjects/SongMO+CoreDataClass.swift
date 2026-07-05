@@ -36,9 +36,17 @@ extension SongMO: CoreDataIdentifyable {
 
   static var excludeServerDeleteUncachedSongsFetchPredicate: NSPredicate {
     // see also Song Array extension [Song].filterServerDeleteUncachedSongs()
+    // A song is visible if it is available on the server (its own remote status AND
+    // its album's) — or if it is locally cached (deliberate design: cached songs
+    // survive server-side deletion until their cache is cleared).
     NSCompoundPredicate(orPredicateWithSubpredicates: [
       NSCompoundPredicate(andPredicateWithSubpredicates: [
         NSPredicate(format: "%K > 0", #keyPath(SongMO.size)),
+        NSPredicate(
+          format: "%K == %i",
+          #keyPath(SongMO.remoteStatus),
+          RemoteStatus.available.rawValue
+        ),
         NSPredicate(
           format: "%K == %i",
           #keyPath(SongMO.album.remoteStatus),
