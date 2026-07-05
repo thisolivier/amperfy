@@ -64,6 +64,7 @@ private final class StubURLProtocol: URLProtocol {
 class AdjacencySidecarClientTest: XCTestCase {
   var session: URLSession!
   var settings: AdjacencySidecarSettings!
+  var gatewaySettings: AdjacencyGatewaySettings!
   var telemetry: DiscoveryTelemetry!
   var lastRequest: URLRequest?
 
@@ -71,9 +72,9 @@ class AdjacencySidecarClientTest: XCTestCase {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [StubURLProtocol.self]
     session = URLSession(configuration: configuration)
-    settings = AdjacencySidecarSettings(
-      defaults: UserDefaults(suiteName: "AdjacencySidecarClientTest-\(UUID().uuidString)")!
-    )
+    let suiteName = "AdjacencySidecarClientTest-\(UUID().uuidString)"
+    settings = AdjacencySidecarSettings(defaults: UserDefaults(suiteName: suiteName)!)
+    gatewaySettings = AdjacencyGatewaySettings(defaults: UserDefaults(suiteName: suiteName)!)
     telemetry = DiscoveryTelemetry()
     lastRequest = nil
     StubURLProtocol.connectionError = nil
@@ -85,7 +86,8 @@ class AdjacencySidecarClientTest: XCTestCase {
       serverUrl: serverUrl,
       settings: settings,
       session: session,
-      telemetry: telemetry
+      telemetry: telemetry,
+      gatewaySettings: gatewaySettings
     )
   }
 
@@ -143,6 +145,63 @@ class AdjacencySidecarClientTest: XCTestCase {
     let itemsByName = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0.value) })
     XCTAssertEqual(itemsByName["seedSongIds"], "s1,s2,s3")
     XCTAssertEqual(itemsByName["kind"], "playlist")
+  }
+
+  // MARK: - Gateway mode
+
+  func testGatewayModeRoutesThroughGatewayWithApiKeyHeader() async throws {
+    gatewaySettings.gatewayUrlString = "http://gateway.local:5041"
+    gatewaySettings.gatewayApiKey = "secret-key"
+    stub(statusCode: 200, body: "[]")
+
+    _ = try await makeClient().fetchCandidates(
+      seedSongIds: [],
+      seedCollection: (id: "album-1", kind: .album),
+      kind: .album,
+      count: 10
+    )
+
+    let url = try XCTUnwrap(lastRequest?.url)
+    XCTAssertEqual(url.host, "gateway.local")
+    XCTAssertEqual(url.port, 5041)
+    XCTAssertEqual(url.path, "/adjacency/similar-collections")
+    let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+    let itemsByName = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0.value) })
+    XCTAssertEqual(itemsByName["collectionId"], "album-1")
+    XCTAssertEqual(lastRequest?.value(forHTTPHeaderField: "X-API-Key"), "secret-key")
+  }
+
+  func testDirectModeOmitsApiKeyHeader() async throws {
+    stub(statusCode: 200, body: "[]")
+
+    _ = try await makeClient().fetchCandidates(
+      seedSongIds: ["s1"],
+      seedCollection: nil,
+      kind: .album,
+      count: 10
+    )
+
+    XCTAssertNil(lastRequest?.value(forHTTPHeaderField: "X-API-Key"))
+  }
+
+  /// Gateway mode requires BOTH the URL and the key — with only the URL set,
+  /// the legacy direct derivation must stay in effect, unchanged.
+  func testGatewayUrlWithoutKeyStaysOnLegacyDirectDerivation() async throws {
+    gatewaySettings.gatewayUrlString = "http://gateway.local:5041"
+    stub(statusCode: 200, body: "[]")
+
+    _ = try await makeClient().fetchCandidates(
+      seedSongIds: [],
+      seedCollection: (id: "album-1", kind: .album),
+      kind: .album,
+      count: 10
+    )
+
+    let url = try XCTUnwrap(lastRequest?.url)
+    XCTAssertEqual(url.host, "navidrome.local")
+    XCTAssertEqual(url.port, 8787)
+    XCTAssertEqual(url.path, "/similar-collections")
+    XCTAssertNil(lastRequest?.value(forHTTPHeaderField: "X-API-Key"))
   }
 
   // MARK: - Deal-id correlation header
