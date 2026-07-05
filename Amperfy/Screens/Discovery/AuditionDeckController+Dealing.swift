@@ -189,7 +189,12 @@ extension AuditionDeckController {
     keptIds: Set<String>
   ) async {
     isRefreshing = true
-    let result = await dealFromPools(seed: seed, kind: kind, count: replaceCount, trigger: "refresh")
+    let result = await dealFromPools(
+      seed: seed,
+      kind: kind,
+      count: replaceCount,
+      trigger: "refresh"
+    )
     excludeIds.formUnion(result.candidates.map(\.collectionId))
     for candidate in result.candidates where likeCoordinator.isLiked(candidate) {
       likedBeforeSessionIds.insert(candidate.collectionId)

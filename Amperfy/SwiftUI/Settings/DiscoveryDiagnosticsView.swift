@@ -159,8 +159,12 @@ struct DiscoveryDiagnosticsView: View {
     )
     activityViewController.popoverPresentationController?.sourceView = presenter.view
     activityViewController.popoverPresentationController?
-      .sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY,
-                           width: 0, height: 0)
+      .sourceRect = CGRect(
+        x: presenter.view.bounds.midX,
+        y: presenter.view.bounds.midY,
+        width: 0,
+        height: 0
+      )
     activityViewController.completionWithItemsHandler = { _, _, _, _ in
       try? FileManager.default.removeItem(at: temporaryFileURL)
     }

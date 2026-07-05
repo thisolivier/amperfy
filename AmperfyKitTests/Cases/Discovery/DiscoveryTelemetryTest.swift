@@ -38,7 +38,12 @@ class DiscoveryTelemetryTest: XCTestCase {
       seedDescription: "recentHistory",
       kindDescription: "album"
     )
-    telemetry.completeDeal(servedByPool: "sidecar", fallbackTaken: false, dealtCount: 5, totalMs: 42)
+    telemetry.completeDeal(
+      servedByPool: "sidecar",
+      fallbackTaken: false,
+      dealtCount: 5,
+      totalMs: 42
+    )
     return dealId
   }
 
@@ -68,7 +73,12 @@ class DiscoveryTelemetryTest: XCTestCase {
     telemetry.beginDeal(trigger: "dealMore", seedDescription: "album(a1)", kindDescription: "album")
     telemetry.appendDealEvent(label: "seed resolution", detail: "songs=3", milliseconds: 7)
     telemetry.appendDealEvent(label: "familiar pool", detail: "ok candidates=9", milliseconds: 120)
-    telemetry.completeDeal(servedByPool: "sidecar", fallbackTaken: false, dealtCount: 9, totalMs: 150)
+    telemetry.completeDeal(
+      servedByPool: "sidecar",
+      fallbackTaken: false,
+      dealtCount: 9,
+      totalMs: 150
+    )
 
     let record = telemetry.dealRecordsNewestFirst().first
     XCTAssertEqual(record?.events.count, 2)
