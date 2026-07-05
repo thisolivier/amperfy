@@ -102,6 +102,14 @@ class SsAlbumParserDelegate: SsXmlLibWithArtworkParser {
       }
       if let attributeSongCount = attributeDict["songCount"],
          let songCount = Int(attributeSongCount) {
+        // Server-side song set changed since the last full song sync (e.g. a track
+        // was deleted via an admin tool): force a song-level re-sync so the per-song
+        // diff in sync(album:) can prune removed songs. Without this, an album is
+        // song-synced at most once and server deletions inside it are never noticed.
+        if let albumBuffer, albumBuffer.isSongsMetaDataSynced,
+           albumBuffer.remoteSongCount != songCount {
+          albumBuffer.isSongsMetaDataSynced = false
+        }
         albumBuffer?.remoteSongCount = songCount
       }
       if let attributeDuration = attributeDict["duration"], let duration = Int(attributeDuration) {

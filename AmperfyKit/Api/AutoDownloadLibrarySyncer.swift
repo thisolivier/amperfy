@@ -71,7 +71,11 @@ public class AutoDownloadLibrarySyncer {
       }
     }
 
-    fetchNeededNewestAlbums = newNewestAlbums.filter { !$0.isSongsMetaDataSynced }
+    // Re-sync songs for every album in the newest window that needs it — not just the
+    // newly appeared ones. SsAlbumParserDelegate clears isSongsMetaDataSynced when the
+    // server-side songCount changed, so this is what prunes server-deleted songs from
+    // albums that are still present (Recently Added accuracy).
+    fetchNeededNewestAlbums = updatedNewestAlbums.filter { !$0.isSongsMetaDataSynced }
     try await withThrowingTaskGroup(of: Void.self) { taskGroup in
       for album in fetchNeededNewestAlbums {
         taskGroup.addTask { @MainActor @Sendable in
@@ -79,6 +83,26 @@ public class AutoDownloadLibrarySyncer {
         }
       }
       try await taskGroup.waitForAll()
+    }
+
+    // Albums that were in the local newest window but are gone after the server sync
+    // either fell out of the window naturally or were deleted server-side. Verify each
+    // one: sync(album:) marks a server-deleted album (and its songs) as remote deleted
+    // via its not-available handling. Errors are expected here (the "no longer
+    // available" report) and must not abort the rest of the sync.
+    let vanishedNewestAlbums = oldNewestAlbums.subtracting(updatedNewestAlbums)
+    for album in vanishedNewestAlbums {
+      do {
+        try await librarySyncer.sync(album: album)
+      } catch {
+        os_log(
+          "Newest album <%s> could not be verified (likely deleted on server): %s",
+          log: log,
+          type: .info,
+          album.name,
+          error.localizedDescription
+        )
+      }
     }
 
     if offset == 0, !oldNewestAlbums.isEmpty, !newNewestAlbums.isEmpty,

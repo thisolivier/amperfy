@@ -175,7 +175,10 @@ public class Song: AbstractPlayable, Identifyable {
 
   override public func isAvailableToUser() -> Bool {
     // See also SongMO.excludeServerDeleteUncachedSongsFetchPredicate()
-    ((size > 0) && (album?.remoteStatus == .available)) || isCached
+    // Cached songs deliberately survive server-side deletion until their cache
+    // is cleared; uncached songs must be available (song AND album) on the server.
+    ((size > 0) && (remoteStatus == .available) && (album?.remoteStatus == .available)) ||
+      isCached
   }
 }
 
