@@ -64,6 +64,7 @@ private final class StubURLProtocol: URLProtocol {
 class AdjacencySidecarClientTest: XCTestCase {
   var session: URLSession!
   var settings: AdjacencySidecarSettings!
+  var telemetry: DiscoveryTelemetry!
   var lastRequest: URLRequest?
 
   override func setUp() {
@@ -73,13 +74,19 @@ class AdjacencySidecarClientTest: XCTestCase {
     settings = AdjacencySidecarSettings(
       defaults: UserDefaults(suiteName: "AdjacencySidecarClientTest-\(UUID().uuidString)")!
     )
+    telemetry = DiscoveryTelemetry()
     lastRequest = nil
     StubURLProtocol.connectionError = nil
   }
 
   private func makeClient(serverUrl: String = "http://navidrome.local:4533")
     -> AdjacencySidecarClient {
-    AdjacencySidecarClient(serverUrl: serverUrl, settings: settings, session: session)
+    AdjacencySidecarClient(
+      serverUrl: serverUrl,
+      settings: settings,
+      session: session,
+      telemetry: telemetry
+    )
   }
 
   private func stub(statusCode: Int, body: String?) {
@@ -136,6 +143,39 @@ class AdjacencySidecarClientTest: XCTestCase {
     let itemsByName = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0.value) })
     XCTAssertEqual(itemsByName["seedSongIds"], "s1,s2,s3")
     XCTAssertEqual(itemsByName["kind"], "playlist")
+  }
+
+  // MARK: - Deal-id correlation header
+
+  func testSendsCurrentDealIdAsCorrelationHeader() async throws {
+    let dealId = telemetry.beginDeal(
+      trigger: "deal",
+      seedDescription: "recentHistory",
+      kindDescription: "album"
+    )
+    stub(statusCode: 200, body: "[]")
+
+    _ = try await makeClient().fetchCandidates(
+      seedSongIds: ["s1"],
+      seedCollection: nil,
+      kind: .album,
+      count: 10
+    )
+
+    XCTAssertEqual(lastRequest?.value(forHTTPHeaderField: "X-Deal-Id"), dealId)
+  }
+
+  func testOmitsCorrelationHeaderWhenNoDealHasHappened() async throws {
+    stub(statusCode: 200, body: "[]")
+
+    _ = try await makeClient().fetchCandidates(
+      seedSongIds: ["s1"],
+      seedCollection: nil,
+      kind: .album,
+      count: 10
+    )
+
+    XCTAssertNil(lastRequest?.value(forHTTPHeaderField: "X-Deal-Id"))
   }
 
   // MARK: - Decoding
