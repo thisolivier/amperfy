@@ -11,6 +11,7 @@
 		0F33D9605FC626D96099256F /* OnDeviceAdventurousPoolProviderTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECBB0A5656EAB6C63C3FACC2 /* OnDeviceAdventurousPoolProviderTest.swift */; };
 		101908DE9F7486EE44E112CB /* AdjacencySidecarClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27840FE68CA4450D50C8B30F /* AdjacencySidecarClient.swift */; };
 		102E05769BFF825739DC8487 /* AdjacencySidecarClientTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87045C62548E017865B9D516 /* AdjacencySidecarClientTest.swift */; };
+		795F083AEE4DAE91A5422E99 /* DiscoveryTelemetryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F55BAFEF959299057BD755E9 /* DiscoveryTelemetryTest.swift */; };
 		18DB30DF1960F2D0E479A161 /* DeckDealingGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D73297EB78368851BCDEE9F3 /* DeckDealingGate.swift */; };
 		20413785961A13BFB0B1A4ED /* FamiliarPoolProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDA5B75CDFB8C10B4345BCCC /* FamiliarPoolProviding.swift */; };
 		21803F4CC026E7311C46D6D1 /* OnDeviceAdventurousPoolProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5DB6DEFF8CA5DD93DA4216E /* OnDeviceAdventurousPoolProvider.swift */; };
@@ -541,6 +542,7 @@
 		63060401189E924AF205F06A /* AuditionDeckController+Dealing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79A3A6DB3E79C8FC69237046 /* AuditionDeckController+Dealing.swift */; };
 		631C166B2C6D3D9A0085F62E /* SettingsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 631C166A2C6D3D9A0085F62E /* SettingsRow.swift */; };
 		631C166D2C6D61110085F62E /* NavigationTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 631C166C2C6D61110085F62E /* NavigationTarget.swift */; };
+		B02A20D89351678C1FD6D316 /* DiscoveryDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B8BD93A2F7AC3EA0F8B243 /* DiscoveryDiagnosticsView.swift */; };
 		631C166F2C6D63510085F62E /* SettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 631C166E2C6D63510085F62E /* SettingsSection.swift */; };
 		632F51242C83A7970032860D /* QueueVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 632F51232C83A7970032860D /* QueueVC.swift */; };
 		632F51262C83A8400032860D /* LyricsVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 632F51252C83A8400032860D /* LyricsVC.swift */; };
@@ -648,6 +650,8 @@
 		C0A1B0032EEE000000000003 /* MacWindowHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A1B0022EEE000000000002 /* MacWindowHelper.swift */; };
 		DF4E1154B7ECE2AFA1BF3A00 /* LocalTrackAdjacencyComputer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2E3B058E28C8D26D7E496FE /* LocalTrackAdjacencyComputer.swift */; };
 		E19396E2D8F741C8F5E49C03 /* DeckFusionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42A0E721A0B9C71F75554C98 /* DeckFusionEngine.swift */; };
+		36410600691DD1F73191ED3D /* DiscoveryTelemetryRecords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 603131CF67BD109652E211AF /* DiscoveryTelemetryRecords.swift */; };
+		0DD0CDE1772ADEA53AAD29D2 /* DiscoveryTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48AA3779E123A0D9C7CA403 /* DiscoveryTelemetry.swift */; };
 		ECD033A8E82939B0F464186E /* DeckSeedResolution.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86519AE157CB31DDA0056DD3 /* DeckSeedResolution.swift */; };
 		ED2305EE261B919ED1909588 /* AuditionDeckController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EDD38E321F8AD36BC65C9C6 /* AuditionDeckController.swift */; };
 		EE3D6C735CD85D66DA44F719 /* AuditionDeckCardInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 696DAAA5BCD39E9C53A52B2B /* AuditionDeckCardInfoView.swift */; };
@@ -730,6 +734,8 @@
 		28F695A9B40CB080214A15DC /* AdventurousPoolProviding.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdventurousPoolProviding.swift; sourceTree = "<group>"; };
 		40BA54924858ACBF2EF8EB73 /* AdjacencySidecarSettingsTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjacencySidecarSettingsTest.swift; sourceTree = "<group>"; };
 		42A0E721A0B9C71F75554C98 /* DeckFusionEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckFusionEngine.swift; sourceTree = "<group>"; };
+		603131CF67BD109652E211AF /* DiscoveryTelemetryRecords.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiscoveryTelemetryRecords.swift; sourceTree = "<group>"; };
+		D48AA3779E123A0D9C7CA403 /* DiscoveryTelemetry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiscoveryTelemetry.swift; sourceTree = "<group>"; };
 		43FBE27E250D4DFD00D5F9B3 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		44F0DF2BE2466E004E8A817A /* PlaylistFolderMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderMO+CoreDataClass.swift"; sourceTree = "<group>"; };
 		4D9D2A1B832989F845D00A3B /* PlaylistFolderMO+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderMO+CoreDataProperties.swift"; sourceTree = "<group>"; };
@@ -1284,6 +1290,7 @@
 		590A639B44AC70AC88BDAF49 /* DeckBlendInterleaver.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckBlendInterleaver.swift; sourceTree = "<group>"; };
 		631C166A2C6D3D9A0085F62E /* SettingsRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRow.swift; sourceTree = "<group>"; };
 		631C166C2C6D61110085F62E /* NavigationTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationTarget.swift; sourceTree = "<group>"; };
+		87B8BD93A2F7AC3EA0F8B243 /* DiscoveryDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryDiagnosticsView.swift; sourceTree = "<group>"; };
 		631C166E2C6D63510085F62E /* SettingsSection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsSection.swift; sourceTree = "<group>"; };
 		632F51232C83A7970032860D /* QueueVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueVC.swift; sourceTree = "<group>"; };
 		632F51252C83A8400032860D /* LyricsVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyricsVC.swift; sourceTree = "<group>"; };
@@ -1303,6 +1310,7 @@
 		8527D8D392314291A9BE69CA /* SettingEnumerations+UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingEnumerations+UIKit.swift"; sourceTree = "<group>"; };
 		86519AE157CB31DDA0056DD3 /* DeckSeedResolution.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckSeedResolution.swift; sourceTree = "<group>"; };
 		87045C62548E017865B9D516 /* AdjacencySidecarClientTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjacencySidecarClientTest.swift; sourceTree = "<group>"; };
+		F55BAFEF959299057BD755E9 /* DiscoveryTelemetryTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiscoveryTelemetryTest.swift; sourceTree = "<group>"; };
 		8AE98C211B1EDEC684100C7C /* AuditionDeckCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckCardView.swift; sourceTree = "<group>"; };
 		8EDD38E321F8AD36BC65C9C6 /* AuditionDeckController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckController.swift; sourceTree = "<group>"; };
 		8EEA8F0C6E87A5409143493D /* NeedleDropSpritePlayerStopRaceTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NeedleDropSpritePlayerStopRaceTest.swift; sourceTree = "<group>"; };
@@ -1682,6 +1690,7 @@
 				50E77DB628D2163F00BDF882 /* SettingsView.swift */,
 				503BAF332E4A1EAC00AE50B4 /* SettingsTabView.swift */,
 				631C166C2C6D61110085F62E /* NavigationTarget.swift */,
+				87B8BD93A2F7AC3EA0F8B243 /* DiscoveryDiagnosticsView.swift */,
 				A5B0F20000000000000050A0 /* ReleaseNotes.swift */,
 				A5B0F40000000000000050A0 /* WhatsNewSettingsView.swift */,
 				5078AFB12B40CA5E0038FD17 /* DisplaySettingsView.swift */,
@@ -2481,6 +2490,7 @@
 			isa = PBXGroup;
 			children = (
 				87045C62548E017865B9D516 /* AdjacencySidecarClientTest.swift */,
+				F55BAFEF959299057BD755E9 /* DiscoveryTelemetryTest.swift */,
 				40BA54924858ACBF2EF8EB73 /* AdjacencySidecarSettingsTest.swift */,
 				110F51D7CBD583B77C30D6E5 /* DeckFusionEngineTest.swift */,
 				DADC71ACFD77D1D88398B31D /* DeckSeedResolverTest.swift */,
@@ -2629,6 +2639,8 @@
 				E3EEB043DC7573126836BA9E /* DeckCandidate.swift */,
 				6B188FC8F903F08568D5CFA2 /* DeckCandidateResolver.swift */,
 				42A0E721A0B9C71F75554C98 /* DeckFusionEngine.swift */,
+				603131CF67BD109652E211AF /* DiscoveryTelemetryRecords.swift */,
+				D48AA3779E123A0D9C7CA403 /* DiscoveryTelemetry.swift */,
 				86519AE157CB31DDA0056DD3 /* DeckSeedResolution.swift */,
 				DDA5B75CDFB8C10B4345BCCC /* FamiliarPoolProviding.swift */,
 				D5DB6DEFF8CA5DD93DA4216E /* OnDeviceAdventurousPoolProvider.swift */,
@@ -2952,6 +2964,7 @@
 				5007CE4121EF5F4300BC5CBA /* PlaylistsVC.swift in Sources */,
 				A5B0E50000000000000050A0 /* PlaylistFolderContentsVC.swift in Sources */,
 				631C166D2C6D61110085F62E /* NavigationTarget.swift in Sources */,
+				B02A20D89351678C1FD6D316 /* DiscoveryDiagnosticsView.swift in Sources */,
 				A5B0F10000000000000050A0 /* ReleaseNotes.swift in Sources */,
 				A5B0F30000000000000050A0 /* WhatsNewSettingsView.swift in Sources */,
 				A5C0F10000000000000060A0 /* ThemeStore.swift in Sources */,
@@ -3404,6 +3417,8 @@
 				9AA73BEB5910364AD8BB9799 /* DeckCandidate.swift in Sources */,
 				59762AF78B9B8CEFDF04791F /* DeckCandidateResolver.swift in Sources */,
 				E19396E2D8F741C8F5E49C03 /* DeckFusionEngine.swift in Sources */,
+				36410600691DD1F73191ED3D /* DiscoveryTelemetryRecords.swift in Sources */,
+				0DD0CDE1772ADEA53AAD29D2 /* DiscoveryTelemetry.swift in Sources */,
 				ECD033A8E82939B0F464186E /* DeckSeedResolution.swift in Sources */,
 				20413785961A13BFB0B1A4ED /* FamiliarPoolProviding.swift in Sources */,
 				21803F4CC026E7311C46D6D1 /* OnDeviceAdventurousPoolProvider.swift in Sources */,
@@ -3489,6 +3504,7 @@
 				50BE5D942850F51E00156FC6 /* UnitTestHelper.swift in Sources */,
 				50AE79B82C1F68090085CBB3 /* SsLyricsBySongId2ParserTest.swift in Sources */,
 				102E05769BFF825739DC8487 /* AdjacencySidecarClientTest.swift in Sources */,
+				795F083AEE4DAE91A5422E99 /* DiscoveryTelemetryTest.swift in Sources */,
 				F2F8AAFD25B944821E9AAC24 /* AdjacencySidecarSettingsTest.swift in Sources */,
 				F4F6BD0AB9C15AA1C66BD197 /* DeckFusionEngineTest.swift in Sources */,
 				706790844DE32C4BDAFFEEC5 /* DeckSeedResolverTest.swift in Sources */,

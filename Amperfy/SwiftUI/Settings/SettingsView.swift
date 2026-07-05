@@ -142,6 +142,10 @@ struct SettingsView: View {
             navigationLink(.support)
             navigationLink(.license)
             navigationLink(.xcallback)
+            // Fork addition (build-60): production-device Discovery
+            // debuggability — deal timings, sprite-fetch outcomes,
+            // sidecar health check.
+            navigationLink(.discoveryDiagnostics)
 
             #if DEBUG
               navigationLink(.developer)

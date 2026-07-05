@@ -35,6 +35,7 @@ enum NavigationTarget: String, CaseIterable, @MainActor Identifiable {
   case license
   case whatsNew
   case xcallback
+  case discoveryDiagnostics
   #if DEBUG
     case developer = "developer"
   #endif
@@ -56,6 +57,7 @@ enum NavigationTarget: String, CaseIterable, @MainActor Identifiable {
     case .license: LicenseSettingsView()
     case .whatsNew: WhatsNewSettingsView()
     case .xcallback: XCallbackURLsSetttingsView()
+    case .discoveryDiagnostics: DiscoveryDiagnosticsView()
     #if DEBUG
       case .developer: DeveloperView()
     #endif
@@ -77,6 +79,7 @@ enum NavigationTarget: String, CaseIterable, @MainActor Identifiable {
     case .player: "Player, Stream & Scrobble"
     case .whatsNew: "What's New"
     case .xcallback: "X-Callback-URL Documentation"
+    case .discoveryDiagnostics: "Discovery Diagnostics"
     #if DEBUG
       case .developer: "Developer"
     #endif
@@ -102,6 +105,9 @@ enum NavigationTarget: String, CaseIterable, @MainActor Identifiable {
     case .license: .doc
     case .whatsNew: .sparkles
     case .xcallback: .arrowTurnUp
+    // Fork addition (build-60): telemetry screen; system-symbol fallback,
+    // same pattern as .customTheme above.
+    case .discoveryDiagnostics: UIImage(systemName: "waveform.badge.magnifyingglass") ?? .settings
     #if DEBUG
       case .developer: .hammer
     #endif
@@ -123,6 +129,7 @@ enum NavigationTarget: String, CaseIterable, @MainActor Identifiable {
     case .license: "doc.fill"
     case .whatsNew: "sparkles"
     case .xcallback: "arrowshape.turn.up.backward.circle.fill"
+    case .discoveryDiagnostics: "waveform.badge.magnifyingglass"
     #if DEBUG
       case .developer: "hammer.circle.fill"
     #endif
