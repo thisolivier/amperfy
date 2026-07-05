@@ -336,4 +336,46 @@ class RecentTracksAccuracyTest: XCTestCase {
       "An album still in the newest window with isSongsMetaDataSynced == false must be re-synced"
     )
   }
+
+  /// A pre-existing ghost: a visible song whose album is NOT in the server's newest
+  /// window anymore (deleted server-side before this client could watch it vanish).
+  /// The Recently-Added-surface verification must re-verify its album via
+  /// sync(album:) — and only once per app session.
+  func testSyncNewestLibraryElementsVerifiesAlbumsBackingRecentlyAddedSongs() async throws {
+    let ghostAlbum = library.createAlbum(account: account)
+    ghostAlbum.id = "ghost-album"
+    ghostAlbum.name = "Ghost Album"
+    ghostAlbum.isSongsMetaDataSynced = true
+    // Not flagged newest: the server's newest window does not vouch for it.
+
+    let ghostSong = library.createSong(account: account)
+    ghostSong.id = "ghost-song"
+    ghostSong.title = "Ghost Song"
+    ghostSong.size = 1234
+    ghostSong.album = ghostAlbum
+    ghostSong.addedDate = Date()
+    library.saveContext()
+
+    let spySyncer = SPY_LibrarySyncer()
+    let autoDownloadSyncer = AutoDownloadLibrarySyncer(
+      storage: storage,
+      account: account,
+      librarySyncer: spySyncer,
+      playableDownloadManager: MOCK_SongDownloader()
+    )
+
+    try await autoDownloadSyncer.syncNewestLibraryElements()
+    XCTAssertEqual(
+      spySyncer.syncedAlbums.filter { $0.id == "ghost-album" }.count,
+      1,
+      "The album backing a recently added, unvouched song must be verified"
+    )
+
+    try await autoDownloadSyncer.syncNewestLibraryElements()
+    XCTAssertEqual(
+      spySyncer.syncedAlbums.filter { $0.id == "ghost-album" }.count,
+      1,
+      "Surface verification must run at most once per album per app session"
+    )
+  }
 }

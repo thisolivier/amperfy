@@ -368,6 +368,22 @@ class SubsonicLibrarySyncer: CommonLibrarySyncer, LibrarySyncer {
     }
     guard let albumResponse else { return }
 
+    // Surface subsonic errors (e.g. "Album not found" after a server-side deletion)
+    // BEFORE the context work: errors thrown inside storage.async.perform bodies are
+    // swallowed by the wrapper (it saves and returns normally), so the catch blocks
+    // around those bodies never see a "resource not available" response and the album
+    // would silently stay marked available. Navidrome reports a purged album as
+    // HTTP 200 + subsonic error 70, so this pre-parse is the only reliable signal.
+    do {
+      try parse(
+        response: albumResponse,
+        delegate: SsXmlParser(performanceMonitor: performanceMonitor),
+        isThrowingErrorsAllowed: true
+      )
+    } catch {
+      try await handleNotAvailableAlbum(error: error)
+    }
+
     do {
       try await storage.async.perform { asyncCompanion in
         let accountAsync = Account(

@@ -31,6 +31,12 @@ public class AutoDownloadLibrarySyncer {
   private let librarySyncer: LibrarySyncer
   private let playableDownloadManager: DownloadManageable
 
+  /// Albums already re-verified against the server this app session by the
+  /// Recently-Added-surface check in `syncNewestLibraryElements`. Verifying once
+  /// per session is enough to heal stale entries while keeping sync traffic flat.
+  @MainActor
+  private static var verifiedRecentSurfaceAlbumIDs = Set<NSManagedObjectID>()
+
   public init(
     storage: PersistentStorage,
     account: Account,
@@ -102,6 +108,64 @@ public class AutoDownloadLibrarySyncer {
           album.name,
           error.localizedDescription
         )
+      }
+    }
+
+    // Recently-Added-surface verification: a song deleted server-side while this
+    // client wasn't watching (or before this fix shipped) keeps its original
+    // addedDate and sorts to the top of Recently Added forever. Re-verify the
+    // albums backing the most recently added, still-visible songs whenever the
+    // server's current newest window doesn't vouch for them — sync(album:) either
+    // refreshes their song set (pruning server-deleted songs) or marks a fully
+    // deleted album (and its songs) as remote deleted. Throttled to once per album
+    // per app session; for a healthy library the newest window vouches for these
+    // albums and this loop does nothing.
+    if offset == 0 {
+      let recentSurfaceFetch: NSFetchRequest<SongMO> = SongMO.addedDateSortedFetchRequest
+      recentSurfaceFetch.fetchLimit = count
+      recentSurfaceFetch.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+        storage.main.library.getFetchPredicate(forAccount: account),
+        SongMO.excludeServerDeleteUncachedSongsFetchPredicate,
+      ])
+      let recentSurfaceSongs = (try? storage.main.context.fetch(recentSurfaceFetch)) ?? []
+      let recentSurfaceAlbums = Set(recentSurfaceSongs.compactMap { $0.album })
+        .map { Album(managedObject: $0) }
+      let albumsToVerify = recentSurfaceAlbums.filter { album in
+        album.remoteStatus == .available &&
+          !updatedNewestAlbums.contains(album) &&
+          !Self.verifiedRecentSurfaceAlbumIDs.contains(album.managedObject.objectID)
+      }
+      os_log(
+        "Recently-added surface: %i songs, %i backing albums, %i to verify",
+        log: log,
+        type: .info,
+        recentSurfaceSongs.count,
+        recentSurfaceAlbums.count,
+        albumsToVerify.count
+      )
+      for album in albumsToVerify {
+        // Two overlapping sync passes (background + Home) can snapshot the same
+        // candidate list before either starts verifying — re-check at loop time.
+        guard !Self.verifiedRecentSurfaceAlbumIDs.contains(album.managedObject.objectID)
+        else { continue }
+        Self.verifiedRecentSurfaceAlbumIDs.insert(album.managedObject.objectID)
+        os_log(
+          "Recently-added surface: verifying album <%s>",
+          log: log,
+          type: .info,
+          album.name
+        )
+        do {
+          try await librarySyncer.sync(album: album)
+        } catch {
+          os_log(
+            "Recently-added album <%s> could not be verified (likely deleted on server): %s",
+            log: log,
+            type: .info,
+            album.name,
+            error.localizedDescription
+          )
+        }
       }
     }
 
