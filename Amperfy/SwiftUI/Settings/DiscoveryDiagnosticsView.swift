@@ -43,6 +43,16 @@ struct DiscoveryDiagnosticsView: View {
   var body: some View {
     SettingsList {
       SettingsSection(content: {
+        // Which path adjacency requests take right now — gateway when both
+        // the Gateway URL and Key are set in Settings, direct otherwise.
+        diagnosticText(
+          "Active mode: " +
+            (
+              AdjacencyGatewaySettings.shared.activeRoute == nil
+                ? AdjacencyRequestMode.direct.rawValue
+                : AdjacencyRequestMode.gateway.rawValue
+            )
+        )
         Button {
           Task { await testSidecarConnection() }
         } label: {
@@ -103,28 +113,55 @@ struct DiscoveryDiagnosticsView: View {
 
   // MARK: Sidecar health check
 
+  /// Tests whichever mode is ACTIVE: gateway mode hits
+  /// `{gateway}/adjacency/health` with `X-API-Key` (401 surfaced distinctly
+  /// as a rejected key); direct mode keeps the legacy sidecar health check.
   private func testSidecarConnection() async {
     isTestingConnection = true
     defer { isTestingConnection = false }
-    guard let activeAccountInfo = appDelegate.storage.settings.accounts.active else {
-      healthResult = "No active account — cannot derive the sidecar URL."
-      return
+    let gatewayRoute = AdjacencyGatewaySettings.shared.activeRoute
+    let mode: AdjacencyRequestMode = gatewayRoute == nil ? .direct : .gateway
+    let healthURL: URL
+    if let gatewayRoute {
+      guard let gatewayHealthURL = gatewayRoute.url(sidecarPath: "/health") else {
+        healthResult = "Could not build a gateway health URL from " +
+          "'\(AdjacencyGatewaySettings.shared.gatewayUrlString)'."
+        return
+      }
+      healthURL = gatewayHealthURL
+    } else {
+      guard let activeAccountInfo = appDelegate.storage.settings.accounts.active else {
+        healthResult = "No active account — cannot derive the sidecar URL."
+        return
+      }
+      let account = appDelegate.storage.main.library.getAccount(info: activeAccountInfo)
+      guard let baseURL = AdjacencySidecarClient.deriveBaseURL(serverUrl: account.serverUrl)
+      else {
+        healthResult = "Could not derive a sidecar URL from server URL '\(account.serverUrl)'."
+        return
+      }
+      healthURL = baseURL.appendingPathComponent("health")
     }
-    let account = appDelegate.storage.main.library.getAccount(info: activeAccountInfo)
-    guard let baseURL = AdjacencySidecarClient.deriveBaseURL(serverUrl: account.serverUrl) else {
-      healthResult = "Could not derive a sidecar URL from server URL '\(account.serverUrl)'."
-      return
+    var request = URLRequest(url: healthURL)
+    if let gatewayRoute {
+      request.setValue(
+        gatewayRoute.apiKey,
+        forHTTPHeaderField: AdjacencyGatewayRoute.apiKeyHeaderName
+      )
     }
-    let healthURL = baseURL.appendingPathComponent("health")
     let start = DispatchTime.now()
     do {
-      let (_, response) = try await DiscoveryURLSession.fastFail.data(from: healthURL)
+      let (_, response) = try await DiscoveryURLSession.fastFail.data(for: request)
       let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-      let latency = DiscoveryTelemetry.millisecondsSince(start)
-      healthResult = "URL: \(healthURL.absoluteString)\nHTTP \(statusCode)\nLatency: \(latency) ms"
+      healthResult = AdjacencyConnectionTest.resultText(
+        urlString: healthURL.absoluteString,
+        statusCode: statusCode,
+        latencyMilliseconds: DiscoveryTelemetry.millisecondsSince(start),
+        mode: mode
+      )
     } catch {
       let elapsed = DiscoveryTelemetry.millisecondsSince(start)
-      healthResult = "URL: \(healthURL.absoluteString)\n" +
+      healthResult = "URL: \(healthURL.absoluteString)\nMode: \(mode.rawValue)\n" +
         "Failed after \(elapsed) ms: \(error.localizedDescription)"
     }
   }

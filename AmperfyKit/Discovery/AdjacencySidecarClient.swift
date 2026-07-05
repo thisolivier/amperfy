@@ -40,6 +40,7 @@ import Foundation
 
 public final class AdjacencySidecarClient: FamiliarPoolProviding {
   private let baseURL: URL?
+  private let gatewayRoute: AdjacencyGatewayRoute?
   private let session: URLSession
   private let telemetry: DiscoveryTelemetry
 
@@ -49,15 +50,24 @@ public final class AdjacencySidecarClient: FamiliarPoolProviding {
   /// - Parameter session: defaults to the dedicated 5s-timeout session — an
   ///   unreachable sidecar must fail fast to the on-device fallback, not
   ///   stall deals for `URLSession.shared`'s 60s default.
+  /// - Parameter gatewaySettings: when these hold BOTH a gateway URL and an
+  ///   API key, requests route as `{gateway}/adjacency{path}` with
+  ///   `X-API-Key`; otherwise the legacy host:port derivation applies.
   public init(
     serverUrl: String,
     settings: AdjacencySidecarSettings = .shared,
     session: URLSession = DiscoveryURLSession.fastFail,
-    telemetry: DiscoveryTelemetry = .shared
+    telemetry: DiscoveryTelemetry = .shared,
+    gatewaySettings: AdjacencyGatewaySettings = .shared
   ) {
     self.session = session
     self.telemetry = telemetry
+    self.gatewayRoute = gatewaySettings.activeRoute
     self.baseURL = Self.deriveBaseURL(serverUrl: serverUrl, settings: settings)
+  }
+
+  private var requestMode: AdjacencyRequestMode {
+    gatewayRoute == nil ? .direct : .gateway
   }
 
   /// `http(s)://{server host}:{configured sidecar port}` — shared with the
@@ -97,6 +107,12 @@ public final class AdjacencySidecarClient: FamiliarPoolProviding {
     if let dealId = telemetry.currentDealId {
       request.setValue(dealId, forHTTPHeaderField: DiscoveryTelemetry.dealIdHeaderName)
     }
+    if let gatewayRoute {
+      request.setValue(
+        gatewayRoute.apiKey,
+        forHTTPHeaderField: AdjacencyGatewayRoute.apiKeyHeaderName
+      )
+    }
 
     let requestStart = DispatchTime.now()
     let data: Data
@@ -106,14 +122,15 @@ public final class AdjacencySidecarClient: FamiliarPoolProviding {
     } catch {
       telemetry.appendDealEvent(
         label: "sidecar request",
-        detail: "url=\(requestURL.absoluteString) error=\(error.localizedDescription)",
+        detail: "mode=\(requestMode.rawValue) url=\(requestURL.absoluteString) " +
+          "error=\(error.localizedDescription)",
         milliseconds: DiscoveryTelemetry.millisecondsSince(requestStart)
       )
       throw DeckPoolError.unreachable
     }
     telemetry.appendDealEvent(
       label: "sidecar request",
-      detail: "url=\(requestURL.absoluteString) " +
+      detail: "mode=\(requestMode.rawValue) url=\(requestURL.absoluteString) " +
         "status=\((response as? HTTPURLResponse)?.statusCode ?? -1)",
       milliseconds: DiscoveryTelemetry.millisecondsSince(requestStart)
     )
@@ -172,26 +189,31 @@ public final class AdjacencySidecarClient: FamiliarPoolProviding {
     count: Int
   )
     -> URL? {
-    guard let baseURL, var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-    else { return nil }
-
     var queryItems = [
       URLQueryItem(name: "kind", value: kind.rawValue),
       URLQueryItem(name: "count", value: String(count)),
     ]
 
+    let sidecarPath: String
     if let seedCollection {
-      components.path = "/similar-collections"
+      sidecarPath = "/similar-collections"
       queryItems.append(URLQueryItem(name: "collectionId", value: seedCollection.id))
     } else {
       guard !seedSongIds.isEmpty else { return nil }
-      components.path = "/similar-from-history"
+      sidecarPath = "/similar-from-history"
       queryItems.append(URLQueryItem(
         name: "seedSongIds",
         value: seedSongIds.joined(separator: ",")
       ))
     }
 
+    if let gatewayRoute {
+      return gatewayRoute.url(sidecarPath: sidecarPath, queryItems: queryItems)
+    }
+
+    guard let baseURL, var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
+    else { return nil }
+    components.path = sidecarPath
     components.queryItems = queryItems
     return components.url
   }
