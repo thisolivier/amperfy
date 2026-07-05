@@ -37,6 +37,21 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 62,
+      date: "2026-07-05",
+      title: "Build 62 — Discovery works away from home",
+      whatsNew: [
+        "New in Settings: Gateway URL and Gateway Key — set both and Discovery's recommendations and previews work anywhere, not just on your home network",
+        "With a gateway configured, the app uses it everywhere (home included) — one path, no mode switching",
+        "Discovery Diagnostics now shows whether each request went via the gateway or direct, and the connection test tells you a rejected key apart from an unreachable server",
+      ],
+      testingFocus: [
+        "Settings → set Gateway URL (your soul.beat.online address, port 5040) and the key — then deal a deck OFF your home network: cards and previews should work",
+        "Diagnostics → Test Connection should show gateway mode, 200, and a latency",
+        "Clear the gateway fields → behavior reverts to home-network-only, as before",
+      ]
+    ),
+    ReleaseNote(
       id: 61,
       date: "2026-07-05",
       title: "Build 61 — Related Tracks polish + Discovery diagnostics",
@@ -99,24 +114,6 @@ enum ReleaseNotes {
         "Card menu (···) → Open — should land on that collection's detail screen",
         "Playlists with many hundreds of tracks should no longer appear as recommendations",
         "Move the blend slider back and forth a few times — the deck should refill with fresh cards rather than shrinking",
-      ]
-    ),
-    ReleaseNote(
-      id: 57,
-      date: "2026-07-03",
-      title: "Build 57 — Discovery: Audition Deck + Needle Drop",
-      whatsNew: [
-        "New Discovery experience: 'Find similar playlists' and 'Find similar albums' in the playlist/album detail menus deal a full-screen deck of recommended collections",
-        "Each card has a Needle Drop bar — drag across it to audition ~1.5s slices of every track, like running a thumb across a crate of vinyl; cards auto-audition as you swipe",
-        "Blend slider mixes Familiar (close matches from your library's listening patterns) with Adventurous (new directions) recommendations",
-        "Like button, Play-from-track handoff to the main player, deal-more, and 'Find more' doors on Home widget sections",
-      ],
-      testingFocus: [
-        "Open 'Find similar playlists' on a playlist you know well — do the recommendations make sense, and do evidence lines read honestly?",
-        "Drag the Needle Drop bar: audio slices should start near-instantly and follow your finger; releasing should keep riding through tracks",
-        "Tap Play mid-audition — the main player should take over with the picked track, and sprite audio must stop dead",
-        "Album previews render on first visit lazily: a card may say 'Preview unavailable' once, then have a working bar next time you open a deck for it",
-        "Swipe fast between cards — audio must never come from two sources at once",
       ]
     ),
   ]
