@@ -28,6 +28,14 @@ struct SettingsView: View {
   @EnvironmentObject
   private var settings: Settings
 
+  // Fork addition (gateway-client): HTTP gateway fronting the
+  // adjacency-sidecar. Gateway mode is active only when BOTH fields are set
+  // (see AdjacencyGatewaySettings.activeRoute).
+  @State
+  private var gatewayUrlInput = AdjacencyGatewaySettings.shared.gatewayUrlString
+  @State
+  private var gatewayKeyInput = AdjacencyGatewaySettings.shared.gatewayApiKey
+
   func screenLockPreventionOffPressed() {
     settings.screenLockPreventionPreference = .never
     UIDevice.current.isBatteryMonitoringEnabled = false
@@ -146,6 +154,21 @@ struct SettingsView: View {
             // debuggability — deal timings, sprite-fetch outcomes,
             // sidecar health check.
             navigationLink(.discoveryDiagnostics)
+            // Fork addition (gateway-client): when both are set, adjacency
+            // requests route via {gateway}/adjacency/* with X-API-Key.
+            TextField("Gateway URL", text: $gatewayUrlInput)
+              .autocapitalization(.none)
+              .disableAutocorrection(true)
+              .keyboardType(.URL)
+              .onChange(of: gatewayUrlInput) { newValue in
+                AdjacencyGatewaySettings.shared.gatewayUrlString = newValue
+              }
+            TextField("Gateway Key", text: $gatewayKeyInput)
+              .autocapitalization(.none)
+              .disableAutocorrection(true)
+              .onChange(of: gatewayKeyInput) { newValue in
+                AdjacencyGatewaySettings.shared.gatewayApiKey = newValue
+              }
 
             #if DEBUG
               navigationLink(.developer)

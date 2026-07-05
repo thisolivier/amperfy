@@ -565,6 +565,8 @@
 		8AC16E65905A94843000FC2B /* AuditionDeckHostVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = E633B9D463CF91B4F4EA54DB /* AuditionDeckHostVC.swift */; };
 		8BCD5E9AFFB2BB80C18514B6 /* AuditionDeckCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AE98C211B1EDEC684100C7C /* AuditionDeckCardView.swift */; };
 		8F4B7A89BAF296AA9E84626A /* AdjacencySidecarSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90CF787F02567831D033FF1 /* AdjacencySidecarSettings.swift */; };
+		7A11FACE0001BEEF00000001 /* AdjacencyGatewaySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A11FACE0002BEEF00000002 /* AdjacencyGatewaySettings.swift */; };
+		7A11FACE0003BEEF00000003 /* AdjacencyGatewayRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A11FACE0004BEEF00000004 /* AdjacencyGatewayRoute.swift */; };
 		9AA73BEB5910364AD8BB9799 /* DeckCandidate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3EEB043DC7573126836BA9E /* DeckCandidate.swift */; };
 		9D6217A799F58ACCED4ECA72 /* AuditionDeckState.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEB24EEE355DC237CAE05931 /* AuditionDeckState.swift */; };
 		A0BFFB19CF883D57BA942E6B /* RelatedTracksVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = E63A9F9C82A0199DC6B62B08 /* RelatedTracksVC.swift */; };
@@ -658,6 +660,7 @@
 		F0B25FC47F592D5B4657F4B4 /* DeckBlendInterleaver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 590A639B44AC70AC88BDAF49 /* DeckBlendInterleaver.swift */; };
 		F17E3E6C6EBC44B6AD4D40D6 /* QuickActionsHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505CA1F42B848B8300AA81CD /* QuickActionsHandler.swift */; };
 		F2F8AAFD25B944821E9AAC24 /* AdjacencySidecarSettingsTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40BA54924858ACBF2EF8EB73 /* AdjacencySidecarSettingsTest.swift */; };
+		7A11FACE0005BEEF00000005 /* AdjacencyGatewayRouteTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A11FACE0006BEEF00000006 /* AdjacencyGatewayRouteTest.swift */; };
 		F46F1B07E57D4F7EB2167393 /* UIImageAssetsExtension+UIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10B00A56772D449DA928889D /* UIImageAssetsExtension+UIKit.swift */; };
 		F4F6BD0AB9C15AA1C66BD197 /* DeckFusionEngineTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110F51D7CBD583B77C30D6E5 /* DeckFusionEngineTest.swift */; };
 		FD97AC7E15E0F46B8A328F8F /* NeedleDropSpritePlayerStopRaceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EEA8F0C6E87A5409143493D /* NeedleDropSpritePlayerStopRaceTest.swift */; };
@@ -733,6 +736,7 @@
 		27AE138D21A30D559C3E1232 /* EntityArtworkView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EntityArtworkView.swift; sourceTree = "<group>"; };
 		28F695A9B40CB080214A15DC /* AdventurousPoolProviding.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdventurousPoolProviding.swift; sourceTree = "<group>"; };
 		40BA54924858ACBF2EF8EB73 /* AdjacencySidecarSettingsTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjacencySidecarSettingsTest.swift; sourceTree = "<group>"; };
+		7A11FACE0006BEEF00000006 /* AdjacencyGatewayRouteTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjacencyGatewayRouteTest.swift; sourceTree = "<group>"; };
 		42A0E721A0B9C71F75554C98 /* DeckFusionEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckFusionEngine.swift; sourceTree = "<group>"; };
 		603131CF67BD109652E211AF /* DiscoveryTelemetryRecords.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiscoveryTelemetryRecords.swift; sourceTree = "<group>"; };
 		D48AA3779E123A0D9C7CA403 /* DiscoveryTelemetry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiscoveryTelemetry.swift; sourceTree = "<group>"; };
@@ -1408,6 +1412,8 @@
 		ECBB0A5656EAB6C63C3FACC2 /* OnDeviceAdventurousPoolProviderTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnDeviceAdventurousPoolProviderTest.swift; sourceTree = "<group>"; };
 		EEA6C7C94AAC46FA8A0C94CD /* SwipeActionSettings+UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SwipeActionSettings+UIKit.swift"; sourceTree = "<group>"; };
 		F90CF787F02567831D033FF1 /* AdjacencySidecarSettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjacencySidecarSettings.swift; sourceTree = "<group>"; };
+		7A11FACE0002BEEF00000002 /* AdjacencyGatewaySettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjacencyGatewaySettings.swift; sourceTree = "<group>"; };
+		7A11FACE0004BEEF00000004 /* AdjacencyGatewayRoute.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjacencyGatewayRoute.swift; sourceTree = "<group>"; };
 		FCDC42640928BC083027BE64 /* AuditionDeckStateViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckStateViews.swift; sourceTree = "<group>"; };
 		FE1F35FB3C0845E6B790E33C /* Utilities+UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Utilities+UIKit.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -2492,6 +2498,7 @@
 				87045C62548E017865B9D516 /* AdjacencySidecarClientTest.swift */,
 				F55BAFEF959299057BD755E9 /* DiscoveryTelemetryTest.swift */,
 				40BA54924858ACBF2EF8EB73 /* AdjacencySidecarSettingsTest.swift */,
+				7A11FACE0006BEEF00000006 /* AdjacencyGatewayRouteTest.swift */,
 				110F51D7CBD583B77C30D6E5 /* DeckFusionEngineTest.swift */,
 				DADC71ACFD77D1D88398B31D /* DeckSeedResolverTest.swift */,
 				ECBB0A5656EAB6C63C3FACC2 /* OnDeviceAdventurousPoolProviderTest.swift */,
@@ -2634,6 +2641,8 @@
 			children = (
 				27840FE68CA4450D50C8B30F /* AdjacencySidecarClient.swift */,
 				F90CF787F02567831D033FF1 /* AdjacencySidecarSettings.swift */,
+				7A11FACE0002BEEF00000002 /* AdjacencyGatewaySettings.swift */,
+				7A11FACE0004BEEF00000004 /* AdjacencyGatewayRoute.swift */,
 				28F695A9B40CB080214A15DC /* AdventurousPoolProviding.swift */,
 				590A639B44AC70AC88BDAF49 /* DeckBlendInterleaver.swift */,
 				E3EEB043DC7573126836BA9E /* DeckCandidate.swift */,
@@ -3412,6 +3421,8 @@
 				A5C00200000000000000B00C /* FolderProviderImpl.swift in Sources */,
 				101908DE9F7486EE44E112CB /* AdjacencySidecarClient.swift in Sources */,
 				8F4B7A89BAF296AA9E84626A /* AdjacencySidecarSettings.swift in Sources */,
+				7A11FACE0001BEEF00000001 /* AdjacencyGatewaySettings.swift in Sources */,
+				7A11FACE0003BEEF00000003 /* AdjacencyGatewayRoute.swift in Sources */,
 				6376D8FAD6CDDAD7F6849824 /* AdventurousPoolProviding.swift in Sources */,
 				F0B25FC47F592D5B4657F4B4 /* DeckBlendInterleaver.swift in Sources */,
 				9AA73BEB5910364AD8BB9799 /* DeckCandidate.swift in Sources */,
@@ -3506,6 +3517,7 @@
 				102E05769BFF825739DC8487 /* AdjacencySidecarClientTest.swift in Sources */,
 				795F083AEE4DAE91A5422E99 /* DiscoveryTelemetryTest.swift in Sources */,
 				F2F8AAFD25B944821E9AAC24 /* AdjacencySidecarSettingsTest.swift in Sources */,
+				7A11FACE0005BEEF00000005 /* AdjacencyGatewayRouteTest.swift in Sources */,
 				F4F6BD0AB9C15AA1C66BD197 /* DeckFusionEngineTest.swift in Sources */,
 				706790844DE32C4BDAFFEEC5 /* DeckSeedResolverTest.swift in Sources */,
 				0F33D9605FC626D96099256F /* OnDeviceAdventurousPoolProviderTest.swift in Sources */,
