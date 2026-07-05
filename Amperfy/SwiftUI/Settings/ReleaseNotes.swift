@@ -37,6 +37,21 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 61,
+      date: "2026-07-05",
+      title: "Build 61 — Related Tracks polish + Discovery diagnostics",
+      whatsNew: [
+        "Related Tracks: proper large title that collapses as you scroll, row layout now matches playlist views, and the seed track wears an accent-colored border on a clean transparent badge",
+        "Slow recommendation deals fail fast now: if the recommendation server can't be reached, the app gives up in ~5 seconds and falls back, instead of stalling for minutes",
+        "New: Settings → Discovery Diagnostics — see exactly what every deal and preview fetch did (which server, how long, what failed), test the server connection, and Export Logs to share",
+      ],
+      testingFocus: [
+        "Related Tracks: large title should shrink into the bar on scroll; rows should align like a playlist; seed badge = accent border, no fill",
+        "Deal a deck on your long 'rock' playlist — it should resolve or fall back within seconds, not minutes",
+        "Settings → Discovery Diagnostics → deal a deck, then Export Logs and send me the file — it lines up 1:1 with the server logs via the deal id",
+      ]
+    ),
+    ReleaseNote(
       id: 60,
       date: "2026-07-04",
       title: "Build 60 — Discovery deck v2",
@@ -102,20 +117,6 @@ enum ReleaseNotes {
         "Tap Play mid-audition — the main player should take over with the picked track, and sprite audio must stop dead",
         "Album previews render on first visit lazily: a card may say 'Preview unavailable' once, then have a working bar next time you open a deck for it",
         "Swipe fast between cards — audio must never come from two sources at once",
-      ]
-    ),
-    ReleaseNote(
-      id: 56,
-      date: "2026-07-02",
-      title: "Build 56 — Fixed wrong song playing from Recently Added Tracks",
-      whatsNew: [
-        "Fixed a bug where tapping a track in Recently Added Tracks could start playing a different song than the one you tapped",
-        "This could happen right after the list refreshed (e.g. new tracks synced in) while you were tapping a row",
-      ],
-      testingFocus: [
-        "Open Recently Added Tracks, let new tracks sync in or pull-to-refresh, then tap a track — the song that plays should always match the one you tapped",
-        "Tap a track immediately after switching between 'Top N' and 'Last M days' modes, or after adjusting the count stepper — playback should still match the tapped row",
-        "General regression: tapping any track in this list should behave exactly as before when no refresh has just happened",
       ]
     ),
   ]
