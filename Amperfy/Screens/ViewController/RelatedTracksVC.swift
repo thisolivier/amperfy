@@ -32,12 +32,18 @@ class RelatedTracksVC: UITableViewController {
   private weak var originRootView: UIViewController?
   private var relatedSongs: [AbstractPlayable] = []
   private var sourceInfoByIndex: [Int: String] = [:]
+  /// Nav-bar large-title state as it was before this screen appeared, restored on disappear so
+  /// screens beneath/above on the shared stack are unaffected (user-specced build-60 feedback).
+  private var priorPrefersLargeTitles: Bool?
 
   init(seedSongId: String, seedSongTitle: String, originRootView: UIViewController) {
     self.seedSongId = seedSongId
     self.seedSongTitle = seedSongTitle
     self.originRootView = originRootView
-    super.init(style: .insetGrouped)
+    // `.grouped`, matching PlaylistDetailVC exactly (its `super.init(style: .grouped, ...)`) —
+    // `.insetGrouped` gave these rows extra side padding vs regular playlist views (build-60
+    // user feedback).
+    super.init(style: .grouped)
   }
 
   @available(*, unavailable)
@@ -45,7 +51,8 @@ class RelatedTracksVC: UITableViewController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    title = "Related Tracks"
+    title = "Related Tracks To:"
+    navigationItem.largeTitleDisplayMode = .always
     tableView.register(nibName: PlayableTableCell.typeName)
     tableView.rowHeight = PlayableTableCell.rowHeight
     setupToolbar()
@@ -57,6 +64,12 @@ class RelatedTracksVC: UITableViewController {
 
   override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(animated)
+    // Standard collapsing large title for this VC only — capture the bar's prior
+    // preference and restore it on disappear.
+    if let navigationBar = navigationController?.navigationBar {
+      priorPrefersLargeTitles = navigationBar.prefersLargeTitles
+      navigationBar.prefersLargeTitles = true
+    }
     if !relatedSongs.isEmpty {
       navigationController?.setToolbarHidden(false, animated: animated)
     }
@@ -67,6 +80,9 @@ class RelatedTracksVC: UITableViewController {
     // Pushed onto a shared stack: never leave our toolbar behind for the
     // screens beneath (or above) us.
     navigationController?.setToolbarHidden(true, animated: animated)
+    if let priorPrefersLargeTitles {
+      navigationController?.navigationBar.prefersLargeTitles = priorPrefersLargeTitles
+    }
   }
 
   private func showLoadingState() {
@@ -113,22 +129,19 @@ class RelatedTracksVC: UITableViewController {
     updateToolbarState()
   }
 
-  /// "Related Tracks To:" header (user-specced 2026-07-03): themed title with
-  /// the seed track as a rounded badge — the standard row UI minus its
-  /// options (…) control, non-interactive.
+  /// Seed-badge header (restyled per build-60 user feedback): the "Related
+  /// Tracks To:" text now lives in the nav bar's large title, so the header is
+  /// just the seed track as a rounded badge — transparent fill, theme-accent
+  /// border — the standard row UI minus its options (…) control,
+  /// non-interactive.
   private func installSeedHeader(seedSong: Song) {
     let container = UIView()
 
-    let titleLabel = UILabel()
-    titleLabel.text = "Related Tracks To:"
-    let titleSize = UIFont.preferredFont(forTextStyle: .title2).pointSize
-    titleLabel.font = .systemFont(ofSize: titleSize, weight: .bold)
-    titleLabel.textColor = view.tintColor
-    titleLabel.translatesAutoresizingMaskIntoConstraints = false
-
     let badge = UIView()
-    badge.backgroundColor = .secondarySystemGroupedBackground
+    badge.backgroundColor = .clear
     badge.layer.cornerRadius = 12
+    badge.layer.borderWidth = 1.5
+    badge.layer.borderColor = view.tintColor.cgColor
     badge.layer.masksToBounds = true
     badge.translatesAutoresizingMaskIntoConstraints = false
 
@@ -141,16 +154,10 @@ class RelatedTracksVC: UITableViewController {
     seedCell.translatesAutoresizingMaskIntoConstraints = false
 
     badge.addSubview(seedCell)
-    container.addSubview(titleLabel)
     container.addSubview(badge)
 
     NSLayoutConstraint.activate([
-      titleLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
-      titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
-      titleLabel.trailingAnchor.constraint(
-        lessThanOrEqualTo: container.trailingAnchor, constant: -20
-      ),
-      badge.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 10),
+      badge.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
       badge.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
       badge.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
       badge.heightAnchor.constraint(equalToConstant: PlayableTableCell.rowHeight),
@@ -160,7 +167,7 @@ class RelatedTracksVC: UITableViewController {
       seedCell.bottomAnchor.constraint(equalTo: badge.bottomAnchor),
     ])
 
-    let headerHeight = 12 + ceil(titleSize * 1.25) + 10 + PlayableTableCell.rowHeight + 8
+    let headerHeight = 8 + PlayableTableCell.rowHeight + 8
     container.frame = CGRect(
       x: 0, y: 0,
       width: tableView.bounds.width,
