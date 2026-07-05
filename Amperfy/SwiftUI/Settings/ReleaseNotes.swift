@@ -37,6 +37,23 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 63,
+      date: "2026-07-05",
+      title: "Build 63 — An honest Recently Added list",
+      whatsNew: [
+        "Recently Added is now accurate: the after-import triplicates can no longer occur (fixed at the source, not papered over), and tracks deleted on the server disappear from the list promptly — including old ghosts already on your device, healed on first launch",
+        "Deleted-but-cached tracks: still playable from cache until you clear it (that behavior is deliberate and kept), then they vanish cleanly instead of erroring",
+        "Opening a recommendation deck no longer pauses your music — playback only pauses when you actually start a preview, and resumes after",
+        "Settings now shows gateway status under the key fields: last request result and when",
+      ],
+      testingFocus: [
+        "Import something via SoulseekNavi, watch Recently Added during the scan — no duplicates at any point",
+        "Recently Added should now match what NaviAdmin/Navidrome say is real",
+        "Play music, open a recommendation deck — music keeps playing; touch a needle-drop bar — it pauses; leave — it resumes",
+        "Settings → gateway fields → status line should show your last gateway request",
+      ]
+    ),
+    ReleaseNote(
       id: 62,
       date: "2026-07-05",
       title: "Build 62 — Discovery works away from home",
@@ -97,23 +114,6 @@ enum ReleaseNotes {
         "Track menu → Related Tracks: should slide in with a back button and a 'Related Tracks To:' header showing the original track",
         "From a related track's menu → Show in Playlists → pick a playlist → back, back, back — you should retrace your exact steps",
         "From the Now Playing popup, try Add to Playlist and Show in Playlists — both should appear reliably",
-      ]
-    ),
-    ReleaseNote(
-      id: 58,
-      date: "2026-07-03",
-      title: "Build 58 — Discovery polish from your first test drive",
-      whatsNew: [
-        "The first card of a deck now auto-auditions the moment it's dealt (it used to sit silent until you swiped)",
-        "'Open' in a card's menu now actually takes you to the playlist/album",
-        "Mega-playlists (folder playlists, imported liked-songs dumps) are no longer recommended",
-        "Blend changes and Deal More no longer come up short when you've already seen the top matches — the deck digs deeper into the ranking",
-      ],
-      testingFocus: [
-        "Open a deck and just wait — the first card should start auditioning by itself within about a second",
-        "Card menu (···) → Open — should land on that collection's detail screen",
-        "Playlists with many hundreds of tracks should no longer appear as recommendations",
-        "Move the blend slider back and forth a few times — the deck should refill with fresh cards rather than shrinking",
       ]
     ),
   ]
