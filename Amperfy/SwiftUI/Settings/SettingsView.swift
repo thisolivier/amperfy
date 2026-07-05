@@ -35,6 +35,20 @@ struct SettingsView: View {
   private var gatewayUrlInput = AdjacencyGatewaySettings.shared.gatewayUrlString
   @State
   private var gatewayKeyInput = AdjacencyGatewaySettings.shared.gatewayApiKey
+  // Triage A2: the user had no way to tell the gateway was ever used — show
+  // the newest gateway request's outcome + relative time from telemetry.
+  @State
+  private var gatewayStatusText = ""
+
+  private func refreshGatewayStatus() {
+    guard let status = DiscoveryTelemetry.shared.lastGatewayRequestStatus() else {
+      gatewayStatusText = "No gateway requests yet."
+      return
+    }
+    let relativeTime = RelativeDateTimeFormatter()
+      .localizedString(for: status.date, relativeTo: Date())
+    gatewayStatusText = "Last gateway request: \(status.outcome), \(relativeTime)."
+  }
 
   func screenLockPreventionOffPressed() {
     settings.screenLockPreventionPreference = .never
@@ -169,6 +183,10 @@ struct SettingsView: View {
               .onChange(of: gatewayKeyInput) { newValue in
                 AdjacencyGatewaySettings.shared.gatewayApiKey = newValue
               }
+            // Triage A2: read-only gateway status, refreshed on screen appear
+            // (telemetry is in-memory; "yet" means since this app launch).
+            InlineFooterRow(text: gatewayStatusText)
+              .onAppear { refreshGatewayStatus() }
 
             #if DEBUG
               navigationLink(.developer)

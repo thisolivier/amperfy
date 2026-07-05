@@ -15,6 +15,7 @@
 		18DB30DF1960F2D0E479A161 /* DeckDealingGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D73297EB78368851BCDEE9F3 /* DeckDealingGate.swift */; };
 		A1FACADE000000000000B001 /* DeckMainPlayerHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FACADE000000000000F001 /* DeckMainPlayerHandoff.swift */; };
 		A1FACADE000000000000B002 /* DeckMainPlayerHandoffTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FACADE000000000000F002 /* DeckMainPlayerHandoffTest.swift */; };
+		A1FACADE000000000000B003 /* GatewayRequestStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FACADE000000000000F003 /* GatewayRequestStatus.swift */; };
 		20413785961A13BFB0B1A4ED /* FamiliarPoolProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDA5B75CDFB8C10B4345BCCC /* FamiliarPoolProviding.swift */; };
 		21803F4CC026E7311C46D6D1 /* OnDeviceAdventurousPoolProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5DB6DEFF8CA5DD93DA4216E /* OnDeviceAdventurousPoolProvider.swift */; };
 		2BF1BC4E3169449D9672DF84 /* SwipeActionSettings+UIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA6C7C94AAC46FA8A0C94CD /* SwipeActionSettings+UIKit.swift */; };
@@ -1407,6 +1408,7 @@
 		D73297EB78368851BCDEE9F3 /* DeckDealingGate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckDealingGate.swift; sourceTree = "<group>"; };
 		A1FACADE000000000000F001 /* DeckMainPlayerHandoff.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckMainPlayerHandoff.swift; sourceTree = "<group>"; };
 		A1FACADE000000000000F002 /* DeckMainPlayerHandoffTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckMainPlayerHandoffTest.swift; sourceTree = "<group>"; };
+		A1FACADE000000000000F003 /* GatewayRequestStatus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GatewayRequestStatus.swift; sourceTree = "<group>"; };
 		DADC71ACFD77D1D88398B31D /* DeckSeedResolverTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckSeedResolverTest.swift; sourceTree = "<group>"; };
 		DDA5B75CDFB8C10B4345BCCC /* FamiliarPoolProviding.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FamiliarPoolProviding.swift; sourceTree = "<group>"; };
 		DDEC4BAA3E305AF27B3E4841 /* DeckDealingGateTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckDealingGateTest.swift; sourceTree = "<group>"; };
@@ -2663,6 +2665,7 @@
 				D5DB6DEFF8CA5DD93DA4216E /* OnDeviceAdventurousPoolProvider.swift */,
 				D73297EB78368851BCDEE9F3 /* DeckDealingGate.swift */,
 				A1FACADE000000000000F001 /* DeckMainPlayerHandoff.swift */,
+				A1FACADE000000000000F003 /* GatewayRequestStatus.swift */,
 			);
 			name = Discovery;
 			path = Discovery;
@@ -3444,6 +3447,7 @@
 				21803F4CC026E7311C46D6D1 /* OnDeviceAdventurousPoolProvider.swift in Sources */,
 				18DB30DF1960F2D0E479A161 /* DeckDealingGate.swift in Sources */,
 				A1FACADE000000000000B001 /* DeckMainPlayerHandoff.swift in Sources */,
+				A1FACADE000000000000B003 /* GatewayRequestStatus.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

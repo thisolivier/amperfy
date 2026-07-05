@@ -76,3 +76,4 @@ fastlane/test_output
 # Local working state
 .spike/
 .venv/
+.derivedData*/

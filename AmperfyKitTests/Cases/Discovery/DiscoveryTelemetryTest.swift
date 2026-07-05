@@ -160,4 +160,88 @@ class DiscoveryTelemetryTest: XCTestCase {
     XCTAssertEqual(configuration.timeoutIntervalForRequest, 5)
     XCTAssertEqual(configuration.timeoutIntervalForResource, 10)
   }
+
+  // MARK: Last gateway request status (triage A2)
+
+  func testLastGatewayRequestStatusIsNilWithoutGatewayRecords() {
+    XCTAssertNil(telemetry.lastGatewayRequestStatus())
+    telemetry.beginDeal(trigger: "deal", seedDescription: "s", kindDescription: "k")
+    telemetry.appendDealEvent(
+      label: "sidecar request",
+      detail: "mode=direct url=http://h/similar-collections status=200",
+      milliseconds: 30
+    )
+    telemetry.recordSpriteFetch(
+      urlString: "u",
+      outcome: "ready (8 slices) mode=direct",
+      milliseconds: 9
+    )
+    XCTAssertNil(telemetry.lastGatewayRequestStatus(), "direct-mode records don't count")
+  }
+
+  func testLastGatewayRequestStatusPicksUpDealEvents() {
+    telemetry.beginDeal(trigger: "deal", seedDescription: "s", kindDescription: "k")
+    telemetry.appendDealEvent(
+      label: "sidecar request",
+      detail: "mode=gateway url=http://gw/adjacency/similar-collections status=200",
+      milliseconds: 40
+    )
+    let status = telemetry.lastGatewayRequestStatus()
+    XCTAssertEqual(status?.outcome, "200")
+    XCTAssertEqual(
+      status?.date,
+      telemetry.dealRecordsNewestFirst().first?.startedAt,
+      "stage events carry no timestamp; the deal's start time stands in"
+    )
+  }
+
+  func testLastGatewayRequestStatusNewestSpriteFetchWinsOverOlderDeal() {
+    telemetry.beginDeal(trigger: "deal", seedDescription: "s", kindDescription: "k")
+    telemetry.appendDealEvent(
+      label: "sidecar request",
+      detail: "mode=gateway url=http://gw/adjacency/similar-collections status=200",
+      milliseconds: 40
+    )
+    // Recorded after the deal began, so its own (later) date wins.
+    telemetry.recordSpriteFetch(
+      urlString: "http://gw/adjacency/sprite-manifest",
+      outcome: "failed (status 401) mode=gateway",
+      milliseconds: 15
+    )
+    XCTAssertEqual(telemetry.lastGatewayRequestStatus()?.outcome, "key rejected (401)")
+  }
+
+  func testShortGatewayOutcomeFormats() {
+    XCTAssertEqual(
+      DiscoveryTelemetry.shortGatewayOutcome(from: "mode=gateway url=http://gw/x status=200"),
+      "200"
+    )
+    XCTAssertEqual(
+      DiscoveryTelemetry.shortGatewayOutcome(from: "mode=gateway url=http://gw/x status=401"),
+      "key rejected (401)"
+    )
+    XCTAssertEqual(
+      DiscoveryTelemetry.shortGatewayOutcome(from: "failed (status 403) mode=gateway"),
+      "key rejected (403)"
+    )
+    XCTAssertEqual(
+      DiscoveryTelemetry.shortGatewayOutcome(from: "ready (8 slices) mode=gateway"),
+      "200"
+    )
+    XCTAssertEqual(
+      DiscoveryTelemetry
+        .shortGatewayOutcome(from: "unavailable (404 not-yet-rendered) mode=gateway"),
+      "404 (sprite not rendered yet)"
+    )
+    XCTAssertEqual(
+      DiscoveryTelemetry.shortGatewayOutcome(
+        from: "mode=gateway url=http://gw/x error=Could not connect to the server."
+      ),
+      "failed: Could not connect to the server."
+    )
+    XCTAssertEqual(
+      DiscoveryTelemetry.shortGatewayOutcome(from: "failed (The request timed out.) mode=gateway"),
+      "failed: The request timed out."
+    )
+  }
 }
