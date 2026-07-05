@@ -47,9 +47,11 @@ struct DiscoveryDiagnosticsView: View {
         // the Gateway URL and Key are set in Settings, direct otherwise.
         diagnosticText(
           "Active mode: " +
-            (AdjacencyGatewaySettings.shared.activeRoute == nil
-              ? AdjacencyRequestMode.direct.rawValue
-              : AdjacencyRequestMode.gateway.rawValue)
+            (
+              AdjacencyGatewaySettings.shared.activeRoute == nil
+                ? AdjacencyRequestMode.direct.rawValue
+                : AdjacencyRequestMode.gateway.rawValue
+            )
         )
         Button {
           Task { await testSidecarConnection() }
