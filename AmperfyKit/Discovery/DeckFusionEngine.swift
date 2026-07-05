@@ -62,15 +62,18 @@ public final class DeckFusionEngine: @unchecked Sendable {
   private let familiarPool: FamiliarPoolProviding
   private let adventurousPool: AdventurousPoolProviding
   private let storage: LibraryStorage
+  private let telemetry: DiscoveryTelemetry
 
   public init(
     familiarPool: FamiliarPoolProviding,
     adventurousPool: AdventurousPoolProviding,
-    storage: LibraryStorage
+    storage: LibraryStorage,
+    telemetry: DiscoveryTelemetry = .shared
   ) {
     self.familiarPool = familiarPool
     self.adventurousPool = adventurousPool
     self.storage = storage
+    self.telemetry = telemetry
   }
 
   /// `@MainActor`: matches this method's own documented invariant above — the seed resolution and
@@ -90,7 +93,20 @@ public final class DeckFusionEngine: @unchecked Sendable {
     account: Account
   ) async
     -> DeckDealResult {
+    let passStart = DispatchTime.now()
+    telemetry.appendDealEvent(
+      label: "engine pass",
+      detail: "blend=\(blend) kind=\(kind.rawValue) count=\(count)",
+      milliseconds: 0
+    )
+    let seedResolutionStart = DispatchTime.now()
     let resolution = DeckSeedResolver.resolve(seed: seed, storage: storage, account: account)
+    telemetry.appendDealEvent(
+      label: "seed resolution",
+      detail: "collection=\(resolution.seedCollectionId ?? "none") " +
+        "songs=\(resolution.seedSongIds.count)",
+      milliseconds: DiscoveryTelemetry.millisecondsSince(seedResolutionStart)
+    )
     var excludeSet = excludeIds
     if let seedCollectionId = resolution.seedCollectionId {
       excludeSet.insert(seedCollectionId)
@@ -126,9 +142,15 @@ public final class DeckFusionEngine: @unchecked Sendable {
     if familiarResult.degraded { degradedPools.insert(.adjacency) }
     if adventurousResult.degraded { degradedPools.insert(.similar) }
     if degradedPools.count == 2 {
+      telemetry.appendDealEvent(
+        label: "engine pass done",
+        detail: "dealt=0 degraded=[both pools]",
+        milliseconds: DiscoveryTelemetry.millisecondsSince(passStart)
+      )
       return DeckDealResult(candidates: [], degradedPools: degradedPools)
     }
 
+    let resolveInterleaveStart = DispatchTime.now()
     let familiarTagged = familiarResult.results.map {
       PoolTaggedCandidate(scored: withSeedTitle($0, seedTitle), pool: .adjacency)
     }
@@ -160,6 +182,17 @@ public final class DeckFusionEngine: @unchecked Sendable {
       // on-device Adventurous pool too. Seeds are unaffected.
       candidate.kind != .playlist || candidate.trackCount <= Self.megaPlaylistTrackCeiling
     }
+    telemetry.appendDealEvent(
+      label: "resolve+interleave",
+      detail: "merged=\(merged.count) resolved=\(candidates.count)",
+      milliseconds: DiscoveryTelemetry.millisecondsSince(resolveInterleaveStart)
+    )
+    telemetry.appendDealEvent(
+      label: "engine pass done",
+      detail: "dealt=\(candidates.count) " +
+        "degraded=[\(degradedPools.map(\.rawValue).sorted().joined(separator: ","))]",
+      milliseconds: DiscoveryTelemetry.millisecondsSince(passStart)
+    )
 
     return DeckDealResult(candidates: candidates, degradedPools: degradedPools)
   }
@@ -178,6 +211,7 @@ public final class DeckFusionEngine: @unchecked Sendable {
     count: Int
   ) async
     -> PoolOutcome {
+    let fetchStart = DispatchTime.now()
     do {
       let results = try await familiarPool.fetchCandidates(
         seedSongIds: seedSongIds,
@@ -185,8 +219,18 @@ public final class DeckFusionEngine: @unchecked Sendable {
         kind: kind,
         count: count
       )
+      telemetry.appendDealEvent(
+        label: "familiar pool",
+        detail: "ok candidates=\(results.count)",
+        milliseconds: DiscoveryTelemetry.millisecondsSince(fetchStart)
+      )
       return PoolOutcome(results: results, degraded: false)
     } catch {
+      telemetry.appendDealEvent(
+        label: "familiar pool",
+        detail: "degraded error=\(error)",
+        milliseconds: DiscoveryTelemetry.millisecondsSince(fetchStart)
+      )
       return PoolOutcome(results: [], degraded: true)
     }
   }
@@ -198,11 +242,17 @@ public final class DeckFusionEngine: @unchecked Sendable {
     count: Int
   ) async
     -> PoolOutcome {
+    let fetchStart = DispatchTime.now()
     let (results, dataAvailable) = adventurousPool.candidates(
       seedSongIds: seedSongIds,
       kind: kind,
       excluding: excluding,
       count: count
+    )
+    telemetry.appendDealEvent(
+      label: "adventurous pool",
+      detail: "candidates=\(results.count) dataAvailable=\(dataAvailable)",
+      milliseconds: DiscoveryTelemetry.millisecondsSince(fetchStart)
     )
     return PoolOutcome(results: results, degraded: !dataAvailable)
   }

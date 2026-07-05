@@ -41,25 +41,40 @@ import Foundation
 public final class AdjacencySidecarClient: FamiliarPoolProviding {
   private let baseURL: URL?
   private let session: URLSession
+  private let telemetry: DiscoveryTelemetry
 
   /// - Parameter serverUrl: the active account's Navidrome server URL string
   ///   (e.g. `account.serverUrl`). Only the host/scheme are kept; the port is
   ///   replaced with `settings.port`.
+  /// - Parameter session: defaults to the dedicated 5s-timeout session — an
+  ///   unreachable sidecar must fail fast to the on-device fallback, not
+  ///   stall deals for `URLSession.shared`'s 60s default.
   public init(
     serverUrl: String,
     settings: AdjacencySidecarSettings = .shared,
-    session: URLSession = .shared
+    session: URLSession = DiscoveryURLSession.fastFail,
+    telemetry: DiscoveryTelemetry = .shared
   ) {
     self.session = session
-    if let serverURLValue = URL(string: serverUrl), let host = serverURLValue.host {
-      var components = URLComponents()
-      components.scheme = serverURLValue.scheme ?? "http"
-      components.host = host
-      components.port = settings.port
-      self.baseURL = components.url
-    } else {
-      self.baseURL = nil
-    }
+    self.telemetry = telemetry
+    self.baseURL = Self.deriveBaseURL(serverUrl: serverUrl, settings: settings)
+  }
+
+  /// `http(s)://{server host}:{configured sidecar port}` — shared with the
+  /// Discovery Diagnostics screen's "Test sidecar connection" health check so
+  /// the diagnosed URL is exactly the one this client uses.
+  public static func deriveBaseURL(
+    serverUrl: String,
+    settings: AdjacencySidecarSettings = .shared
+  )
+    -> URL? {
+    guard let serverURLValue = URL(string: serverUrl), let host = serverURLValue.host
+    else { return nil }
+    var components = URLComponents()
+    components.scheme = serverURLValue.scheme ?? "http"
+    components.host = host
+    components.port = settings.port
+    return components.url
   }
 
   public func fetchCandidates(
@@ -78,13 +93,30 @@ public final class AdjacencySidecarClient: FamiliarPoolProviding {
       throw DeckPoolError.unreachable
     }
 
+    var request = URLRequest(url: requestURL)
+    if let dealId = telemetry.currentDealId {
+      request.setValue(dealId, forHTTPHeaderField: DiscoveryTelemetry.dealIdHeaderName)
+    }
+
+    let requestStart = DispatchTime.now()
     let data: Data
     let response: URLResponse
     do {
-      (data, response) = try await session.data(from: requestURL)
+      (data, response) = try await session.data(for: request)
     } catch {
+      telemetry.appendDealEvent(
+        label: "sidecar request",
+        detail: "url=\(requestURL.absoluteString) error=\(error.localizedDescription)",
+        milliseconds: DiscoveryTelemetry.millisecondsSince(requestStart)
+      )
       throw DeckPoolError.unreachable
     }
+    telemetry.appendDealEvent(
+      label: "sidecar request",
+      detail: "url=\(requestURL.absoluteString) " +
+        "status=\((response as? HTTPURLResponse)?.statusCode ?? -1)",
+      milliseconds: DiscoveryTelemetry.millisecondsSince(requestStart)
+    )
 
     guard let httpResponse = response as? HTTPURLResponse,
           (200 ..< 300).contains(httpResponse.statusCode) else {
