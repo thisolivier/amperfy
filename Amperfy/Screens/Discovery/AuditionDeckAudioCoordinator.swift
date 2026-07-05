@@ -65,11 +65,19 @@ final class AuditionDeckAudioCoordinator {
     // X-Deal-Id on the sprite-audio request too, so server logs correlate the
     // audio load with the deal that produced the card; player-item load
     // failures land in DiscoveryTelemetry (build-60: self-diagnosing previews).
-    let dealIdHeader = DiscoveryTelemetry.shared.currentDealId
-      .map { [DiscoveryTelemetry.dealIdHeaderName: $0] }
+    // In gateway mode (both URL + key set) the sprite URL already points at
+    // {gateway}/adjacency/sprite-audio (rebased by DeckSpriteManifestFetcher),
+    // so the AVURLAsset also needs the gateway's X-API-Key header.
+    var httpHeaderFields: [String: String] = [:]
+    if let dealId = DiscoveryTelemetry.shared.currentDealId {
+      httpHeaderFields[DiscoveryTelemetry.dealIdHeaderName] = dealId
+    }
+    if let gatewayRoute = AdjacencyGatewaySettings.shared.activeRoute {
+      httpHeaderFields[AdjacencyGatewayRoute.apiKeyHeaderName] = gatewayRoute.apiKey
+    }
     let newPlayer = NeedleDropSpritePlayer(
       spriteURL: manifest.spriteURL,
-      httpHeaderFields: dealIdHeader
+      httpHeaderFields: httpHeaderFields.isEmpty ? nil : httpHeaderFields
     )
     let spriteURLString = manifest.spriteURL.absoluteString
     newPlayer.onItemFailed = { reason in
