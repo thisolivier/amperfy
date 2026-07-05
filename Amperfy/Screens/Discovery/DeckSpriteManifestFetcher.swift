@@ -37,20 +37,51 @@ enum DeckSpriteManifestFetcher {
   ) async
     -> DeckSpriteManifestResult {
     guard let url = manifestURL(collectionId: collectionId, kind: kind, account: account) else {
+      DiscoveryTelemetry.shared.recordSpriteFetch(
+        urlString: "(unresolvable — bad server URL)",
+        outcome: "failed (no URL)",
+        milliseconds: 0
+      )
       return .failed
     }
+    // Fast-fail session (5s request timeout) + X-Deal-Id correlation header —
+    // an unreachable sidecar must degrade the preview quickly, not stall it
+    // behind URLSession.shared's 60s default.
+    var request = URLRequest(url: url)
+    if let dealId = DiscoveryTelemetry.shared.currentDealId {
+      request.setValue(dealId, forHTTPHeaderField: DiscoveryTelemetry.dealIdHeaderName)
+    }
+    let fetchStart = DispatchTime.now()
+    func record(_ outcome: String) {
+      DiscoveryTelemetry.shared.recordSpriteFetch(
+        urlString: url.absoluteString,
+        outcome: outcome,
+        milliseconds: DiscoveryTelemetry.millisecondsSince(fetchStart)
+      )
+    }
     do {
-      let (data, response) = try await URLSession.shared.data(from: url)
-      guard let http = response as? HTTPURLResponse else { return .failed }
+      let (data, response) = try await DiscoveryURLSession.fastFail.data(for: request)
+      guard let http = response as? HTTPURLResponse else {
+        record("failed (non-HTTP response)")
+        return .failed
+      }
       // 404 = not-yet-rendered = Unavailable, not an error (contract §5, design §5.3).
-      if http.statusCode == 404 { return .unavailable }
-      guard (200 ..< 300).contains(http.statusCode) else { return .failed }
+      if http.statusCode == 404 {
+        record("unavailable (404 not-yet-rendered)")
+        return .unavailable
+      }
+      guard (200 ..< 300).contains(http.statusCode) else {
+        record("failed (status \(http.statusCode))")
+        return .failed
+      }
       let manifest = try JSONDecoder().decode(NeedleDropManifest.self, from: data)
+      record("ready (\(manifest.slices.count) slices)")
       // Contract §3.3 allows spriteUrl to be relative ("/sprite-audio?...").
       // A relative URL decodes fine but AVPlayer silently can't load it — no
       // request, no audio — so resolve it against the URL we fetched from.
       return .ready(manifest.resolvingSpriteURL(against: url))
     } catch {
+      record("failed (\(error.localizedDescription))")
       return .failed
     }
   }

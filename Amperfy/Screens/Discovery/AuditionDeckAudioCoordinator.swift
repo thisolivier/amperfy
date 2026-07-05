@@ -62,7 +62,23 @@ final class AuditionDeckAudioCoordinator {
   )
     -> NeedleDropSpritePlayer {
     if let existing = spritePlayers[candidateId] { return existing }
-    let newPlayer = NeedleDropSpritePlayer(spriteURL: manifest.spriteURL)
+    // X-Deal-Id on the sprite-audio request too, so server logs correlate the
+    // audio load with the deal that produced the card; player-item load
+    // failures land in DiscoveryTelemetry (build-60: self-diagnosing previews).
+    let dealIdHeader = DiscoveryTelemetry.shared.currentDealId
+      .map { [DiscoveryTelemetry.dealIdHeaderName: $0] }
+    let newPlayer = NeedleDropSpritePlayer(
+      spriteURL: manifest.spriteURL,
+      httpHeaderFields: dealIdHeader
+    )
+    let spriteURLString = manifest.spriteURL.absoluteString
+    newPlayer.onItemFailed = { reason in
+      DiscoveryTelemetry.shared.recordSpriteFetch(
+        urlString: spriteURLString,
+        outcome: "sprite player load failed: \(reason)",
+        milliseconds: 0
+      )
+    }
     spritePlayers[candidateId] = newPlayer
     return newPlayer
   }
