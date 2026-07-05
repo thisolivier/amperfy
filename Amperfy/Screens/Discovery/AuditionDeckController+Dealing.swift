@@ -19,19 +19,35 @@ extension AuditionDeckController {
   private static let onDeviceFallbackBlend = 1.0
 
   /// One deal round at the Deck v2 pool policy above. Also publishes `degradedPools` (kept for
-  /// internal state/error detection — the warning chip UI is gone).
+  /// internal state/error detection — the warning chip UI is gone), and records the whole
+  /// user-perceived deal — both engine passes when the fallback fires — as one
+  /// `DiscoveryTelemetry` deal record (build-60: production-device debuggability of slow deals).
   private func dealFromPools(
     seed: DeckSeed,
     kind: DeckCandidateKind,
-    count: Int
+    count: Int,
+    trigger: String
   ) async
     -> DeckDealResult {
+    let telemetry = DiscoveryTelemetry.shared
+    telemetry.beginDeal(
+      trigger: trigger,
+      seedDescription: Self.describe(seed: seed),
+      kindDescription: kind.rawValue
+    )
+    let dealStart = DispatchTime.now()
     let sidecarResult = await fusionEngine.deal(
       seed: seed, kind: kind, blend: Self.sidecarBlend, count: count,
       excludeIds: excludeIds, account: account
     )
     guard sidecarResult.degradedPools.contains(.adjacency) else {
       degradedPools = sidecarResult.degradedPools
+      telemetry.completeDeal(
+        servedByPool: sidecarResult.candidates.isEmpty ? "sidecar (empty)" : "sidecar",
+        fallbackTaken: false,
+        dealtCount: sidecarResult.candidates.count,
+        totalMs: DiscoveryTelemetry.millisecondsSince(dealStart)
+      )
       return sidecarResult
     }
     let fallbackResult = await fusionEngine.deal(
@@ -41,7 +57,21 @@ extension AuditionDeckController {
     // Surface the sidecar's degradation alongside the fallback's own report so
     // `isBothPoolsDown` still recognizes the everything-unreachable case.
     degradedPools = fallbackResult.degradedPools.union([.adjacency])
+    telemetry.completeDeal(
+      servedByPool: fallbackResult.candidates.isEmpty ? "none" : "on-device fallback",
+      fallbackTaken: true,
+      dealtCount: fallbackResult.candidates.count,
+      totalMs: DiscoveryTelemetry.millisecondsSince(dealStart)
+    )
     return fallbackResult
+  }
+
+  private static func describe(seed: DeckSeed) -> String {
+    switch seed {
+    case let .playlist(id): return "playlist(\(id))"
+    case let .album(id): return "album(\(id))"
+    case .recentHistory: return "recentHistory"
+    }
   }
 
   func deal(seed: DeckSeed, kind: DeckCandidateKind) async {
@@ -49,7 +79,7 @@ extension AuditionDeckController {
     currentKind = kind
     lifecycleState = .dealing
 
-    let result = await dealFromPools(seed: seed, kind: kind, count: deckLength)
+    let result = await dealFromPools(seed: seed, kind: kind, count: deckLength, trigger: "deal")
     applyDealtCandidates(result, appending: false)
 
     if candidates.isEmpty {
@@ -92,7 +122,7 @@ extension AuditionDeckController {
 
   private func performDealMore(seed: DeckSeed, kind: DeckCandidateKind) async {
     isExtending = true
-    let result = await dealFromPools(seed: seed, kind: kind, count: deckLength)
+    let result = await dealFromPools(seed: seed, kind: kind, count: deckLength, trigger: "dealMore")
     applyDealtCandidates(result, appending: true)
     isExtending = false
   }
@@ -159,7 +189,12 @@ extension AuditionDeckController {
     keptIds: Set<String>
   ) async {
     isRefreshing = true
-    let result = await dealFromPools(seed: seed, kind: kind, count: replaceCount)
+    let result = await dealFromPools(
+      seed: seed,
+      kind: kind,
+      count: replaceCount,
+      trigger: "refresh"
+    )
     excludeIds.formUnion(result.candidates.map(\.collectionId))
     for candidate in result.candidates where likeCoordinator.isLiked(candidate) {
       likedBeforeSessionIds.insert(candidate.collectionId)

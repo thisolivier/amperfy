@@ -34,6 +34,12 @@ public final class NeedleDropSpritePlayer: ObservableObject {
 
   private let player: AVPlayer
   private var timeControlStatusObservation: NSKeyValueObservation?
+  private var itemStatusObservation: NSKeyValueObservation?
+
+  /// Fired (with a human-readable reason) if the player item transitions to `.failed` — i.e. the
+  /// sprite audio file itself could not be loaded. Used by the deck's audio coordinator to record
+  /// the failure into `DiscoveryTelemetry` (build-60: self-diagnosing missing previews).
+  public var onItemFailed: ((String) -> ())?
 
   /// Bumped on every `seekAndPlay` call so a stale seek's completion handler (superseded by a
   /// later scrub) can recognize it is no longer current and avoid calling `play()` out of turn.
@@ -50,10 +56,21 @@ public final class NeedleDropSpritePlayer: ObservableObject {
   private let _pendingAudibleStartLock = NSLock()
 
   /// Loads `spriteURL` into a fresh `AVPlayer`. This is the normal path used by `NeedleDropBar`.
-  public init(spriteURL: URL) {
-    self.player = AVPlayer(url: spriteURL)
+  /// `httpHeaderFields` (e.g. the sidecar-correlation `X-Deal-Id` header) are attached to the
+  /// asset's HTTP requests via `AVURLAsset`'s header-fields option when provided.
+  public init(spriteURL: URL, httpHeaderFields: [String: String]? = nil) {
+    if let httpHeaderFields {
+      let asset = AVURLAsset(
+        url: spriteURL,
+        options: ["AVURLAssetHTTPHeaderFieldsKey": httpHeaderFields]
+      )
+      self.player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+    } else {
+      self.player = AVPlayer(url: spriteURL)
+    }
     player.automaticallyWaitsToMinimizeStalling = false
     observeTimeControlStatus()
+    observeItemStatus()
   }
 
   /// Wraps an already-constructed `AVPlayer`. Exists for testability (e.g. pointing at a bundled
@@ -62,10 +79,12 @@ public final class NeedleDropSpritePlayer: ObservableObject {
     self.player = player
     player.automaticallyWaitsToMinimizeStalling = false
     observeTimeControlStatus()
+    observeItemStatus()
   }
 
   deinit {
     timeControlStatusObservation?.invalidate()
+    itemStatusObservation?.invalidate()
   }
 
   /// Seeks the sprite to `slice`'s offset and begins playback, reporting the touch-to-audible
@@ -131,6 +150,17 @@ public final class NeedleDropSpritePlayer: ObservableObject {
     _seekGenerationLock.withLock { _seekGeneration += 1 }
     player.pause()
     _pendingAudibleStartLock.withLock { _pendingAudibleStart = nil }
+  }
+
+  private func observeItemStatus() {
+    itemStatusObservation = player.currentItem?
+      .observe(\.status, options: [.new]) { [weak self] observedItem, _ in
+        guard observedItem.status == .failed else { return }
+        let reason = observedItem.error?.localizedDescription ?? "unknown error"
+        Task { @MainActor [weak self] in
+          self?.onItemFailed?(reason)
+        }
+      }
   }
 
   private func observeTimeControlStatus() {
