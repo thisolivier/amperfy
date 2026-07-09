@@ -302,6 +302,25 @@ extension TabBarVC: MainSceneHostingViewController {
   }
 
   func getSafeAreaExtension() -> CGFloat {
-    0.0
+    // The now-playing mini player is a UITabAccessory (bottomAccessory) that
+    // floats above the compact tab bar on iPhone. UIKit does not extend a
+    // pushed VC's nav-controller toolbar to clear this floating pill, so a VC
+    // with a fixed bottom toolbar (RelatedTracksVC's bulk-queue actions) has
+    // its controls hidden behind the accessory + tab bar. Callers of
+    // extendSafeAreaToAccountForMiniPlayer() add this value to their
+    // additionalSafeAreaInsets.bottom, lifting the toolbar clear of both.
+    //
+    // Only reserve space when the accessory actually shows content (a track is
+    // loaded); when the player is empty the pill collapses and no inset is
+    // wanted. Uses the live accessory height constraint (48pt compact / 60pt
+    // regular-width) plus the floating gap the system leaves below it, so the
+    // toolbar clears the pill rather than merely butting against it.
+    guard appDelegate.player.currentlyPlaying != nil,
+          let heightConstraint else { return 0.0 }
+
+    // Gap the floating accessory leaves between its bottom and the tab bar's
+    // top edge; matches the system inset so the toolbar sits fully above it.
+    let floatingAccessoryGap: CGFloat = 8.0
+    return heightConstraint.constant + floatingAccessoryGap
   }
 }

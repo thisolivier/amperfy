@@ -23,6 +23,8 @@ import AmperfyKit
 import CoreData
 import UIKit
 
+// MARK: - RelatedTracksVC
+
 /// Shows top 20 related tracks for a given song, ranked by adjacency score.
 /// Pushed from the song context menu's "Related Tracks" action (a page with
 /// deep onward traversals, so never presented modally).
@@ -57,6 +59,10 @@ class RelatedTracksVC: UITableViewController {
     tableView.rowHeight = PlayableTableCell.rowHeight
     setupToolbar()
     showLoadingState()
+    // Observe playback so the toolbar's mini-player inset stays correct if the
+    // player appears/disappears while this screen is up (e.g. the user starts
+    // playback from here). Registered once — the player holds notifiers weakly.
+    appDelegate.player.addNotifier(notifier: self)
     Task { @MainActor in
       await loadRelatedTracks()
     }
@@ -73,6 +79,18 @@ class RelatedTracksVC: UITableViewController {
     if !relatedSongs.isEmpty {
       navigationController?.setToolbarHidden(false, animated: animated)
     }
+  }
+
+  override func viewIsAppearing(_ animated: Bool) {
+    super.viewIsAppearing(animated)
+    // Reserve space for the floating now-playing mini player so the bottom
+    // toolbar (the bulk-queue actions) is not obscured by it. On iPhone the
+    // mini player is a UITabAccessory floating above the compact tab bar, and
+    // UIKit does not push our nav-controller toolbar clear of it — see
+    // TabBarVC.getSafeAreaExtension(), which now returns the accessory height
+    // so this call actually insets on iPhone (it used to be a no-op there,
+    // build-63 QA finding). On iPad the same helper insets via SplitVC.
+    extendSafeAreaToAccountForMiniPlayer()
   }
 
   override func viewWillDisappear(_ animated: Bool) {
@@ -107,9 +125,14 @@ class RelatedTracksVC: UITableViewController {
       let song = Song(managedObject: songMO)
       songs.append(song)
 
-      let playlistCount = service.playlistCoOccurrenceCount(
+      // Reason line uses a LIVE playlist co-occurrence count (not the
+      // precomputed adjacency `co_membership`, which drifts from live state
+      // after a playlist edit). This keeps the reason consistent with the
+      // song's own "Show in Playlists" list — the two can never contradict.
+      let playlistCount = PlaylistMembershipQuery.sharedPlaylistCount(
         songIdA: seedSongId,
-        songIdB: result.songId
+        songIdB: result.songId,
+        in: context
       )
       if playlistCount > 0 {
         let playlistWord = playlistCount == 1 ? "playlist" : "playlists"
@@ -382,4 +405,23 @@ class RelatedTracksVC: UITableViewController {
     alert.popoverPresentationController?.barButtonItem = sender
     present(alert, animated: true)
   }
+}
+
+// MARK: MusicPlayable
+
+// Re-apply the mini-player safe-area inset when playback starts or stops so the
+// bottom toolbar stays clear of the now-playing accessory even if it appears or
+// disappears while this screen is on top. Only the start/stop transitions
+// change whether the accessory is shown; the rest are required protocol stubs.
+extension RelatedTracksVC: MusicPlayable {
+  func didStartPlaying() { extendSafeAreaToAccountForMiniPlayer() }
+  func didStartPlayingFromBeginning() { extendSafeAreaToAccountForMiniPlayer() }
+  func didStopPlaying() { extendSafeAreaToAccountForMiniPlayer() }
+  func didPause() {}
+  func didElapsedTimeChange() {}
+  func didPlaylistChange() {}
+  func didArtworkChange() {}
+  func didShuffleChange() {}
+  func didRepeatChange() {}
+  func didPlaybackRateChange() {}
 }

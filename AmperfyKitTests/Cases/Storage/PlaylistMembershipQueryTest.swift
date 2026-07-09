@@ -179,6 +179,97 @@ class PlaylistMembershipQueryTest: XCTestCase {
     return defaults
   }
 
+  // MARK: - sharedPlaylistCount (Related Tracks reason line)
+
+  /// Two songs co-occurring in two user playlists yields a shared count of 2.
+  func testSharedPlaylistCountCountsCoOccurrences() {
+    let songA = makeSong(id: "spc-song-a")
+    let songB = makeSong(id: "spc-song-b")
+    let playlistOne = makePlaylist(id: "spc-pl-1", name: "Road Trip")
+    let playlistTwo = makePlaylist(id: "spc-pl-2", name: "Sunday Chill")
+    playlistOne.append(playable: songA)
+    playlistOne.append(playable: songB)
+    playlistTwo.append(playable: songA)
+    playlistTwo.append(playable: songB)
+    library.saveContext()
+
+    let count = PlaylistMembershipQuery.sharedPlaylistCount(
+      songIdA: "spc-song-a",
+      songIdB: "spc-song-b",
+      in: testContext
+    )
+    XCTAssertEqual(count, 2, "Both songs share two playlists")
+  }
+
+  /// A playlist containing only one of the two songs does not count toward the shared total.
+  func testSharedPlaylistCountIgnoresPlaylistsMissingOneSong() {
+    let songA = makeSong(id: "spc2-song-a")
+    let songB = makeSong(id: "spc2-song-b")
+    let sharedPlaylist = makePlaylist(id: "spc2-pl-shared", name: "Both Here")
+    let soloPlaylist = makePlaylist(id: "spc2-pl-solo", name: "Only A")
+    sharedPlaylist.append(playable: songA)
+    sharedPlaylist.append(playable: songB)
+    soloPlaylist.append(playable: songA)
+    library.saveContext()
+
+    let count = PlaylistMembershipQuery.sharedPlaylistCount(
+      songIdA: "spc2-song-a",
+      songIdB: "spc2-song-b",
+      in: testContext
+    )
+    XCTAssertEqual(count, 1, "Only the playlist holding both songs counts")
+  }
+
+  /// The reason-line drift bug: once a song is removed from the only shared
+  /// playlist, the live shared count must be zero (no "in N playlists" claim).
+  func testSharedPlaylistCountReflectsLiveRemoval() {
+    let songA = makeSong(id: "spc3-song-a")
+    let songB = makeSong(id: "spc3-song-b")
+    let playlist = makePlaylist(id: "spc3-pl", name: "Ephemeral")
+    playlist.append(playable: songA)
+    playlist.append(playable: songB)
+    library.saveContext()
+
+    XCTAssertEqual(
+      PlaylistMembershipQuery.sharedPlaylistCount(
+        songIdA: "spc3-song-a", songIdB: "spc3-song-b", in: testContext
+      ),
+      1,
+      "Both songs share the playlist before removal"
+    )
+
+    playlist.remove(at: playlist.playables.firstIndex(where: { $0.id == "spc3-song-b" })!)
+    library.saveContext()
+
+    XCTAssertEqual(
+      PlaylistMembershipQuery.sharedPlaylistCount(
+        songIdA: "spc3-song-a", songIdB: "spc3-song-b", in: testContext
+      ),
+      0,
+      "After removing song B live, the shared count must drop to zero — no stale reason"
+    )
+  }
+
+  /// Smart playlists are excluded from the shared count (mirrors playlistsContaining).
+  func testSharedPlaylistCountExcludesSmartPlaylists() {
+    let songA = makeSong(id: "spc4-song-a")
+    let songB = makeSong(id: "spc4-song-b")
+    let smartPlaylist = makePlaylist(
+      id: "\(Playlist.smartPlaylistIdPrefix)auto",
+      name: "Auto Mix"
+    )
+    smartPlaylist.append(playable: songA)
+    smartPlaylist.append(playable: songB)
+    library.saveContext()
+
+    let count = PlaylistMembershipQuery.sharedPlaylistCount(
+      songIdA: "spc4-song-a",
+      songIdB: "spc4-song-b",
+      in: testContext
+    )
+    XCTAssertEqual(count, 0, "Smart playlists must not contribute to the shared count")
+  }
+
   /// Playlists with empty or nil names are excluded from results.
   func testEmptyNamePlaylistExcluded() {
     let song = makeSong(id: "pmq-song-named")
