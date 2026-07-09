@@ -41,6 +41,32 @@ public final class NeedleDropSpritePlayer: ObservableObject {
   /// the failure into `DiscoveryTelemetry` (build-60: self-diagnosing missing previews).
   public var onItemFailed: ((String) -> ())?
 
+  /// Activates the shared `AVAudioSession` for audible preview playback, called immediately before
+  /// every `player.play()` on the preview's own `AVPlayer`.
+  ///
+  /// This exists because the sprite preview runs on a bare `AVPlayer` that is completely
+  /// independent of the main `BackendAudioPlayer` — the main player is the only thing that ever
+  /// set the session to `.playback` and activated it (`BackendAudioPlayer.insert`). Until the user
+  /// had started real playback at least once in the session, the process audio session sat at its
+  /// default `.soloAmbient` category, which is silenced by the hardware mute switch and does not
+  /// mix as playback — so needle-drop advanced visually but produced NO audible output (the P1
+  /// "needle-drop previews: no audio" bug). Setting `.playback` + `setActive(true)` here makes the
+  /// preview audible regardless of the mute switch and regardless of whether the main player has
+  /// ever run this session.
+  ///
+  /// Injectable (a `static var`) so unit tests can replace it with a no-op — activating a real
+  /// `AVAudioSession` from the XCTest host is both unnecessary for the wiring under test and
+  /// undesirable side-effecting in the test runner. Production callers leave the default in place.
+  nonisolated(unsafe) public static var activateAudioSession: () -> () = {
+    do {
+      try AVAudioSession.sharedInstance().setCategory(.playback)
+      try AVAudioSession.sharedInstance().setActive(true)
+    } catch {
+      // Deliberately swallowed: a session-activation failure must not crash the deck. Playback
+      // will simply remain silent, which is no worse than the pre-fix behavior.
+    }
+  }
+
   /// Bumped on every `seekAndPlay` call so a stale seek's completion handler (superseded by a
   /// later scrub) can recognize it is no longer current and avoid calling `play()` out of turn.
   nonisolated(unsafe) private var _seekGeneration = 0
@@ -117,6 +143,7 @@ public final class NeedleDropSpritePlayer: ObservableObject {
           guard let self else { return }
           let isCurrent = _seekGenerationLock.withLock { self._seekGeneration == generation }
           guard isCurrent else { return }
+          Self.activateAudioSession()
           player.play()
         }
       }
@@ -135,6 +162,7 @@ public final class NeedleDropSpritePlayer: ObservableObject {
 
   /// Resumes playback in place, used by the PausedAudition -> Riding transition (§3.2).
   public func resume() {
+    Self.activateAudioSession()
     player.play()
   }
 
