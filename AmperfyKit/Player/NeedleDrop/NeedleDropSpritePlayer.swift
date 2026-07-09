@@ -36,6 +36,41 @@ public final class NeedleDropSpritePlayer: ObservableObject {
   private var timeControlStatusObservation: NSKeyValueObservation?
   private var itemStatusObservation: NSKeyValueObservation?
 
+  #if DEBUG
+    /// DEBUG/QA-only audio-output validation harness. Nil unless a QA/debug caller opts in via
+    /// `enableAudioTrace()`. When set, an `MTAudioProcessingTap` measures per-buffer RMS/peak and
+    /// play-time player/session state is written to a Documents trace file. Never referenced in
+    /// release builds (whole block is `#if DEBUG`), so it cannot affect production behavior.
+    private var audioTrace: NeedleDropAudioTrace?
+    /// Set once the tap has been installed on the current item, so we don't install it twice.
+    private var audioTraceMixInstalled = false
+
+    /// Opt in to audio-output validation for this player (DEBUG/QA only). Idempotent. The tap is
+    /// installed against the item's audio track as soon as the item reaches `.readyToPlay` (when
+    /// `tracks` is populated); state is logged at each `play()`.
+    public func enableAudioTrace(fileName: String = NeedleDropAudioTrace.defaultFileName) {
+      guard audioTrace == nil else { return }
+      audioTrace = NeedleDropAudioTrace(fileName: fileName)
+      audioTrace?.line("ENABLE audioTrace on NeedleDropSpritePlayer")
+      installAudioTapIfReady()
+    }
+
+    /// Installs the level tap once the current item exposes its audio track. Safe to call multiple
+    /// times; no-ops until an audio asset track is available and after it has installed once.
+    private func installAudioTapIfReady() {
+      guard let audioTrace, !audioTraceMixInstalled, let item = player.currentItem else { return }
+      // The item's `tracks` (AVPlayerItemTrack) populate around readyToPlay; for the asset track we
+      // need for the mix, load it from the asset. Use the already-loaded tracks when present.
+      let audioAssetTracks = item.tracks.compactMap { $0.assetTrack }
+        .filter { $0.mediaType == .audio }
+      guard let audioAssetTrack = audioAssetTracks.first else { return }
+      if let mix = audioTrace.makeAudioMix(for: audioAssetTrack) {
+        item.audioMix = mix
+        audioTraceMixInstalled = true
+      }
+    }
+  #endif
+
   /// Fired (with a human-readable reason) if the player item transitions to `.failed` — i.e. the
   /// sprite audio file itself could not be loaded. Used by the deck's audio coordinator to record
   /// the failure into `DiscoveryTelemetry` (build-60: self-diagnosing missing previews).
@@ -144,7 +179,14 @@ public final class NeedleDropSpritePlayer: ObservableObject {
           let isCurrent = _seekGenerationLock.withLock { self._seekGeneration == generation }
           guard isCurrent else { return }
           Self.activateAudioSession()
+          #if DEBUG
+            installAudioTapIfReady()
+            audioTrace?.logPlayState(player: player, phase: "before-play")
+          #endif
           player.play()
+          #if DEBUG
+            audioTrace?.logPlayState(player: player, phase: "after-play-call")
+          #endif
         }
       }
   }
@@ -183,6 +225,26 @@ public final class NeedleDropSpritePlayer: ObservableObject {
   private func observeItemStatus() {
     itemStatusObservation = player.currentItem?
       .observe(\.status, options: [.new]) { [weak self] observedItem, _ in
+        #if DEBUG
+          Task { @MainActor [weak self] in
+            guard let self else { return }
+            let statusName: String
+            switch observedItem.status {
+            case .unknown: statusName = "unknown"
+            case .readyToPlay: statusName = "readyToPlay"
+            case .failed: statusName = "failed"
+            @unknown default: statusName = "unknown(\(observedItem.status.rawValue))"
+            }
+            let errorText = observedItem.error.map { error -> String in
+              let nsError = error as NSError
+              return "\(nsError.domain)#\(nsError.code): \(nsError.localizedDescription)"
+            } ?? "none"
+            audioTrace?.line("ITEM_STATUS -> \(statusName) error=\(errorText)")
+            if observedItem.status == .readyToPlay {
+              installAudioTapIfReady()
+            }
+          }
+        #endif
         guard observedItem.status == .failed else { return }
         let reason = observedItem.error?.localizedDescription ?? "unknown error"
         Task { @MainActor [weak self] in
@@ -198,6 +260,10 @@ public final class NeedleDropSpritePlayer: ObservableObject {
         Task { @MainActor [weak self] in
           guard let self else { return }
           isPlaying = true
+          #if DEBUG
+            audioTrace?.logPlayState(player: player, phase: "reached-playing")
+            audioTrace?.logTapSummary()
+          #endif
           let pending = _pendingAudibleStartLock.withLock { () -> PendingAudibleStart? in
             let value = self._pendingAudibleStart
             self._pendingAudibleStart = nil

@@ -79,6 +79,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
   public var log: OSLog { appDelegate.log }
 
+  #if DEBUG
+    /// Ensures the `-NeedleDropDebugAutostart` trigger fires at most once per launch even though
+    /// `sceneDidBecomeActive` can be called repeatedly (foreground cycles). DEBUG-only.
+    static var didRunNeedleDropDebugAutostart = false
+  #endif
+
   var window: UIWindow?
 
   func scene(
@@ -159,6 +165,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     // Called when the scene has moved from an inactive state to an active state.
     // Use this method to restart any tasks that were paused (or not yet started) when the scene was inactive.
     os_log("sceneDidBecomeActive", log: self.log, type: .info)
+    #if DEBUG
+      // DEBUG/QA: if launched with `-NeedleDropDebugAutostart <sprite-url>`, drive a real needle-drop
+      // preview once so the audio-output validation harness can measure it (the deck is not reachable
+      // via sim UI automation). No-ops when the argument is absent.
+      if !SceneDelegate.didRunNeedleDropDebugAutostart {
+        SceneDelegate.didRunNeedleDropDebugAutostart = true
+        NeedleDropDebugAutostart.runIfRequested()
+      }
+    #endif
     guard appDelegate.isNormalInteraction else {
       return
     }
