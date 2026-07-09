@@ -37,6 +37,18 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 68,
+      date: "2026-07-09",
+      title: "Build 68 — Reliability hardening",
+      whatsNew: [
+        "Reliability: fixed a rare cause of the 'search could not be parsed' message on your first search, and made the mini player more robust against briefly showing the wrong track.",
+      ],
+      testingFocus: [
+        "Do your very first search right after launch a few times — no 'search could not be parsed' message should appear",
+        "Start a track so the mini player shows it, then background and reopen the app — the mini player should still show the correct track, and tapping it opens the full player with that track",
+      ]
+    ),
+    ReleaseNote(
       id: 67,
       date: "2026-07-09",
       title: "Build 67 — Consistent player + quieter first search",
@@ -85,23 +97,6 @@ enum ReleaseNotes {
       testingFocus: [
         "Open a recommendation deck and touch a needle-drop bar — you should now hear the track preview, not silence",
         "After a preview, your own music should resume as before",
-      ]
-    ),
-    ReleaseNote(
-      id: 63,
-      date: "2026-07-05",
-      title: "Build 63 — An honest Recently Added list",
-      whatsNew: [
-        "Recently Added is now accurate: the after-import triplicates can no longer occur (fixed at the source, not papered over), and tracks deleted on the server disappear from the list promptly — including old ghosts already on your device, healed on first launch",
-        "Deleted-but-cached tracks: still playable from cache until you clear it (that behavior is deliberate and kept), then they vanish cleanly instead of erroring",
-        "Opening a recommendation deck no longer pauses your music — playback only pauses when you actually start a preview, and resumes after",
-        "Settings now shows gateway status under the key fields: last request result and when",
-      ],
-      testingFocus: [
-        "Import something via SoulseekNavi, watch Recently Added during the scan — no duplicates at any point",
-        "Recently Added should now match what NaviAdmin/Navidrome say is real",
-        "Play music, open a recommendation deck — music keeps playing; touch a needle-drop bar — it pauses; leave — it resumes",
-        "Settings → gateway fields → status line should show your last gateway request",
       ]
     ),
   ]
