@@ -600,6 +600,7 @@
 		A5B0950000000000000050A0 /* RecentTracksPlaybackResolverTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0960000000000000050A0 /* RecentTracksPlaybackResolverTest.swift */; };
 		A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */; };
 		A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */; };
+		A5B0A30000000000000050A1 /* PlaylistItemsSyncTrackerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A40000000000000050A1 /* PlaylistItemsSyncTrackerTest.swift */; };
 		A5B0A50000000000000050A0 /* PlaylistMembershipVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */; };
 		A5B0B10000000000000050A0 /* PinnedPlaylistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0B20000000000000050A0 /* PinnedPlaylistStore.swift */; };
 		A5B0B30000000000000050A0 /* PinnedPlaylistStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */; };
@@ -1356,6 +1357,7 @@
 		A5B0960000000000000050A0 /* RecentTracksPlaybackResolverTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksPlaybackResolverTest.swift; sourceTree = "<group>"; };
 		A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQuery.swift; sourceTree = "<group>"; };
 		A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQueryTest.swift; sourceTree = "<group>"; };
+		A5B0A40000000000000050A1 /* PlaylistItemsSyncTrackerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistItemsSyncTrackerTest.swift; sourceTree = "<group>"; };
 		A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipVC.swift; sourceTree = "<group>"; };
 		A5B0B20000000000000050A0 /* PinnedPlaylistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedPlaylistStore.swift; sourceTree = "<group>"; };
 		A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedPlaylistStoreTest.swift; sourceTree = "<group>"; };
@@ -1917,6 +1919,7 @@
 				5095F98F23CA94BC008B0805 /* ManagedObjects */,
 				A5B0630000000000000050A0 /* ResultController */,
 				A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */,
+				A5B0A40000000000000050A1 /* PlaylistItemsSyncTrackerTest.swift */,
 				9779F04373BB7D951F3B3163 /* TrackAdjacencyStoreTest.swift */,
 				A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */,
 				A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */,
@@ -3484,6 +3487,7 @@
 				A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */,
 				A5B0950000000000000050A0 /* RecentTracksPlaybackResolverTest.swift in Sources */,
 				A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */,
+				A5B0A30000000000000050A1 /* PlaylistItemsSyncTrackerTest.swift in Sources */,
 				6B54DADE2AD80F4769973080 /* TrackAdjacencyStoreTest.swift in Sources */,
 				A5B0B30000000000000050A0 /* PinnedPlaylistStoreTest.swift in Sources */,
 				A5B0E30000000000000050A0 /* PlaylistFolderStoreTest.swift in Sources */,

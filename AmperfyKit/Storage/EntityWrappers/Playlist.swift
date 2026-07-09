@@ -115,6 +115,15 @@ public class Playlist: Identifyable {
     return moSongCount != 0 ? moSongCount : remoteSongCount
   }
 
+  /// Number of `PlaylistItemMO` rows actually stored locally for this playlist.
+  /// Unlike `songCount`, this never falls back to `remoteSongCount`, so it
+  /// reflects only what the per-playlist item sync has populated. Used by
+  /// `PlaylistItemsSyncTracker` to detect server-side edits that happened after
+  /// the last item sync (count mismatch → stale items → needs re-sync).
+  public var localItemCount: Int {
+    managedObject.items.count
+  }
+
   public var remoteSongCount: Int {
     get { Int(managedObject.remoteSongCount) }
     set {
