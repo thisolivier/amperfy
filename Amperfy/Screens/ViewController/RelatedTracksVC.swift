@@ -117,9 +117,14 @@ class RelatedTracksVC: UITableViewController {
       let song = Song(managedObject: songMO)
       songs.append(song)
 
-      let playlistCount = service.playlistCoOccurrenceCount(
+      // Reason line uses a LIVE playlist co-occurrence count (not the
+      // precomputed adjacency `co_membership`, which drifts from live state
+      // after a playlist edit). This keeps the reason consistent with the
+      // song's own "Show in Playlists" list — the two can never contradict.
+      let playlistCount = PlaylistMembershipQuery.sharedPlaylistCount(
         songIdA: seedSongId,
-        songIdB: result.songId
+        songIdB: result.songId,
+        in: context
       )
       if playlistCount > 0 {
         let playlistWord = playlistCount == 1 ? "playlist" : "playlists"

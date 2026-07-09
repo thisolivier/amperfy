@@ -90,4 +90,28 @@ public enum PlaylistMembershipQuery {
       return []
     }
   }
+
+  /// Returns the number of non-smart, named user playlists that contain *both*
+  /// `songIdA` and `songIdB` — the live count of playlists in which the two
+  /// songs currently co-occur.
+  ///
+  /// This is the authoritative, on-demand answer used by the Related Tracks
+  /// screen's reason line ("In N playlists nearby"). It queries live Core Data
+  /// (the same predicate family as `playlistsContaining`) rather than reading
+  /// the precomputed adjacency store, so the reason can never contradict the
+  /// song's own "Show in Playlists" list: a song shown as co-occurring in N
+  /// playlists genuinely appears — right now — in N shared playlists. The
+  /// precomputed `co_membership` score can drift from live state after a
+  /// playlist edit and must not be trusted for user-facing membership claims.
+  public static func sharedPlaylistCount(
+    songIdA: String,
+    songIdB: String,
+    in context: NSManagedObjectContext
+  )
+    -> Int {
+    let playlistsWithA = Set(playlistsContaining(songId: songIdA, in: context).map { $0.id })
+    guard !playlistsWithA.isEmpty else { return 0 }
+    let playlistsWithB = Set(playlistsContaining(songId: songIdB, in: context).map { $0.id })
+    return playlistsWithA.intersection(playlistsWithB).count
+  }
 }
