@@ -89,16 +89,19 @@ class PlaylistMembershipVC: UITableViewController {
       loadingConfig.text = "Syncing playlists\u{2026}"
       contentUnavailableConfiguration = loadingConfig
     } else if playlists.isEmpty, !syncWasComplete {
-      // Incomplete sync + no results: the answer is unknown, not "none".
+      // Incomplete local sync + no results yet: the answer is still-unknown, not
+      // a definitive "none". Present it as an in-progress state (not an error) —
+      // the background item-sync is still working toward completeness — with a
+      // refresh affordance to re-read once it advances.
       var incompleteConfig = UIContentUnavailableConfiguration.empty()
-      incompleteConfig.image = UIImage(systemName: "exclamationmark.arrow.circlepath")
-      incompleteConfig.text = "Couldn't finish syncing playlists"
+      incompleteConfig.image = UIImage(systemName: "arrow.triangle.2.circlepath")
+      incompleteConfig.text = "Still syncing playlists\u{2026}"
       incompleteConfig.secondaryText =
-        "Some playlists didn't sync, so this list may be incomplete."
+        "Your playlists are still syncing in the background, so this list may be incomplete."
       if onRetry != nil {
-        var retryButton = UIButton.Configuration.borderedProminent()
-        retryButton.title = "Retry"
-        incompleteConfig.button = retryButton
+        var refreshButton = UIButton.Configuration.borderedProminent()
+        refreshButton.title = "Refresh"
+        incompleteConfig.button = refreshButton
         incompleteConfig.buttonProperties.primaryAction = UIAction { [weak self] _ in
           self?.beginRetry()
         }
