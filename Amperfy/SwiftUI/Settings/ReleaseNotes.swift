@@ -37,6 +37,19 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 67,
+      date: "2026-07-09",
+      title: "Build 67 — Consistent player + quieter first search",
+      whatsNew: [
+        "Fixed: the full player could show 'No music playing' after tapping the mini player during a library sync.",
+        "Fixed: a harmless 'search could not be parsed' message that could flash on your first search.",
+      ],
+      testingFocus: [
+        "Start a track so the mini player shows it, then tap the mini player during a sync — the full player should show the SAME track, never 'No music playing'",
+        "Do your very first search right after launch — no 'XML response could not be parsed' banner should appear",
+      ]
+    ),
+    ReleaseNote(
       id: 66,
       date: "2026-07-09",
       title: "Build 66 — Reachable Related Tracks controls + faster Show in Playlists",
@@ -89,21 +102,6 @@ enum ReleaseNotes {
         "Recently Added should now match what NaviAdmin/Navidrome say is real",
         "Play music, open a recommendation deck — music keeps playing; touch a needle-drop bar — it pauses; leave — it resumes",
         "Settings → gateway fields → status line should show your last gateway request",
-      ]
-    ),
-    ReleaseNote(
-      id: 62,
-      date: "2026-07-05",
-      title: "Build 62 — Discovery works away from home",
-      whatsNew: [
-        "New in Settings: Gateway URL and Gateway Key — set both and Discovery's recommendations and previews work anywhere, not just on your home network",
-        "With a gateway configured, the app uses it everywhere (home included) — one path, no mode switching",
-        "Discovery Diagnostics now shows whether each request went via the gateway or direct, and the connection test tells you a rejected key apart from an unreachable server",
-      ],
-      testingFocus: [
-        "Settings → set Gateway URL (your soul.beat.online address, port 5040) and the key — then deal a deck OFF your home network: cards and previews should work",
-        "Diagnostics → Test Connection should show gateway mode, 200, and a latency",
-        "Clear the gateway fields → behavior reverts to home-network-only, as before",
       ]
     ),
   ]
