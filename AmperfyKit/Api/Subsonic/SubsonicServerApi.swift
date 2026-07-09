@@ -105,6 +105,13 @@ final class SubsonicServerApi: URLCleanser, Sendable {
 
   internal let serverApiVersion = Atomic<SubsonicVersion?>(wrappedValue: nil)
   internal let clientApiVersion = Atomic<SubsonicVersion?>(wrappedValue: nil)
+  /// Coalesces concurrent server-API-version negotiations. The first caller
+  /// stores its in-flight Task here so that concurrent callers await the same
+  /// network request instead of each firing their own `ping` (see
+  /// `getCachedServerApiVersionOrRequestIt`).
+  private let inFlightServerApiVersionRequest = Atomic<Task<SubsonicVersion, Error>?>(
+    wrappedValue: nil
+  )
   internal let authType = Atomic<SubsonicApiAuthType>(wrappedValue: .autoDetect)
   internal var account: AccountInfo? {
     guard let credentials = credentials.wrappedValue else { return nil }
@@ -115,18 +122,48 @@ final class SubsonicServerApi: URLCleanser, Sendable {
   private let performanceMonitor: ThreadPerformanceMonitor
   private let eventLogger: EventLogger
   private let settings: AmperfySettings
+  /// Alamofire session used for all requests. Defaults to the shared `AF`
+  /// session in production; injectable so tests can supply a session backed by a
+  /// stub `URLProtocol` (a globally-registered `URLProtocol` is NOT consulted by
+  /// Alamofire's default session, so injection is the only reliable test seam).
+  // Alamofire's `Session` is internally thread-safe (it serialises work onto its
+  // own queues) but is not marked `Sendable`; `nonisolated(unsafe)` lets this
+  // `Sendable` type hold it without changing its immutable, shared-safe usage.
+  private nonisolated(unsafe) let networkSession: Session
   private let credentials = Atomic<LoginCredentials?>(wrappedValue: nil)
   private let openSubsonicExtensionsSupport =
     Atomic<OpenSubsonicExtensionsSupport?>(wrappedValue: nil)
   init(
     performanceMonitor: ThreadPerformanceMonitor,
     eventLogger: EventLogger,
-    settings: AmperfySettings
+    settings: AmperfySettings,
+    networkSession: Session = AF
   ) {
     self.performanceMonitor = performanceMonitor
     self.eventLogger = eventLogger
     self.settings = settings
+    self.networkSession = networkSession
   }
+
+  #if DEBUG
+    /// Test-only initializer that builds the Alamofire session from a plain
+    /// `URLSessionConfiguration`. This keeps Alamofire's `Session` type out of the
+    /// test target (which does not link Alamofire) while still letting tests route
+    /// requests through a stub `URLProtocol` installed on the configuration.
+    internal convenience init(
+      performanceMonitor: ThreadPerformanceMonitor,
+      eventLogger: EventLogger,
+      settings: AmperfySettings,
+      urlSessionConfiguration: URLSessionConfiguration
+    ) {
+      self.init(
+        performanceMonitor: performanceMonitor,
+        eventLogger: eventLogger,
+        settings: settings,
+        networkSession: Session(configuration: urlSessionConfiguration)
+      )
+    }
+  #endif
 
   func setAuthType(newAuthType: SubsonicApiAuthType) {
     authType.wrappedValue = newAuthType
@@ -162,10 +199,39 @@ final class SubsonicServerApi: URLCleanser, Sendable {
     -> SubsonicVersion {
     if let serverVersion = serverApiVersion.wrappedValue {
       return serverVersion
-    } else {
-      return try await requestServerApiVersionPromise(providedCredentials: providedCredentials)
     }
+
+    // Coalesce concurrent negotiations: the first caller to observe no in-flight
+    // request creates one and stores it; concurrent callers reuse the same Task
+    // so only a single `ping` hits the network (previously each of the first
+    // callers raced its own request, and one could receive an empty body).
+    let requestTask = inFlightServerApiVersionRequest.withLock { existingTask -> Task<
+      SubsonicVersion,
+      Error
+    > in
+      if let existingTask {
+        return existingTask
+      }
+      let newTask = Task { [weak self] () throws -> SubsonicVersion in
+        guard let self else { throw BackendError.invalidUrl }
+        defer { self.inFlightServerApiVersionRequest.wrappedValue = nil }
+        return try await self
+          .requestServerApiVersionPromise(providedCredentials: providedCredentials)
+      }
+      existingTask = newTask
+      return newTask
+    }
+    return try await requestTask.value
   }
+
+  #if DEBUG
+    /// Test-only seam that drives the coalescing path in
+    /// `getCachedServerApiVersionOrRequestIt` directly, so tests can prove that
+    /// concurrent callers share a single in-flight version-negotiation request.
+    internal func _test_getCachedServerApiVersionOrRequestIt() async throws -> SubsonicVersion {
+      try await getCachedServerApiVersionOrRequestIt()
+    }
+  #endif
 
   private func determineApiVersionToUse(providedCredentials: LoginCredentials? = nil) async throws
     -> SubsonicVersion {
@@ -958,7 +1024,7 @@ final class SubsonicServerApi: URLCleanser, Sendable {
 
   private func request(url: URL) async throws -> APIDataResponse {
     try await withUnsafeThrowingContinuation { continuation in
-      let afRequest = AF.request(url, method: .get)
+      let afRequest = networkSession.request(url, method: .get)
       afRequest.validate().responseData { response in
         if response.response?.statusCode == 404 {
           let cleanedURL = self.cleanse(url: response.request?.url)

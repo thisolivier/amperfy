@@ -246,6 +246,7 @@
 		50BE5D6D2850F4FB00156FC6 /* SsDirectoriesExample1ParserTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50AB92D32666C1A000DCE45C /* SsDirectoriesExample1ParserTest.swift */; };
 		50BE5D6E2850F4FB00156FC6 /* SsPlaylistsParserTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50AB92C92666BAC300DCE45C /* SsPlaylistsParserTest.swift */; };
 		50BE5D6F2850F4FB00156FC6 /* SsPingParserTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50DB11B0266537C30033BFFA /* SsPingParserTest.swift */; };
+		C93A39C62E29A029B541BC12 /* SubsonicServerApiVersionCoalescingTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6706C7B2B845F50600BF6E14 /* SubsonicServerApiVersionCoalescingTest.swift */; };
 		50BE5D702850F4FB00156FC6 /* SsIndexesParserTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50AB92DD2666C54500DCE45C /* SsIndexesParserTest.swift */; };
 		50BE5D712850F4FB00156FC6 /* SsMusicFolderParserTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50AB92D72666C2D900DCE45C /* SsMusicFolderParserTest.swift */; };
 		50BE5D722850F4FB00156FC6 /* SsSongExample1ParserTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50AB92C12666127100DCE45C /* SsSongExample1ParserTest.swift */; };
@@ -1221,6 +1222,7 @@
 		50DB11AB266536540033BFFA /* ping_example_1.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = ping_example_1.xml; sourceTree = "<group>"; };
 		50DB11AE266537910033BFFA /* error_example_1.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = error_example_1.xml; sourceTree = "<group>"; };
 		50DB11B0266537C30033BFFA /* SsPingParserTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SsPingParserTest.swift; sourceTree = "<group>"; };
+		6706C7B2B845F50600BF6E14 /* SubsonicServerApiVersionCoalescingTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubsonicServerApiVersionCoalescingTest.swift; sourceTree = "<group>"; };
 		50DB11B226653A670033BFFA /* genres_example_1.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = genres_example_1.xml; sourceTree = "<group>"; };
 		50DB11B626653B3A0033BFFA /* SsGenreParserTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SsGenreParserTest.swift; sourceTree = "<group>"; };
 		50DE29EA2B8FCEB700ABA78E /* LibraryNavigatorConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryNavigatorConfigurator.swift; sourceTree = "<group>"; };
@@ -2352,6 +2354,7 @@
 				50DB11AA266536300033BFFA /* Samples */,
 				50AB92DF2667564800DCE45C /* AbstractSsTest.swift */,
 				50DB11B0266537C30033BFFA /* SsPingParserTest.swift */,
+				6706C7B2B845F50600BF6E14 /* SubsonicServerApiVersionCoalescingTest.swift */,
 				50DB11A9266536290033BFFA /* SsXmlParserTest.swift */,
 				50DB11B626653B3A0033BFFA /* SsGenreParserTest.swift */,
 				50AB92BD26660FE000DCE45C /* SsArtistParserTest.swift */,
@@ -3476,6 +3479,7 @@
 				A5C0D70000000000000050F2 /* NeedleDropLatencyTest.swift in Sources */,
 				50BE5D6D2850F4FB00156FC6 /* SsDirectoriesExample1ParserTest.swift in Sources */,
 				50BE5D6F2850F4FB00156FC6 /* SsPingParserTest.swift in Sources */,
+				C93A39C62E29A029B541BC12 /* SubsonicServerApiVersionCoalescingTest.swift in Sources */,
 				50BE5D6C2850F4FB00156FC6 /* SsAlbumParserPreCreatedArtistsTest.swift in Sources */,
 				50BE5D782850F4FB00156FC6 /* SsAlbumMissingArtistsIdParserTest.swift in Sources */,
 				50BE5D8B2850F50F00156FC6 /* CatalogParserTest.swift in Sources */,

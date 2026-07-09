@@ -53,6 +53,13 @@ public final class Atomic<Value>: Sendable {
   public init(wrappedValue value: Value) {
     self.value = value
   }
+
+  /// Performs a read-modify-write on the wrapped value atomically, holding the
+  /// lock for the whole closure. Use this when a check-then-act on the value must
+  /// not race with concurrent callers (e.g. in-flight request coalescing).
+  public func withLock<Result>(_ body: (inout Value) throws -> Result) rethrows -> Result {
+    try lock.withLock { try body(&value) }
+  }
 }
 
 extension Bool {

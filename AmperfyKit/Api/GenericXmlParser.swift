@@ -54,8 +54,8 @@ class GenericXmlParser: NSObject, XMLParserDelegate {
     buffer.append(string)
   }
 
-  func parseErrorOcurred(parser: XMLParser, error: NSError) {
-    os_log("Error: %s", log: log, type: .error, error.localizedDescription)
+  func parser(_ parser: XMLParser, parseErrorOccurred parseError: Error) {
+    os_log("Error: %s", log: log, type: .error, parseError.localizedDescription)
   }
 
   func parser(
