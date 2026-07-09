@@ -37,6 +37,19 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 65,
+      date: "2026-07-09",
+      title: "Build 65 — Related Tracks controls and honest playlist membership",
+      whatsNew: [
+        "Related Tracks: the bulk-queue controls are no longer hidden behind the tab bar and mini player — the toolbar now sits clear of the safe area on iPhone, so you can reach every action",
+        "Playlist membership ('Show in Playlists') is now accurate — it no longer misses playlists a song is really in",
+      ],
+      testingFocus: [
+        "Open a Related Tracks deck on iPhone with the mini player showing — the bulk-queue controls should be fully visible and tappable, not clipped by the tab bar",
+        "Open 'Show in Playlists' for a song you know is in several playlists — every one should be listed, none missing",
+      ]
+    ),
+    ReleaseNote(
       id: 64,
       date: "2026-07-08",
       title: "Build 64 — Needle-drop previews you can hear",
@@ -93,24 +106,6 @@ enum ReleaseNotes {
         "Related Tracks: large title should shrink into the bar on scroll; rows should align like a playlist; seed badge = accent border, no fill",
         "Deal a deck on your long 'rock' playlist — it should resolve or fall back within seconds, not minutes",
         "Settings → Discovery Diagnostics → deal a deck, then Export Logs and send me the file — it lines up 1:1 with the server logs via the deal id",
-      ]
-    ),
-    ReleaseNote(
-      id: 60,
-      date: "2026-07-04",
-      title: "Build 60 — Discovery deck v2",
-      whatsNew: [
-        "The recommendation deck is now a normal page: it slides in, and tapping a card opens that collection — going back returns to your deck exactly as you left it, no re-deal",
-        "Cleaner cards: no more Play/menu buttons or blend slider — just the card, the needle-drop bar, and a like button in the corner",
-        "The page uses your theme (gradient background, accent title: 'Recommended Playlists from …') instead of the forced-dark look",
-        "Previews no longer auto-play — the needle-drop bar plays only when you touch it",
-        "Recommendations now come from the server-side engine by default (quality-verified against the on-device one), with automatic fallback when you're away from the server",
-      ],
-      testingFocus: [
-        "Find similar playlists → tap a card → back: you should land on the same deck, same position, instantly",
-        "Check the deck matches your theme (gradient + accent title) in both light and dark",
-        "Cards should be silent until you drag the needle-drop bar (home network: previews are pre-rendered now, bars should show segments)",
-        "Like from the card corner; open a card; play from inside the collection — back should still return to the deck",
       ]
     ),
   ]
