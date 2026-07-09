@@ -75,6 +75,16 @@ class RelatedTracksVC: UITableViewController {
     }
   }
 
+  override func viewIsAppearing(_ animated: Bool) {
+    super.viewIsAppearing(animated)
+    // Reserve space for the floating now-playing mini player so the bottom
+    // toolbar (the bulk-queue actions) is not obscured by it — the same
+    // pattern every other list/detail VC uses (e.g. PlaylistDetailVC). Without
+    // this, the toolbar sat under the mini player + tab bar and its controls
+    // were unreachable (build-63 QA finding).
+    extendSafeAreaToAccountForMiniPlayer()
+  }
+
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
     // Pushed onto a shared stack: never leave our toolbar behind for the
