@@ -1394,11 +1394,32 @@ class SubsonicLibrarySyncer: CommonLibrarySyncer, LibrarySyncer {
     try parse(response: response, delegate: parserDelegate)
   }
 
+  /// Returns `true` when the response body carries no parseable XML payload (empty or
+  /// whitespace-only). Under a burst of concurrent first-time requests (e.g. all three
+  /// search3 calls firing while the server API version is still being negotiated) a request
+  /// can occasionally be handed back an empty body. A valid Subsonic response is never empty,
+  /// so an empty body is treated as an empty result rather than raising a bogus
+  /// "XML response could not be parsed." banner. Genuinely malformed / truncated (non-empty)
+  /// XML is left to `XMLParser` to reject as before.
+  nonisolated static func isEffectivelyEmptyResponse(_ data: Data) -> Bool {
+    guard !data.isEmpty else { return true }
+    let asString = String(decoding: data, as: UTF8.self)
+    return asString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
   nonisolated private func parse(
     response: APIDataResponse,
     delegate: SsXmlParser,
     isThrowingErrorsAllowed: Bool = true
   ) throws {
+    if Self.isEffectivelyEmptyResponse(response.data) {
+      os_log(
+        "Empty response body received; treating as empty result",
+        log: self.log,
+        type: .info
+      )
+      return
+    }
     let parser = XMLParser(data: response.data)
     parser.delegate = delegate
     parser.parse()
