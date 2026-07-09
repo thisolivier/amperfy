@@ -38,6 +38,28 @@ class RelatedTracksVC: UITableViewController {
   /// screens beneath/above on the shared stack are unaffected (user-specced build-60 feedback).
   private var priorPrefersLargeTitles: Bool?
 
+  /// Bulk-queue controls live in a CUSTOM bottom bar that we own and pin to the
+  /// navigation controller's (non-scrolling) view — NOT the nav-controller
+  /// UIToolbar, and NOT this VC's own `view` (which, for a UITableViewController,
+  /// IS the scrolling table view — pinning there makes the bar scroll and
+  /// mis-lay-out). Build-65 tried to raise the nav toolbar clear of the iOS 26
+  /// floating mini player (a UITabAccessory) via additionalSafeAreaInsets.bottom,
+  /// but that inset only moves the VC's content; the nav-controller toolbar is
+  /// anchored to the nav controller's own view and stayed pinned under the
+  /// accessory + tab bar (build-65 device QA). A bar we host in the nav view can
+  /// be pinned above the accessory ourselves via bottomBarBottomConstraint,
+  /// driven by TabBarVC.getSafeAreaExtension(). Added on appear / removed on
+  /// disappear so it never lingers over the screens beneath us on the shared
+  /// stack.
+  private var bottomBar: UIToolbar?
+  /// Distance from the host view's safe-area bottom to the bar's bottom edge.
+  /// Set to the mini-player accessory height (+ gap) so the bar floats clear of
+  /// it, or 0 when nothing is playing and the accessory is collapsed.
+  private var bottomBarBottomConstraint: NSLayoutConstraint?
+  /// Intrinsic bar height (matches a standard UIToolbar); used to inset the
+  /// table content so the last rows are not hidden behind the bar.
+  private let bottomBarHeight: CGFloat = 49.0
+
   init(seedSongId: String, seedSongTitle: String, originRootView: UIViewController) {
     self.seedSongId = seedSongId
     self.seedSongTitle = seedSongTitle
@@ -57,10 +79,10 @@ class RelatedTracksVC: UITableViewController {
     navigationItem.largeTitleDisplayMode = .always
     tableView.register(nibName: PlayableTableCell.typeName)
     tableView.rowHeight = PlayableTableCell.rowHeight
-    setupToolbar()
+    makeBottomBar()
     showLoadingState()
-    // Observe playback so the toolbar's mini-player inset stays correct if the
-    // player appears/disappears while this screen is up (e.g. the user starts
+    // Observe playback so the bottom bar's mini-player clearance stays correct if
+    // the player appears/disappears while this screen is up (e.g. the user starts
     // playback from here). Registered once — the player holds notifiers weakly.
     appDelegate.player.addNotifier(notifier: self)
     Task { @MainActor in
@@ -76,31 +98,37 @@ class RelatedTracksVC: UITableViewController {
       priorPrefersLargeTitles = navigationBar.prefersLargeTitles
       navigationBar.prefersLargeTitles = true
     }
-    if !relatedSongs.isEmpty {
-      navigationController?.setToolbarHidden(false, animated: animated)
-    }
+    attachBottomBarToHostView()
+    updateBottomBarClearance()
   }
 
   override func viewIsAppearing(_ animated: Bool) {
     super.viewIsAppearing(animated)
-    // Reserve space for the floating now-playing mini player so the bottom
-    // toolbar (the bulk-queue actions) is not obscured by it. On iPhone the
-    // mini player is a UITabAccessory floating above the compact tab bar, and
-    // UIKit does not push our nav-controller toolbar clear of it — see
-    // TabBarVC.getSafeAreaExtension(), which now returns the accessory height
-    // so this call actually insets on iPhone (it used to be a no-op there,
-    // build-63 QA finding). On iPad the same helper insets via SplitVC.
-    extendSafeAreaToAccountForMiniPlayer()
+    // Keep the custom bottom bar clear of the floating now-playing mini player.
+    // On iPhone the mini player is a UITabAccessory floating above the compact
+    // tab bar; we pin our own bar above it using TabBarVC.getSafeAreaExtension()
+    // (the accessory height + gap). On iPad the same helper reports the inset
+    // via SplitVC. Unlike additionalSafeAreaInsets (which only shifts the VC's
+    // content, not the nav-controller toolbar — the build-65 failure), moving a
+    // constraint on a bar we host in the nav view actually repositions the
+    // controls above the mini player.
+    attachBottomBarToHostView()
+    updateBottomBarClearance()
   }
 
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
-    // Pushed onto a shared stack: never leave our toolbar behind for the
-    // screens beneath (or above) us.
-    navigationController?.setToolbarHidden(true, animated: animated)
+    // Pushed onto a shared stack: never leave our bar behind for the screens
+    // beneath (or above) us.
+    bottomBar?.removeFromSuperview()
     if let priorPrefersLargeTitles {
       navigationController?.navigationBar.prefersLargeTitles = priorPrefersLargeTitles
     }
+  }
+
+  override func viewDidLayoutSubviews() {
+    super.viewDidLayoutSubviews()
+    updateBottomBarClearance()
   }
 
   private func showLoadingState() {
@@ -149,7 +177,7 @@ class RelatedTracksVC: UITableViewController {
     }
     tableView.reloadData()
     updateContentState()
-    updateToolbarState()
+    updateBottomBarState()
   }
 
   /// Seed-badge header (restyled per build-60 user feedback): the "Related
@@ -289,9 +317,17 @@ class RelatedTracksVC: UITableViewController {
     appDelegate.player.play(context: playContext)
   }
 
-  // MARK: - Toolbar actions
+  // MARK: - Bottom bar (bulk-queue actions)
 
-  private func setupToolbar() {
+  /// Builds the custom bottom bar (a UIToolbar we own) and its bulk-queue items.
+  /// The bar is NOT added to any view here — it is attached to the
+  /// (non-scrolling) navigation-controller view on appear, so it stays fixed to
+  /// the viewport and lays out its flexible-space-separated items across the full
+  /// width. Adding it to `self.view` would add it to the SCROLLING table view
+  /// (this is a UITableViewController, so `self.view` is the table view), which
+  /// makes the bar scroll off-screen and its items collapse to the left edge —
+  /// the v2 QA regression this refactor fixes.
+  private func makeBottomBar() {
     let playButton = UIBarButtonItem(
       image: UIImage(systemName: "play.fill"),
       style: .plain,
@@ -320,16 +356,72 @@ class RelatedTracksVC: UITableViewController {
       action: nil
     )
 
-    toolbarItems = [playButton, flexSpace, shuffleButton, flexSpace, queueButton]
+    let bar = UIToolbar()
+    bar.translatesAutoresizingMaskIntoConstraints = false
+    bar.setItems([playButton, flexSpace, shuffleButton, flexSpace, queueButton], animated: false)
+    bar.isHidden = relatedSongs.isEmpty // shown once related tracks load
+    bottomBar = bar
   }
 
-  private func updateToolbarState() {
+  /// Host view for the bar: the navigation controller's view (non-scrolling,
+  /// spans the viewport). RelatedTracksVC is always pushed onto a nav stack, so
+  /// this is populated by the time the VC appears.
+  private var bottomBarHostView: UIView? {
+    navigationController?.view
+  }
+
+  /// Adds the bar to the host view (if not already there) and pins it. Idempotent
+  /// — safe to call from both viewWillAppear and viewIsAppearing.
+  private func attachBottomBarToHostView() {
+    guard let bar = bottomBar, let host = bottomBarHostView else { return }
+    guard bar.superview !== host else { return }
+
+    bar.removeFromSuperview()
+    host.addSubview(bar)
+
+    // Bottom edge lifted above the mini player via bottomBarBottomConstraint;
+    // leading/trailing pinned to the host's safe area so it never underlaps a
+    // notch or the rounded-corner inset on iPad.
+    let bottomConstraint = bar.bottomAnchor.constraint(
+      equalTo: host.safeAreaLayoutGuide.bottomAnchor
+    )
+    NSLayoutConstraint.activate([
+      bar.leadingAnchor.constraint(equalTo: host.safeAreaLayoutGuide.leadingAnchor),
+      bar.trailingAnchor.constraint(equalTo: host.safeAreaLayoutGuide.trailingAnchor),
+      bottomConstraint,
+    ])
+    bottomBarBottomConstraint = bottomConstraint
+  }
+
+  /// Enable/disable the actions based on whether we have tracks, reveal the bar,
+  /// and inset the table content so the last rows clear the bar + mini player.
+  private func updateBottomBarState() {
     let hasItems = !relatedSongs.isEmpty
-    toolbarItems?.forEach { item in
+    bottomBar?.items?.forEach { item in
       if item.style != .plain { return } // skip flex spacers
       item.isEnabled = hasItems
     }
-    navigationController?.setToolbarHidden(false, animated: false)
+    bottomBar?.isHidden = !hasItems
+    updateBottomBarClearance()
+  }
+
+  /// Positions the bottom bar above the floating mini player (and, when the
+  /// player is empty, flush to the safe-area bottom) and reserves matching table
+  /// inset so scrolled rows are never hidden behind it.
+  private func updateBottomBarClearance() {
+    guard bottomBar != nil else { return }
+    // getSafeAreaExtension() returns the accessory height + gap while a track is
+    // loaded, else 0 (empty mini player collapses).
+    let miniPlayerClearance = AppDelegate.mainWindowHostVC?.getSafeAreaExtension() ?? 0
+    bottomBarBottomConstraint?.constant = -miniPlayerClearance
+
+    // Reserve space for the bar itself (only while it is visible) plus the
+    // mini-player clearance beneath it, so the final rows are reachable.
+    let reservedBottom = (relatedSongs.isEmpty ? 0 : bottomBarHeight) + miniPlayerClearance
+    if tableView.contentInset.bottom != reservedBottom {
+      tableView.contentInset.bottom = reservedBottom
+      tableView.verticalScrollIndicatorInsets.bottom = reservedBottom
+    }
   }
 
   private var filteredTracks: [AbstractPlayable] {
@@ -409,14 +501,14 @@ class RelatedTracksVC: UITableViewController {
 
 // MARK: MusicPlayable
 
-// Re-apply the mini-player safe-area inset when playback starts or stops so the
-// bottom toolbar stays clear of the now-playing accessory even if it appears or
-// disappears while this screen is on top. Only the start/stop transitions
-// change whether the accessory is shown; the rest are required protocol stubs.
+// Re-apply the mini-player clearance when playback starts or stops so the custom
+// bottom bar stays clear of the now-playing accessory even if it appears or
+// disappears while this screen is on top. Only the start/stop transitions change
+// whether the accessory is shown; the rest are required protocol stubs.
 extension RelatedTracksVC: MusicPlayable {
-  func didStartPlaying() { extendSafeAreaToAccountForMiniPlayer() }
-  func didStartPlayingFromBeginning() { extendSafeAreaToAccountForMiniPlayer() }
-  func didStopPlaying() { extendSafeAreaToAccountForMiniPlayer() }
+  func didStartPlaying() { updateBottomBarClearance() }
+  func didStartPlayingFromBeginning() { updateBottomBarClearance() }
+  func didStopPlaying() { updateBottomBarClearance() }
   func didPause() {}
   func didElapsedTimeChange() {}
   func didPlaylistChange() {}
