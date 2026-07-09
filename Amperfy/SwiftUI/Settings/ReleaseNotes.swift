@@ -37,6 +37,18 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 64,
+      date: "2026-07-08",
+      title: "Build 64 — Needle-drop previews you can hear",
+      whatsNew: [
+        "Needle-drop previews now play sound: the audio session is activated for the preview, so you can actually hear tracks while auditioning them from a recommendation card",
+      ],
+      testingFocus: [
+        "Open a recommendation deck and touch a needle-drop bar — you should now hear the track preview, not silence",
+        "After a preview, your own music should resume as before",
+      ]
+    ),
+    ReleaseNote(
       id: 63,
       date: "2026-07-05",
       title: "Build 63 — An honest Recently Added list",
@@ -99,21 +111,6 @@ enum ReleaseNotes {
         "Check the deck matches your theme (gradient + accent title) in both light and dark",
         "Cards should be silent until you drag the needle-drop bar (home network: previews are pre-rendered now, bars should show segments)",
         "Like from the card corner; open a card; play from inside the collection — back should still return to the deck",
-      ]
-    ),
-    ReleaseNote(
-      id: 59,
-      date: "2026-07-03",
-      title: "Build 59 — Related Tracks becomes a real page",
-      whatsNew: [
-        "Related Tracks now pushes in like any other page — with a proper header showing the track you came from — instead of opening as a floating sheet",
-        "'Show in Playlists' works again and also pushes in; picking a playlist stacks its detail on top so you can navigate back the way you came",
-        "Menus opened from the Now Playing popup no longer silently swallow actions like Add to Playlist",
-      ],
-      testingFocus: [
-        "Track menu → Related Tracks: should slide in with a back button and a 'Related Tracks To:' header showing the original track",
-        "From a related track's menu → Show in Playlists → pick a playlist → back, back, back — you should retrace your exact steps",
-        "From the Now Playing popup, try Add to Playlist and Show in Playlists — both should appear reliably",
       ]
     ),
   ]
