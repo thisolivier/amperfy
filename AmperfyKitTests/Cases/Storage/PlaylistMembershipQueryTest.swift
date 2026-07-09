@@ -121,6 +121,64 @@ class PlaylistMembershipQueryTest: XCTestCase {
     )
   }
 
+  /// Regression for the confirmed root cause: a playlist that was marked synced
+  /// but whose local items are stale/empty (because it was edited on the server
+  /// after sync) silently contributes nothing to the reverse membership lookup.
+  /// After a count-mismatch re-sync repopulates its items, membership is complete.
+  func testStalePlaylistReturnsCompleteMembershipAfterResync() {
+    let song = makeSong(id: "pmq-song-resync")
+    let playlist = makePlaylist(id: "pmq-pl-stale", name: "Edited On Server")
+    // Server reports the playlist now has this song, but locally its items are
+    // empty (stale after a server-side edit). Simulate the tracker having marked
+    // it synced during an earlier, now-outdated sync.
+    playlist.remoteSongCount = 1
+    library.saveContext()
+
+    let tracker = PlaylistItemsSyncTracker(defaults: makeIsolatedDefaults())
+    tracker.markSynced(playlist.id)
+
+    // Before any re-sync, membership is EMPTY — the exact user-visible bug.
+    let staleResults = PlaylistMembershipQuery.playlistsContaining(
+      songId: "pmq-song-resync",
+      in: testContext
+    )
+    XCTAssertTrue(
+      staleResults.isEmpty,
+      "Baseline: stale/empty local items make the reverse lookup miss the song"
+    )
+
+    // Reconcile detects the count mismatch (local 0 vs remote 1) and invalidates.
+    let didInvalidate = tracker.reconcile(
+      playlistId: playlist.id,
+      localItemCount: playlist.localItemCount,
+      remoteSongCount: playlist.remoteSongCount
+    )
+    XCTAssertTrue(didInvalidate, "Count mismatch must invalidate the synced flag")
+    XCTAssertFalse(tracker.isSynced(playlist.id))
+
+    // Simulate the resulting re-fetch (getPlaylist) repopulating the items.
+    playlist.append(playable: song)
+    library.saveContext()
+
+    // Now the membership lookup is complete.
+    let resyncedResults = PlaylistMembershipQuery.playlistsContaining(
+      songId: "pmq-song-resync",
+      in: testContext
+    )
+    XCTAssertEqual(
+      resyncedResults.map { $0.id },
+      ["pmq-pl-stale"],
+      "After re-sync the song's playlist membership is complete"
+    )
+  }
+
+  private func makeIsolatedDefaults() -> UserDefaults {
+    let suite = "PlaylistMembershipQueryTest.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!
+    defaults.removePersistentDomain(forName: suite)
+    return defaults
+  }
+
   /// Playlists with empty or nil names are excluded from results.
   func testEmptyNamePlaylistExcluded() {
     let song = makeSong(id: "pmq-song-named")

@@ -29,10 +29,24 @@ class PlaylistMembershipVC: UITableViewController {
   private var playlists: [Playlist]
   private let onSelect: (Playlist) -> ()
   private var isLoading: Bool
+  /// Set to `false` when the on-demand playlist sync could not complete (errors
+  /// or timeout). When we then have no results, the empty state is uncertain —
+  /// show a retry affordance instead of asserting the song is in no playlists.
+  private var syncWasComplete: Bool
+  /// Optional handler that re-runs the sync + membership lookup. When present and
+  /// an incomplete empty result is shown, a "Retry" button is offered.
+  private let onRetry: (() -> ())?
 
-  init(playlists: [Playlist], isLoading: Bool = false, onSelect: @escaping (Playlist) -> ()) {
+  init(
+    playlists: [Playlist],
+    isLoading: Bool = false,
+    onRetry: (() -> ())? = nil,
+    onSelect: @escaping (Playlist) -> ()
+  ) {
     self.playlists = playlists
     self.isLoading = isLoading
+    self.syncWasComplete = true
+    self.onRetry = onRetry
     self.onSelect = onSelect
     super.init(style: .insetGrouped)
   }
@@ -51,11 +65,22 @@ class PlaylistMembershipVC: UITableViewController {
     updateContentState()
   }
 
-  func updateWithPlaylists(_ playlists: [Playlist]) {
+  func updateWithPlaylists(_ playlists: [Playlist], wasComplete: Bool = true) {
     self.playlists = playlists
+    syncWasComplete = wasComplete
     isLoading = false
     tableView.reloadData()
     updateContentState()
+  }
+
+  /// Called by the retry affordance to re-enter the loading state before the
+  /// caller re-runs the sync. Keeps the spinner honest across retries.
+  func beginRetry() {
+    playlists = []
+    isLoading = true
+    tableView.reloadData()
+    updateContentState()
+    onRetry?()
   }
 
   private func updateContentState() {
@@ -63,6 +88,22 @@ class PlaylistMembershipVC: UITableViewController {
       var loadingConfig = UIContentUnavailableConfiguration.loading()
       loadingConfig.text = "Syncing playlists\u{2026}"
       contentUnavailableConfiguration = loadingConfig
+    } else if playlists.isEmpty, !syncWasComplete {
+      // Incomplete sync + no results: the answer is unknown, not "none".
+      var incompleteConfig = UIContentUnavailableConfiguration.empty()
+      incompleteConfig.image = UIImage(systemName: "exclamationmark.arrow.circlepath")
+      incompleteConfig.text = "Couldn't finish syncing playlists"
+      incompleteConfig.secondaryText =
+        "Some playlists didn't sync, so this list may be incomplete."
+      if onRetry != nil {
+        var retryButton = UIButton.Configuration.borderedProminent()
+        retryButton.title = "Retry"
+        incompleteConfig.button = retryButton
+        incompleteConfig.buttonProperties.primaryAction = UIAction { [weak self] _ in
+          self?.beginRetry()
+        }
+      }
+      contentUnavailableConfiguration = incompleteConfig
     } else if playlists.isEmpty {
       var emptyConfig = UIContentUnavailableConfiguration.empty()
       emptyConfig.text = "This song isn't in any playlists"

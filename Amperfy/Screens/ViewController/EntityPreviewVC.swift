@@ -720,15 +720,18 @@ class EntityPreviewActionBuilder {
     songId: String,
     account: Account
   ) async {
-    let library = appDelegate.storage.main.library
-    let allPlaylists = library.getPlaylists(for: account)
-    let tracker = PlaylistItemsSyncTracker.shared
-    let unsyncedPlaylists = allPlaylists.filter { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
-
-    let needsSync = !unsyncedPlaylists.isEmpty
+    // Build the VC once and give it a retry hook that re-runs the sync/render
+    // pass against the same VC. The retry closure holds only value-ish captures.
+    weak var weakMembershipVC: PlaylistMembershipVC?
     let membershipVC = PlaylistMembershipVC(
       playlists: [],
-      isLoading: needsSync
+      isLoading: true,
+      onRetry: { [weak self] in
+        guard let self, let vc = weakMembershipVC else { return }
+        Task { @MainActor in
+          await self.runMembershipSyncPass(songId: songId, account: account, into: vc)
+        }
+      }
     ) { selectedPlaylist in
       let detailVC = AppStoryboard.Main.segueToPlaylistDetail(
         account: account,
@@ -743,6 +746,8 @@ class EntityPreviewActionBuilder {
         hostingSplitVC.pushNavLibrary(vc: detailVC)
       }
     }
+    weakMembershipVC = membershipVC
+
     // Pushed, not presented (user-settled 2026-07-03): only short-lived modal
     // prompts get presented; membership traverses onward into playlist details.
     if let popupPlayer = rootView as? PopupPlayerVC {
@@ -753,27 +758,66 @@ class EntityPreviewActionBuilder {
       hostingSplitVC.pushNavLibrary(vc: membershipVC)
     }
 
-    if needsSync {
+    await runMembershipSyncPass(songId: songId, account: account, into: membershipVC)
+  }
+
+  /// Reconciles + syncs the playlists needed to answer "which playlists contain
+  /// this song", then renders the result into `membershipVC`. Repeatable: the
+  /// VC's retry affordance calls back into this after an incomplete pass.
+  @MainActor
+  private func runMembershipSyncPass(
+    songId: String,
+    account: Account,
+    into membershipVC: PlaylistMembershipVC
+  ) async {
+    let library = appDelegate.storage.main.library
+    let allPlaylists = library.getPlaylists(for: account)
+    let tracker = PlaylistItemsSyncTracker.shared
+    // Invalidate playlists whose server song count no longer matches local items
+    // (edited-after-sync). This closes the hole where a playlist synced earlier
+    // but changed on the server keeps stale local items, silently dropping this
+    // song from the reverse membership lookup.
+    for playlist in allPlaylists where !playlist.isSmartPlaylist {
+      tracker.reconcile(
+        playlistId: playlist.id,
+        localItemCount: playlist.localItemCount,
+        remoteSongCount: playlist.remoteSongCount
+      )
+    }
+    let unsyncedPlaylists = allPlaylists.filter { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
+
+    // Tracks whether every playlist we needed for THIS lookup actually synced.
+    // If any was skipped (error) or the sync timed out / was cancelled, the
+    // local membership picture is incomplete and we must NOT render a definitive
+    // "not in any playlists" — that would be a false negative.
+    var syncWasComplete = true
+    if !unsyncedPlaylists.isEmpty {
       let librarySyncer = appDelegate.getMeta(account.info).librarySyncer
-      let syncTask = Task { @MainActor in
+      let syncTask = Task { @MainActor () -> Bool in
+        var allSynced = true
         for playlist in unsyncedPlaylists {
           do {
             try Task.checkCancellation()
             try await librarySyncer.syncDown(playlist: playlist)
             tracker.markSynced(playlist.id)
           } catch is CancellationError {
+            // Timed out / cancelled: remaining playlists are unsynced.
+            allSynced = false
             break
           } catch {
-            // Skip failed playlists — they'll be retried on next tap.
+            // Skip failed playlists — they'll be retried on next tap — but the
+            // result we're about to show is incomplete.
+            allSynced = false
           }
         }
+        return allSynced
       }
       // 30-second timeout to prevent infinite spinner
       let timeoutTask = Task {
         try await Task.sleep(nanoseconds: 30_000_000_000)
         syncTask.cancel()
       }
-      await syncTask.value
+      syncWasComplete = await syncTask.value
       timeoutTask.cancel()
     }
 
@@ -785,7 +829,10 @@ class EntityPreviewActionBuilder {
     let playlists = playlistMOs.map { managedObject in
       Playlist(library: library, managedObject: managedObject)
     }
-    membershipVC.updateWithPlaylists(playlists)
+    // Only surface a definitive result when the sync was complete. If it was
+    // incomplete (errors / timeout) AND we found nothing, tell the VC the result
+    // is uncertain so it offers a retry instead of asserting "not in any playlists".
+    membershipVC.updateWithPlaylists(playlists, wasComplete: syncWasComplete)
   }
 
   private func createRelatedTracksAction() -> UIAction {

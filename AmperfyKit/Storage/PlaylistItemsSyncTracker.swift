@@ -26,8 +26,14 @@ import Foundation
 /// only returns playlist metadata — items are only populated when each
 /// playlist is individually fetched.
 ///
-/// UserDefaults-backed to avoid Core Data schema changes. No auto-invalidation
-/// on this first pass — synced flags persist across sessions.
+/// UserDefaults-backed to avoid Core Data schema changes. Synced flags persist
+/// across sessions but are auto-invalidated when a playlist's server-reported
+/// song count (`remoteSongCount`, captured cheaply during the bulk list sync)
+/// no longer matches the number of items stored locally. That mismatch means
+/// the playlist was edited on the server after we last synced its items, so
+/// the stale local items must be re-fetched. Without this, features that read
+/// the local `items` relationship (e.g. "Show in Playlists" reverse membership)
+/// silently return incomplete results.
 public final class PlaylistItemsSyncTracker: @unchecked Sendable {
   public static let shared = PlaylistItemsSyncTracker()
 
@@ -57,5 +63,43 @@ public final class PlaylistItemsSyncTracker: @unchecked Sendable {
     var current = syncedIds
     playlistIds.forEach { current.insert($0) }
     syncedIds = current
+  }
+
+  /// Clears the synced flag for a playlist so its items are re-fetched on next access.
+  public func invalidate(_ playlistId: String) {
+    guard syncedIds.contains(playlistId) else { return }
+    var current = syncedIds
+    current.remove(playlistId)
+    syncedIds = current
+  }
+
+  /// Returns `true` when the server-reported song count differs from the number
+  /// of items stored locally — i.e. the playlist was edited on the server after
+  /// we last synced it, so the local items are stale.
+  ///
+  /// A remote count of `0` is treated as unknown/unavailable (the bulk list sync
+  /// may not have populated it yet) and never triggers invalidation, so we don't
+  /// churn playlists we have no authoritative count for.
+  public func hasCountMismatch(localItemCount: Int, remoteSongCount: Int) -> Bool {
+    guard remoteSongCount > 0 else { return false }
+    return localItemCount != remoteSongCount
+  }
+
+  /// Reconciles a synced playlist against its server-reported count and clears
+  /// the synced flag when they diverge. No-op for playlists that are already
+  /// unsynced or whose counts agree. Returns `true` if the playlist was
+  /// invalidated (i.e. it now needs a re-sync).
+  @discardableResult
+  public func reconcile(
+    playlistId: String,
+    localItemCount: Int,
+    remoteSongCount: Int
+  )
+    -> Bool {
+    guard syncedIds.contains(playlistId) else { return false }
+    guard hasCountMismatch(localItemCount: localItemCount, remoteSongCount: remoteSongCount)
+    else { return false }
+    invalidate(playlistId)
+    return true
   }
 }
