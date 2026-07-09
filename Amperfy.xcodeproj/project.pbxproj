@@ -589,6 +589,7 @@
 		A519B010000000000001901A /* BackgroundTasksSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519B020000000000001901A /* BackgroundTasksSection.swift */; };
 		A519C010000000000001901A /* BackgroundTaskStatusStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519C020000000000001901A /* BackgroundTaskStatusStoreTest.swift */; };
 		A519C030000000000001901A /* BackgroundTaskRunnerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519C040000000000001901A /* BackgroundTaskRunnerTest.swift */; };
+		A519C050000000000001901A /* PlaylistSyncWorkerContextResetTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519C060000000000001901A /* PlaylistSyncWorkerContextResetTest.swift */; };
 		A519D010000000000001901B /* AlbumScanWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519D020000000000001901B /* AlbumScanWorker.swift */; };
 		A519D030000000000001901B /* AdjacencyWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519D040000000000001901B /* AdjacencyWorker.swift */; };
 		A519D050000000000001901B /* PlaylistSyncWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A519D060000000000001901B /* PlaylistSyncWorker.swift */; };
@@ -1349,6 +1350,7 @@
 		A519B020000000000001901A /* BackgroundTasksSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTasksSection.swift; sourceTree = "<group>"; };
 		A519C020000000000001901A /* BackgroundTaskStatusStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskStatusStoreTest.swift; sourceTree = "<group>"; };
 		A519C040000000000001901A /* BackgroundTaskRunnerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskRunnerTest.swift; sourceTree = "<group>"; };
+		A519C060000000000001901A /* PlaylistSyncWorkerContextResetTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistSyncWorkerContextResetTest.swift; sourceTree = "<group>"; };
 		A519D020000000000001901B /* AlbumScanWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumScanWorker.swift; sourceTree = "<group>"; };
 		A519D040000000000001901B /* AdjacencyWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjacencyWorker.swift; sourceTree = "<group>"; };
 		A519D060000000000001901B /* PlaylistSyncWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistSyncWorker.swift; sourceTree = "<group>"; };
@@ -2549,6 +2551,7 @@
 			children = (
 				A519C020000000000001901A /* BackgroundTaskStatusStoreTest.swift */,
 				A519C040000000000001901A /* BackgroundTaskRunnerTest.swift */,
+				A519C060000000000001901A /* PlaylistSyncWorkerContextResetTest.swift */,
 			);
 			path = BackgroundRunner;
 			sourceTree = "<group>";
@@ -3483,6 +3486,7 @@
 				50BE5D522850F4D700156FC6 /* HelperTest.swift in Sources */,
 				A519C010000000000001901A /* BackgroundTaskStatusStoreTest.swift in Sources */,
 				A519C030000000000001901A /* BackgroundTaskRunnerTest.swift in Sources */,
+				A519C050000000000001901A /* PlaylistSyncWorkerContextResetTest.swift in Sources */,
 				A5D0D310000000000000070A0 /* GradientTest.swift in Sources */,
 				A5F0F110000000000000090A0 /* EntityImageViewTest.swift in Sources */,
 				50BE5D6B2850F4FB00156FC6 /* SsGenreParserTest.swift in Sources */,

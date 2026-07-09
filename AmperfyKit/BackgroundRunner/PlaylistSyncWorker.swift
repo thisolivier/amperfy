@@ -199,9 +199,25 @@ public final class PlaylistSyncWorker: BackgroundTaskWorker, @unchecked Sendable
     }
   }
 
-  /// Reset the main Core Data context to release accumulated PlaylistItemMO objects.
+  /// Release accumulated `PlaylistItemMO` in-memory state to keep memory bounded.
+  ///
+  /// This used to call `context.reset()`, but that invalidates and de-registers
+  /// EVERY managed object on the main/UI context — including the objects backing
+  /// the play queue's currently-playing item. After a reset the player's
+  /// `currentlyPlaying` (a computed read over those now-invalidated queue MOs)
+  /// starts returning `nil`, while the mini player — which already painted its
+  /// labels and gets no player notification from a silent Core Data reset —
+  /// keeps showing the (now stale) track. Tapping the mini player then opens the
+  /// full player, which reads the live `nil` and renders "No music playing".
+  /// That is the mini-player-has-track / full-player-empty regression.
+  ///
+  /// `refreshAllObjects()` achieves the same memory goal (it drops the cached
+  /// property values and turns objects back into faults, releasing the bulk of
+  /// the accumulated `PlaylistItemMO` footprint) but keeps object identities
+  /// registered and valid, so the play queue re-faults transparently on next
+  /// access and `currentlyPlaying` never observes a spurious `nil`.
   @MainActor
   private func resetMainContext() {
-    mainStorage.context.reset()
+    mainStorage.context.refreshAllObjects()
   }
 }
