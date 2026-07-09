@@ -152,6 +152,16 @@ public final class PlaylistSyncWorker: BackgroundTaskWorker, @unchecked Sendable
       for: account,
       areSystemPlaylistsIncluded: false
     )
+    // Invalidate any previously-synced playlist whose server-reported song count
+    // no longer matches its locally-stored items (edited-after-sync). Those fall
+    // back into the unsynced set below and get their items re-fetched.
+    for playlist in allPlaylists {
+      tracker.reconcile(
+        playlistId: playlist.id,
+        localItemCount: playlist.localItemCount,
+        remoteSongCount: playlist.remoteSongCount
+      )
+    }
     let unsyncedPlaylists = allPlaylists.filter { !tracker.isSynced($0.id) }
     os_log(
       "PlaylistSyncWorker: %d unsynced of %d total playlists",
