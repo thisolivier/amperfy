@@ -152,17 +152,18 @@ public final class PlaylistSyncWorker: BackgroundTaskWorker, @unchecked Sendable
       for: account,
       areSystemPlaylistsIncluded: false
     )
-    // Invalidate any previously-synced playlist whose server-reported song count
-    // no longer matches its locally-stored items (edited-after-sync). Those fall
-    // back into the unsynced set below and get their items re-fetched.
-    for playlist in allPlaylists {
+    // Invalidate any previously-synced playlist the server edited since we last
+    // synced its items (its advertised song count moved). Those fall back into
+    // the unsynced set below and get their items re-fetched. Smart playlists are
+    // skipped — they are derived rules, not membership lists we sync items for
+    // (mirrors the on-demand "Show in Playlists" path).
+    for playlist in allPlaylists where !playlist.isSmartPlaylist {
       tracker.reconcile(
         playlistId: playlist.id,
-        localItemCount: playlist.localItemCount,
         remoteSongCount: playlist.remoteSongCount
       )
     }
-    let unsyncedPlaylists = allPlaylists.filter { !tracker.isSynced($0.id) }
+    let unsyncedPlaylists = allPlaylists.filter { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
     os_log(
       "PlaylistSyncWorker: %d unsynced of %d total playlists",
       log: log,
@@ -185,7 +186,10 @@ public final class PlaylistSyncWorker: BackgroundTaskWorker, @unchecked Sendable
     let playlist = Playlist(library: mainStorage.library, managedObject: playlistMO)
     do {
       try await librarySyncer.syncDown(playlist: playlist)
-      tracker.markSynced(playlistId)
+      // Record the remote count at sync time so a later reconcile can detect a
+      // genuine server edit (count change) rather than churning on the
+      // permanent podcast/unavailable local-vs-remote gap.
+      tracker.markSynced(playlistId, remoteSongCount: playlist.remoteSongCount)
     } catch {
       eventLogger.report(
         topic: "Playlist Items Background Sync",

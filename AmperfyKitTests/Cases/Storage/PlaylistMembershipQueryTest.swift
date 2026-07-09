@@ -131,11 +131,12 @@ class PlaylistMembershipQueryTest: XCTestCase {
     // Server reports the playlist now has this song, but locally its items are
     // empty (stale after a server-side edit). Simulate the tracker having marked
     // it synced during an earlier, now-outdated sync.
-    playlist.remoteSongCount = 1
+    // Synced earlier when the server advertised 0 songs for this playlist.
+    playlist.remoteSongCount = 0
     library.saveContext()
 
     let tracker = PlaylistItemsSyncTracker(defaults: makeIsolatedDefaults())
-    tracker.markSynced(playlist.id)
+    tracker.markSynced(playlist.id, remoteSongCount: 0)
 
     // Before any re-sync, membership is EMPTY — the exact user-visible bug.
     let staleResults = PlaylistMembershipQuery.playlistsContaining(
@@ -147,13 +148,16 @@ class PlaylistMembershipQueryTest: XCTestCase {
       "Baseline: stale/empty local items make the reverse lookup miss the song"
     )
 
-    // Reconcile detects the count mismatch (local 0 vs remote 1) and invalidates.
+    // The server edited the playlist (song added) so its advertised count moved
+    // 0 -> 1. Reconcile detects that CHANGE and invalidates the stale sync flag.
+    playlist.remoteSongCount = 1
+    library.saveContext()
     let didInvalidate = tracker.reconcile(
       playlistId: playlist.id,
       localItemCount: playlist.localItemCount,
       remoteSongCount: playlist.remoteSongCount
     )
-    XCTAssertTrue(didInvalidate, "Count mismatch must invalidate the synced flag")
+    XCTAssertTrue(didInvalidate, "A server-count change must invalidate the synced flag")
     XCTAssertFalse(tracker.isSynced(playlist.id))
 
     // Simulate the resulting re-fetch (getPlaylist) repopulating the items.

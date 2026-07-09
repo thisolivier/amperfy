@@ -22,10 +22,13 @@
 @testable import AmperfyKit
 import XCTest
 
-/// Unit tests for `PlaylistItemsSyncTracker` count-mismatch invalidation.
-/// The tracker must re-sync a playlist whose server-reported `remoteSongCount`
-/// diverges from the number of items stored locally (edited-after-sync), so
-/// that reverse-membership lookups don't silently return stale/incomplete data.
+/// Unit tests for `PlaylistItemsSyncTracker` server-edit invalidation.
+/// The tracker must re-sync a playlist the SERVER edited since we last synced
+/// its items (its advertised `remoteSongCount` moved), but must NOT churn on a
+/// permanent local-vs-remote gap (server counts podcast / directory /
+/// unavailable entries Amperfy skips locally), which perpetually re-invalidated
+/// under the old `localItemCount != remoteSongCount` rule and caused the
+/// "Show in Playlists" blocking-sync storm.
 class PlaylistItemsSyncTrackerTest: XCTestCase {
   private var defaults: UserDefaults!
   private var tracker: PlaylistItemsSyncTracker!
@@ -65,56 +68,90 @@ class PlaylistItemsSyncTrackerTest: XCTestCase {
     XCTAssertFalse(tracker.isSynced("pl-never-synced"))
   }
 
-  // MARK: - Count-mismatch detection
+  // MARK: - Remote-edit detection (change vs last-synced remote count)
 
-  func testCountMismatchDetectedWhenCountsDiffer() {
+  func testRemoteEditDetectedWhenServerCountChangedSinceLastSync() {
+    tracker.markSynced("pl-1", remoteSongCount: 5)
     XCTAssertTrue(
-      tracker.hasCountMismatch(localItemCount: 3, remoteSongCount: 5),
-      "Local 3 vs remote 5 is a mismatch (playlist grew on server)"
+      tracker.hasRemoteEdit(playlistId: "pl-1", remoteSongCount: 6),
+      "Server count moved 5 -> 6 since last sync = a server edit"
     )
     XCTAssertTrue(
-      tracker.hasCountMismatch(localItemCount: 5, remoteSongCount: 3),
-      "Local 5 vs remote 3 is a mismatch (playlist shrank on server)"
+      tracker.hasRemoteEdit(playlistId: "pl-1", remoteSongCount: 4),
+      "Server count moved 5 -> 4 since last sync = a server edit"
     )
   }
 
-  func testNoMismatchWhenCountsAgree() {
-    XCTAssertFalse(tracker.hasCountMismatch(localItemCount: 4, remoteSongCount: 4))
+  func testNoRemoteEditWhenServerCountUnchangedSinceLastSync() {
+    tracker.markSynced("pl-1", remoteSongCount: 5)
+    XCTAssertFalse(tracker.hasRemoteEdit(playlistId: "pl-1", remoteSongCount: 5))
   }
 
-  func testRemoteCountZeroIsTreatedAsUnknownNotMismatch() {
+  func testNoRemoteEditWhenNoBaselineRecorded() {
+    // Marked synced without a recorded remote count → no baseline, so absent
+    // any evidence of an edit we must NOT invalidate (that is exactly what the
+    // old local-vs-remote rule did, causing perpetual churn).
+    tracker.markSynced("pl-1")
+    XCTAssertFalse(tracker.hasRemoteEdit(playlistId: "pl-1", remoteSongCount: 99))
+  }
+
+  func testRemoteCountZeroIsTreatedAsUnknownNotEdit() {
     // remoteSongCount == 0 means the bulk list sync hasn't populated a count,
     // so we must NOT invalidate — we have no authoritative number to compare.
+    tracker.markSynced("pl-1", remoteSongCount: 5)
     XCTAssertFalse(
-      tracker.hasCountMismatch(localItemCount: 7, remoteSongCount: 0),
-      "A zero remote count is unknown, not a mismatch"
+      tracker.hasRemoteEdit(playlistId: "pl-1", remoteSongCount: 0),
+      "A zero remote count is unknown, not an edit"
     )
+  }
+
+  // MARK: - The podcast/unavailable-gap regression (perpetual churn fix)
+
+  /// A playlist whose server songCount permanently exceeds its local item count
+  /// (server counts a podcast/unavailable entry Amperfy skips) must stay synced
+  /// pass after pass — the old `localItemCount != remoteSongCount` rule
+  /// re-invalidated it forever, driving the blocking-sync storm on every open.
+  func testPersistentLocalRemoteGapNeverPerpetuallyInvalidates() {
+    // Synced when the server advertised 10 songs; locally only 8 resolve
+    // (2 podcast/unavailable entries the parser skips). Baseline recorded = 10.
+    tracker.markSynced("pl-podcast", remoteSongCount: 10)
+    // Reconcile many times: the server count is stable at 10, the local gap is
+    // permanent. It must never invalidate.
+    for _ in 0 ..< 5 {
+      let didInvalidate = tracker.reconcile(
+        playlistId: "pl-podcast",
+        localItemCount: 8, // permanent gap vs remote 10
+        remoteSongCount: 10 // unchanged since sync
+      )
+      XCTAssertFalse(didInvalidate, "A permanent local/remote gap must not invalidate")
+      XCTAssertTrue(tracker.isSynced("pl-podcast"))
+    }
   }
 
   // MARK: - Reconcile (the edited-after-sync fix)
 
-  /// A playlist synced earlier but whose server count then changed gets its
-  /// synced flag cleared so the next access re-fetches its items.
+  /// A genuine server edit (the advertised count moved since last sync) still
+  /// clears the synced flag so the next access re-fetches its items.
   func testReconcileInvalidatesSyncedPlaylistWithChangedServerCount() {
-    tracker.markSynced("pl-edited")
+    tracker.markSynced("pl-edited", remoteSongCount: 3)
     let didInvalidate = tracker.reconcile(
       playlistId: "pl-edited",
-      localItemCount: 2, // what we stored last sync
-      remoteSongCount: 6 // server now says 6
+      localItemCount: 3,
+      remoteSongCount: 6 // server now says 6 (was 3 at sync)
     )
-    XCTAssertTrue(didInvalidate, "Count mismatch on a synced playlist should invalidate it")
+    XCTAssertTrue(didInvalidate, "A server-count change on a synced playlist should invalidate it")
     XCTAssertFalse(tracker.isSynced("pl-edited"), "It must now be treated as unsynced")
   }
 
-  func testReconcileLeavesMatchingPlaylistSynced() {
-    tracker.markSynced("pl-stable")
+  func testReconcileLeavesUnchangedPlaylistSynced() {
+    tracker.markSynced("pl-stable", remoteSongCount: 10)
     let didInvalidate = tracker.reconcile(
       playlistId: "pl-stable",
       localItemCount: 10,
       remoteSongCount: 10
     )
     XCTAssertFalse(didInvalidate)
-    XCTAssertTrue(tracker.isSynced("pl-stable"), "Matching counts must stay synced")
+    XCTAssertTrue(tracker.isSynced("pl-stable"), "Unchanged server count must stay synced")
   }
 
   func testReconcileIsNoOpForUnsyncedPlaylist() {
@@ -129,7 +166,7 @@ class PlaylistItemsSyncTrackerTest: XCTestCase {
   }
 
   func testReconcileWithZeroRemoteCountDoesNotInvalidate() {
-    tracker.markSynced("pl-unknown-count")
+    tracker.markSynced("pl-unknown-count", remoteSongCount: 4)
     let didInvalidate = tracker.reconcile(
       playlistId: "pl-unknown-count",
       localItemCount: 4,
@@ -137,5 +174,18 @@ class PlaylistItemsSyncTrackerTest: XCTestCase {
     )
     XCTAssertFalse(didInvalidate, "Unknown (zero) remote count must not invalidate")
     XCTAssertTrue(tracker.isSynced("pl-unknown-count"))
+  }
+
+  /// After a re-sync, the new baseline is recorded — a subsequent unchanged
+  /// pass must not re-invalidate (no oscillation).
+  func testReSyncRecordsNewBaselineAndStopsChurning() {
+    tracker.markSynced("pl", remoteSongCount: 3)
+    XCTAssertTrue(tracker.reconcile(playlistId: "pl", remoteSongCount: 6))
+    // Caller re-syncs and records the new count.
+    tracker.markSynced("pl", remoteSongCount: 6)
+    XCTAssertFalse(
+      tracker.reconcile(playlistId: "pl", remoteSongCount: 6),
+      "New baseline recorded → no further invalidation"
+    )
   }
 }
