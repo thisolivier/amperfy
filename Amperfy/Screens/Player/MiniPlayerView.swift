@@ -563,6 +563,18 @@ class MiniPlayerView: UIView {
 
     player.addNotifier(notifier: self)
 
+    // Defensive refresh: the mini player renders from cached labels and only
+    // updates on player notifications. A silent queue invalidation (one that
+    // fires no player notification) would leave the labels stale. Re-read the
+    // live player state whenever the app returns to the foreground so any such
+    // desync self-corrects the next time the user sees the mini player.
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(appDidBecomeActive),
+      name: UIApplication.didBecomeActiveNotification,
+      object: nil
+    )
+
     registerForTraitChanges(
       [UITraitUserInterfaceStyle.self, UITraitHorizontalSizeClass.self],
       handler: { (self: Self, previousTraitCollection: UITraitCollection) in
@@ -577,6 +589,11 @@ class MiniPlayerView: UIView {
       self.refreshForTabAccessoryTraitChange()
       self.tabAccessoryTraitChangeCB?()
     }
+  }
+
+  @objc
+  private func appDidBecomeActive() {
+    refreshPlayer()
   }
 
   public var tabAccessoryTraitChangeCB: VoidFunctionCallback?
