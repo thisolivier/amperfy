@@ -78,14 +78,16 @@ final class BackgroundTaskRunnerTest: XCTestCase {
 
   // MARK: - Feature flag default values
 
-  func testFeatureFlagDefaults_phase2DisabledByDefault() {
-    // Use a completely fresh UserDefaults suite that has never been written to.
+  func testFeatureFlagDefaults_phase2EnabledByDefault() {
+    // Phase 2 ships ON since PR 25 / build 44: a fresh install that never
+    // touched the flag must default to enabled. Use a completely fresh
+    // UserDefaults suite that has never been written to.
     let freshSuiteName = "test.defaults.\(UUID().uuidString)"
     let freshDefaults = UserDefaults(suiteName: freshSuiteName)!
     defer { freshDefaults.removePersistentDomain(forName: freshSuiteName) }
 
     let freshFlags = BackgroundRunnerFeatureFlags(defaults: freshDefaults)
-    XCTAssertFalse(freshFlags.phase2Enabled, "phase2Enabled should default to false")
+    XCTAssertTrue(freshFlags.phase2Enabled, "phase2Enabled should default to true")
   }
 
   // MARK: - Enqueue with no registered worker
