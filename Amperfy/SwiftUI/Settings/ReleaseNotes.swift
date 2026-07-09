@@ -37,6 +37,19 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 66,
+      date: "2026-07-09",
+      title: "Build 66 — Reachable Related Tracks controls + faster Show in Playlists",
+      whatsNew: [
+        "Related Tracks: the play/shuffle/queue controls now sit above the mini player and tab bar so they're reachable.",
+        "'Show in Playlists' is fast again — it no longer re-syncs your whole library each time you open it.",
+      ],
+      testingFocus: [
+        "Start playback so the mini player shows, then open Related Tracks on iPhone — the play/shuffle/queue controls should sit above the mini player with a clear gap, not clipped behind it",
+        "Open 'Show in Playlists' for a song a few times — it should open instantly without triggering a full library sync",
+      ]
+    ),
+    ReleaseNote(
       id: 65,
       date: "2026-07-09",
       title: "Build 65 — Related Tracks controls and honest playlist membership",
@@ -91,21 +104,6 @@ enum ReleaseNotes {
         "Settings → set Gateway URL (your soul.beat.online address, port 5040) and the key — then deal a deck OFF your home network: cards and previews should work",
         "Diagnostics → Test Connection should show gateway mode, 200, and a latency",
         "Clear the gateway fields → behavior reverts to home-network-only, as before",
-      ]
-    ),
-    ReleaseNote(
-      id: 61,
-      date: "2026-07-05",
-      title: "Build 61 — Related Tracks polish + Discovery diagnostics",
-      whatsNew: [
-        "Related Tracks: proper large title that collapses as you scroll, row layout now matches playlist views, and the seed track wears an accent-colored border on a clean transparent badge",
-        "Slow recommendation deals fail fast now: if the recommendation server can't be reached, the app gives up in ~5 seconds and falls back, instead of stalling for minutes",
-        "New: Settings → Discovery Diagnostics — see exactly what every deal and preview fetch did (which server, how long, what failed), test the server connection, and Export Logs to share",
-      ],
-      testingFocus: [
-        "Related Tracks: large title should shrink into the bar on scroll; rows should align like a playlist; seed badge = accent border, no fill",
-        "Deal a deck on your long 'rock' playlist — it should resolve or fall back within seconds, not minutes",
-        "Settings → Discovery Diagnostics → deal a deck, then Export Logs and send me the file — it lines up 1:1 with the server logs via the deal id",
       ]
     ),
   ]
