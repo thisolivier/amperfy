@@ -55,6 +55,8 @@ extension LibraryDisplayType {
       return UIImage.radio
     case .completeAlbums:
       return UIImage.album
+    case .gigs:
+      return UIImage.gigs
     }
   }
 
@@ -111,6 +113,8 @@ extension LibraryDisplayType {
         category: .all,
         wholeAlbumsOnly: true
       )
+    case .gigs:
+      return AppStoryboard.Main.segueToGigs(account: account)
     }
   }
 }

@@ -37,6 +37,22 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 69,
+      date: "2026-07-09",
+      title: "Build 69 — Gigs + cleaner song menus",
+      whatsNew: [
+        "New: a Gigs tab shows upcoming live shows for the artists in your library. Add cities to follow, or tap the location button to find gigs near you, then tap a gig to open its ticket page.",
+        "Song menus are tidier: the … button now holds actions (play, queue, favorite, download, share), and a new chevron next to it holds ways to explore — Show Album, Show Artist, Show in Playlists, Related Tracks and Lyrics.",
+      ],
+      testingFocus: [
+        "Open the Gigs tab (enable it from the library tab bar if hidden). With no cities added you should see a friendly prompt to add a city or use your location.",
+        "Add a city in Gigs — with the gigs service offline you should get a clear 'couldn't reach / nothing cached' message, not a spinner or crash.",
+        "Tap 'Near me' in Gigs — the app should ask for location permission only at that moment (never at launch).",
+        "On any song row, tap the … button (actions only) and the new chevron (Show Album/Artist/Playlists/Related Tracks/Lyrics) — no item should appear in both menus.",
+        "Check song rows across Search, album detail, playlist detail, the queue and the popup player — the two buttons should render and behave sanely everywhere; the queue's reorder handle and checkmarks should be unaffected.",
+      ]
+    ),
+    ReleaseNote(
       id: 68,
       date: "2026-07-09",
       title: "Build 68 — Reliability hardening",
@@ -85,18 +101,6 @@ enum ReleaseNotes {
       testingFocus: [
         "Open a Related Tracks deck on iPhone with the mini player showing — the bulk-queue controls should be fully visible and tappable, not clipped by the tab bar",
         "Open 'Show in Playlists' for a song you know is in several playlists — every one should be listed, none missing",
-      ]
-    ),
-    ReleaseNote(
-      id: 64,
-      date: "2026-07-08",
-      title: "Build 64 — Needle-drop previews you can hear",
-      whatsNew: [
-        "Needle-drop previews now play sound: the audio session is activated for the preview, so you can actually hear tracks while auditioning them from a recommendation card",
-      ],
-      testingFocus: [
-        "Open a recommendation deck and touch a needle-drop bar — you should now hear the track preview, not silence",
-        "After a preview, your own music should resume as before",
       ]
     ),
   ]

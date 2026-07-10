@@ -1,0 +1,47 @@
+[
+  {
+    "id": "evt-001",
+    "artistId": "art-100",
+    "artistName": "Metric",
+    "priorityScore": 42.5,
+    "venueName": "O2 Academy Brixton",
+    "city": "London",
+    "countryCode": "GB",
+    "latitude": 51.4613,
+    "longitude": -0.1156,
+    "startsAt": "2026-08-14T19:30:00Z",
+    "url": "https://tickets.example.com/evt-001",
+    "source": "ticketmaster",
+    "fetchedAt": "2026-07-09T08:00:00Z"
+  },
+  {
+    "id": "evt-002",
+    "artistId": "art-200",
+    "artistName": "Goose",
+    "priorityScore": 18.0,
+    "venueName": "The Roundhouse",
+    "city": "London",
+    "countryCode": "GB",
+    "latitude": 51.5432,
+    "longitude": -0.1517,
+    "startsAt": "2026-08-02T20:00:00.000Z",
+    "url": "https://skiddle.example.com/evt-002",
+    "source": "skiddle",
+    "fetchedAt": "2026-07-09T08:00:00Z"
+  },
+  {
+    "id": "evt-003",
+    "artistId": "art-300",
+    "artistName": "Joseph Trapanese",
+    "priorityScore": 9.1,
+    "venueName": "Barbican Hall",
+    "city": "London",
+    "countryCode": "GB",
+    "latitude": 51.5200,
+    "longitude": -0.0937,
+    "startsAt": "2026-08-09T18:00:00Z",
+    "url": "https://tickets.example.com/evt-003",
+    "source": "ticketmaster",
+    "fetchedAt": "2026-07-09T08:00:00Z"
+  }
+]

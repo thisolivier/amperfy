@@ -63,6 +63,9 @@ extension UIImage {
 
   public static let airplayaudio = UIImage.create(systemName: AmperfyImage.airplayaudio.systemName)
   public static let album = UIImage.create(systemName: AmperfyImage.album.systemName)
+  /// Gigs library tab icon (fork 2026-07). A system symbol used directly since
+  /// Gigs isn't part of the upstream AmperfyImage catalog.
+  public static let gigs = UIImage.create(systemName: "music.mic")
   public static let antenna = UIImage.create(systemName: AmperfyImage.antenna.systemName)
   public static let artist = UIImage.create(systemName: AmperfyImage.artist.systemName)
   public static let appIcon = UIImage.create("Icon-1024")

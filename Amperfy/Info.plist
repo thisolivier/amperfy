@@ -68,6 +68,8 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Amperfy uses your location only when you tap Near me in Gigs, to find upcoming live shows nearby. Your location is never stored or shared.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INPlayMediaIntent</string>
