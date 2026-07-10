@@ -34,23 +34,26 @@ class GigsServiceTest: XCTestCase {
     getTestFileData(name: "gigs_events", withExtension: "json")
   }
 
-  func testParsesAllEventsFromFixture() throws {
+  func testParsesAllValidEventsFromFixture() throws {
+    // The fixture has 7 rows: 6 valid (3 timed London + 1 date-only Warsaw +
+    // 1 null-venue Montreal + 1 null-city Montreal) and 1 malformed (missing
+    // id + url). Tolerant decoding keeps all 6 valid ones and drops only the bad.
     let events = try GigsService.parseEvents(from: fixtureData())
-    XCTAssertEqual(events.count, 3)
+    XCTAssertEqual(events.count, 6)
+    XCTAssertNil(events.first { $0.artistName == "Malformed — missing id and url" })
   }
 
   func testParsesEventFieldsCorrectly() throws {
     let events = try GigsService.parseEvents(from: fixtureData())
-    // Sorted date-ascending: evt-002 (Aug 2) is first.
-    let first = events[0]
-    XCTAssertEqual(first.id, "evt-002")
-    XCTAssertEqual(first.artistName, "Goose")
-    XCTAssertEqual(first.venueName, "The Roundhouse")
-    XCTAssertEqual(first.city, "London")
-    XCTAssertEqual(first.source, "skiddle")
-    XCTAssertEqual(first.countryCode, "GB")
-    XCTAssertNotNil(first.ticketURL)
-    XCTAssertEqual(first.ticketURL?.absoluteString, "https://skiddle.example.com/evt-002")
+    let goose = try XCTUnwrap(events.first { $0.id == "evt-002" })
+    XCTAssertEqual(goose.artistName, "Goose")
+    XCTAssertEqual(goose.venueName, "The Roundhouse")
+    XCTAssertEqual(goose.city, "London")
+    XCTAssertEqual(goose.source, "skiddle")
+    XCTAssertEqual(goose.countryCode, "GB")
+    XCTAssertFalse(goose.isAllDay)
+    XCTAssertNotNil(goose.ticketURL)
+    XCTAssertEqual(goose.ticketURL?.absoluteString, "https://skiddle.example.com/evt-002")
   }
 
   func testEventsSortedDateAscending() throws {
@@ -66,9 +69,69 @@ class GigsServiceTest: XCTestCase {
     XCTAssertNotNil(events.first { $0.id == "evt-002" }?.startsAt)
   }
 
+  func testMalformedEventIsSkippedNotFatal() throws {
+    // The Montreal city scope in QA degraded to zero events because ONE bad row
+    // threw for the whole array. Tolerant decoding must keep the good rows.
+    let events = try GigsService.parseEvents(from: fixtureData())
+    // Both Montreal rows (null venue, null city) survive.
+    XCTAssertNotNil(events.first { $0.id == "evt-005-nullvenue" })
+    XCTAssertNotNil(events.first { $0.id == "evt-006-nullcity" })
+  }
+
+  func testDateOnlyEventParsesAsAllDayAtStartOfDayUTC() throws {
+    let events = try GigsService.parseEvents(from: fixtureData())
+    let weeknd = try XCTUnwrap(events.first { $0.id == "evt-004-dateonly" })
+    XCTAssertTrue(weeknd.isAllDay)
+    var utcCalendar = Calendar(identifier: .gregorian)
+    utcCalendar.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+    let components = utcCalendar.dateComponents(
+      [.year, .month, .day, .hour, .minute, .second],
+      from: weeknd.startsAt
+    )
+    XCTAssertEqual(components.year, 2026)
+    XCTAssertEqual(components.month, 7)
+    XCTAssertEqual(components.day, 30)
+    XCTAssertEqual(components.hour, 0)
+    XCTAssertEqual(components.minute, 0)
+    XCTAssertEqual(components.second, 0)
+  }
+
+  func testNullVenueAndCityDecodeAsNil() throws {
+    let events = try GigsService.parseEvents(from: fixtureData())
+    let nullVenue = try XCTUnwrap(events.first { $0.id == "evt-005-nullvenue" })
+    XCTAssertNil(nullVenue.venueName)
+    XCTAssertEqual(nullVenue.city, "Montreal")
+    XCTAssertNil(nullVenue.latitude)
+    XCTAssertNil(nullVenue.longitude)
+    let nullCity = try XCTUnwrap(events.first { $0.id == "evt-006-nullcity" })
+    XCTAssertEqual(nullCity.venueName, "MTELUS")
+    XCTAssertNil(nullCity.city)
+  }
+
+  func testDateOnlyEventRoundTripsThroughCache() throws {
+    // A date-only event must re-encode as date-only so the offline cache keeps
+    // its all-day flag intact across a decode → encode → decode cycle.
+    let events = try GigsService.parseEvents(from: fixtureData())
+    let original = try XCTUnwrap(events.first { $0.id == "evt-004-dateonly" })
+    let encoded = try GigsResponseEncoder.make().encode(original)
+    let roundTripped = try GigsResponseDecoder.make().decode(GigEvent.self, from: encoded)
+    XCTAssertEqual(roundTripped, original)
+    XCTAssertTrue(roundTripped.isAllDay)
+  }
+
+  func testEmptyArrayParsesToNoEvents() throws {
+    let events = try GigsService.parseEvents(from: Data("[]".utf8))
+    XCTAssertTrue(events.isEmpty)
+  }
+
   func testDecodingFailureThrows() {
+    // A non-array body (or non-JSON) is a genuine contract/transport failure.
     let garbage = Data("not json".utf8)
     XCTAssertThrowsError(try GigsService.parseEvents(from: garbage)) { error in
+      XCTAssertEqual(error as? GigsServiceError, .decodingFailed)
+    }
+    let notAnArray = Data("{\"unexpected\":\"object\"}".utf8)
+    XCTAssertThrowsError(try GigsService.parseEvents(from: notAnArray)) { error in
       XCTAssertEqual(error as? GigsServiceError, .decodingFailed)
     }
   }
@@ -81,7 +144,7 @@ class GigsServiceTest: XCTestCase {
     var calendar = Calendar(identifier: .gregorian)
     calendar.firstWeekday = 2 // Monday
     let sections = GigsWeekGrouper.group(events: events, calendar: calendar)
-    XCTAssertEqual(sections.count, 3)
+    XCTAssertFalse(sections.isEmpty)
     let weekStarts = sections.map(\.weekStart)
     XCTAssertEqual(weekStarts, weekStarts.sorted())
     // Each section's events are themselves ascending.

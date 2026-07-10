@@ -48,10 +48,15 @@ extension GigsVC: UITableViewDataSource, UITableViewDelegate {
 
     var content = cell.defaultContentConfiguration()
     content.text = event.artistName
-    let dateText = Self.rowDateFormatter.string(from: event.startsAt)
+    // Date-only ("all-day") events render just the date; timed events keep the
+    // localized date+time. Venue / city fall back to "TBA" placeholders when the
+    // source omitted them (real Ticketmaster rows do), so the row still renders.
+    let dateText = event.isAllDay
+      ? Self.rowDateOnlyFormatter.string(from: event.startsAt)
+      : Self.rowDateFormatter.string(from: event.startsAt)
     content
       .secondaryText =
-      "\(event.venueName) · \(event.city)\n\(dateText) · \(event.source.capitalized)"
+      "\(Self.venueLine(for: event))\n\(dateText) · \(event.source.capitalized)"
     content.secondaryTextProperties.numberOfLines = 2
     content.secondaryTextProperties.color = .secondaryLabel
     cell.contentConfiguration = content
@@ -89,6 +94,25 @@ extension GigsVC: UITableViewDataSource, UITableViewDelegate {
     }
   }
 
+  /// The venue · city line, tolerating null venue and/or city. Renders "Venue
+  /// TBA" / "Location TBA" placeholders rather than dropping the row.
+  static func venueLine(for event: GigEvent) -> String {
+    let venue = event.venueName?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let city = event.city?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let hasVenue = !(venue?.isEmpty ?? true)
+    let hasCity = !(city?.isEmpty ?? true)
+    switch (hasVenue, hasCity) {
+    case (true, true):
+      return "\(venue!) · \(city!)"
+    case (true, false):
+      return venue!
+    case (false, true):
+      return "Venue TBA · \(city!)"
+    case (false, false):
+      return "Venue TBA"
+    }
+  }
+
   private static let weekHeaderFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.dateFormat = "'Week of' MMM d"
@@ -99,6 +123,17 @@ extension GigsVC: UITableViewDataSource, UITableViewDelegate {
     let formatter = DateFormatter()
     formatter.dateStyle = .medium
     formatter.timeStyle = .short
+    return formatter
+  }()
+
+  // Date-only / all-day events: show the calendar date with no time. The date is
+  // start-of-day UTC (see GigsDateParsing), so format in UTC to avoid a device
+  // timezone shifting it to the previous/next day.
+  private static let rowDateOnlyFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .none
+    formatter.timeZone = TimeZone(identifier: "UTC")
     return formatter
   }()
 }

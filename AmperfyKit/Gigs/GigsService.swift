@@ -30,6 +30,7 @@
 //
 
 import Foundation
+import OSLog
 
 // MARK: - GigScope
 
@@ -133,15 +134,48 @@ public final class GigsService: @unchecked Sendable {
 
   // MARK: - Parsing (shared with unit tests)
 
-  /// Decode the frozen event-array JSON. Sorted date-ascending here so every
-  /// caller (live + cache) gets the same order the view sections on.
+  private static let log = Logger(subsystem: "de.amperfy.gigs", category: "GigsService")
+
+  /// Decode the event-array JSON TOLERANTLY: a single malformed element is
+  /// skipped (with a debug log) instead of throwing away the whole scope. Real
+  /// Ticketmaster data has ~5% of rows that break the frozen contract (null
+  /// venue/city, date-only startsAt) — those degraded-but-usable rows now
+  /// survive via optional fields + date-only parsing, and only a truly
+  /// undecodable row (e.g. missing id/url) is dropped. A response that isn't a
+  /// JSON array at all (or isn't JSON) still throws `.decodingFailed`.
+  ///
+  /// Sorted date-ascending so every caller (live + cache) gets the same order
+  /// the view sections on.
   public static func parseEvents(from data: Data) throws -> [GigEvent] {
-    do {
-      let events = try GigsResponseDecoder.make().decode([GigEvent].self, from: data)
-      return events.sorted { $0.startsAt < $1.startsAt }
-    } catch {
+    // First establish the payload is a JSON array; a non-array (or non-JSON)
+    // body is a genuine contract/transport failure and should surface.
+    guard let rawArray = try? JSONSerialization.jsonObject(with: data) as? [Any] else {
       throw GigsServiceError.decodingFailed
     }
+
+    let decoder = GigsResponseDecoder.make()
+    var events: [GigEvent] = []
+    var skipped = 0
+    for element in rawArray {
+      guard let elementData = try? JSONSerialization.data(withJSONObject: element) else {
+        skipped += 1
+        continue
+      }
+      do {
+        let event = try decoder.decode(GigEvent.self, from: elementData)
+        events.append(event)
+      } catch {
+        skipped += 1
+        log.debug("Skipping malformed gig event: \(error.localizedDescription, privacy: .public)")
+      }
+    }
+    if skipped > 0 {
+      log
+        .debug(
+          "Skipped \(skipped, privacy: .public) malformed gig event(s) of \(rawArray.count, privacy: .public)"
+        )
+    }
+    return events.sorted { $0.startsAt < $1.startsAt }
   }
 
   // MARK: - URL building

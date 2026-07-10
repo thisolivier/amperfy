@@ -43,5 +43,57 @@
     "url": "https://tickets.example.com/evt-003",
     "source": "ticketmaster",
     "fetchedAt": "2026-07-09T08:00:00Z"
+  },
+  {
+    "id": "evt-004-dateonly",
+    "artistId": "art-400",
+    "artistName": "The Weeknd",
+    "priorityScore": 88.0,
+    "venueName": "PGE Narodowy",
+    "city": "Warsaw",
+    "countryCode": "PL",
+    "latitude": 52.2394,
+    "longitude": 21.0453,
+    "startsAt": "2026-07-30",
+    "url": "https://tickets.example.com/evt-004",
+    "source": "ticketmaster",
+    "fetchedAt": "2026-07-09T08:00:00Z"
+  },
+  {
+    "id": "evt-005-nullvenue",
+    "artistId": "art-500",
+    "artistName": "Gorillaz",
+    "priorityScore": 71.0,
+    "venueName": null,
+    "city": "Montreal",
+    "countryCode": "CA",
+    "latitude": null,
+    "longitude": null,
+    "startsAt": "2026-08-03T23:00:00Z",
+    "url": "https://tickets.example.com/evt-005",
+    "source": "ticketmaster",
+    "fetchedAt": "2026-07-09T08:00:00Z"
+  },
+  {
+    "id": "evt-006-nullcity",
+    "artistId": "art-600",
+    "artistName": "Bonobo",
+    "priorityScore": 55.0,
+    "venueName": "MTELUS",
+    "city": null,
+    "countryCode": "CA",
+    "startsAt": "2026-08-05T01:00:00Z",
+    "url": "https://tickets.example.com/evt-006",
+    "source": "ticketmaster",
+    "fetchedAt": "2026-07-09T08:00:00Z"
+  },
+  {
+    "artistId": "art-700",
+    "artistName": "Malformed — missing id and url",
+    "priorityScore": 1.0,
+    "venueName": "Nowhere",
+    "city": "Void",
+    "startsAt": "2026-08-06T01:00:00Z",
+    "source": "ticketmaster"
   }
 ]
