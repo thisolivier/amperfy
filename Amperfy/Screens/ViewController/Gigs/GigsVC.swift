@@ -201,7 +201,12 @@ class GigsVC: UIViewController {
   private func renderCurrentData(scopeDescription: String, hadLiveSuccess: Bool) {
     if weekSections.isEmpty {
       if hadLiveSuccess {
-        showEmptyState("No upcoming gigs for \(scopeDescription).")
+        // Explicit zero-events state (QA B-P2-6): the merged-list model
+        // otherwise can't distinguish "city added, no events" from "add
+        // failed". Name the scope and point at the manage-cities affordance.
+        showEmptyState(
+          "No upcoming gigs for \(scopeDescription).\n\nWe'll keep checking — or manage your cities from the list button above."
+        )
       } else {
         showEmptyState(
           "Couldn't reach the gigs service, and nothing is cached for \(scopeDescription) yet.\n\nCheck back when you're online."
