@@ -75,6 +75,20 @@ class PlayableTableCell: BasicTableCell {
   weak var optionsButton: UIButton!
   @IBOutlet
   weak var deleteButton: UIButton!
+
+  /// Onward-exploration button (SF `chevron.right`), a fork addition (2026-07)
+  /// sitting to the LEFT of `optionsButton`. Its menu is the exploration-only
+  /// slice (Show Album/Artist/Playlists/Lyrics + Related Tracks); `optionsButton`
+  /// keeps everything else. Created lazily and hosted in `trailingButtonStack`.
+  private var exploreButton: UIButton?
+  /// Horizontal stack that wraps `[exploreButton, optionsButton]` so the two
+  /// trailing buttons lay out together. Built once, on first `refresh`.
+  private var trailingButtonStack: UIStackView?
+  /// Width reserved on the trailing edge for the button column: one button
+  /// (30pt) normally, two (chevron + options) when the exploration button shows.
+  private var trailingButtonColumnWidth: CGFloat {
+    (exploreButton?.isHidden == false) ? 60.0 : 30.0
+  }
   @IBOutlet
   weak var playOverArtworkButton: UIButton!
   @IBOutlet
@@ -144,9 +158,55 @@ class PlayableTableCell: BasicTableCell {
       playOverArtworkButton.layer.cornerRadius = CornerRadius.small.asCGFloat
       selectionStyle = .none
       downloadProgress.isHidden = true
+      setupTrailingButtonStack()
       setupRatingStars()
       resetForReuse()
     }
+  }
+
+  /// Rehome `optionsButton` (xib-pinned to the trailing margin) into a
+  /// horizontal `UIStackView` alongside a new `chevron.right` exploration
+  /// button. The xib's single-occupancy trailing slot becomes a two-button
+  /// column; the exploration button is hidden by default and only shown for
+  /// song rows in `refreshCacheAndDuration`. checkmark / reorder /
+  /// download-progress (`accessoryView`) and the Mac Catalyst delete button are
+  /// untouched — they live outside this stack.
+  private func setupTrailingButtonStack() {
+    // Deactivate the xib trailing-margin pin on optionsButton so the stack can
+    // own the trailing edge instead. (Constraint id X7z-Kg-90N.)
+    for constraint in contentView.constraints where
+      (constraint.firstItem === optionsButton || constraint.secondItem === optionsButton) &&
+      (constraint.firstAttribute == .trailing || constraint.firstAttribute == .trailingMargin) {
+      constraint.isActive = false
+    }
+
+    let chevron = UIButton(type: .system)
+    chevron.translatesAutoresizingMaskIntoConstraints = false
+    chevron.setImage(
+      UIImage(systemName: "chevron.right"),
+      for: .normal
+    )
+    chevron.tintColor = .secondaryLabel
+    chevron.showsMenuAsPrimaryAction = true
+    chevron.accessibilityLabel = "Explore"
+    chevron.isHidden = true
+    NSLayoutConstraint.activate([
+      chevron.widthAnchor.constraint(equalToConstant: 30),
+    ])
+    exploreButton = chevron
+
+    let stack = UIStackView(arrangedSubviews: [chevron, optionsButton])
+    stack.axis = .horizontal
+    stack.alignment = .center
+    stack.distribution = .fill
+    stack.spacing = 0
+    stack.translatesAutoresizingMaskIntoConstraints = false
+    contentView.addSubview(stack)
+    NSLayoutConstraint.activate([
+      stack.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
+      stack.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+    ])
+    trailingButtonStack = stack
   }
 
   private func setupRatingStars() {
@@ -198,6 +258,7 @@ class PlayableTableCell: BasicTableCell {
 
   func resetForReuse() {
     playIndicator?.reset()
+    exploreButton?.isHidden = true
     deleteButton.isHidden = true
     playOverArtworkButton.isHidden = true
     playOverNumberButton.isHidden = true
@@ -406,8 +467,18 @@ class PlayableTableCell: BasicTableCell {
         traitCollection.userInterfaceIdiom != .mac
     ) ? 49.0 : 40.0
     let isDisplayOptionButton = (playContextCb != nil) && (playerIndexCb == nil)
-    let durationTrailing = isDisplayOptionButton ?
-      ((traitCollection.horizontalSizeClass == .regular) ? 30 : 30.0) : 0.0
+
+    // The exploration chevron shows only for real song rows in a browse
+    // context (never in the queue/PopupPlayer reorder surface, where
+    // playerIndexCb is set), and only when there is at least one onward
+    // destination to offer. When shown, `…` drops the exploration items and
+    // becomes actions-only; when hidden, `…` keeps the full combined menu.
+    let isDisplayExploreButton = isDisplayOptionButton && (playable.asSong != nil)
+    exploreButton?.isHidden = !isDisplayExploreButton
+
+    // Reserve one column (30) normally, two (chevron + options = 60) when the
+    // exploration button is shown, so labels/cache/duration clear both buttons.
+    let durationTrailing = isDisplayOptionButton ? trailingButtonColumnWidth : 0.0
 
     optionsButton.isHidden = !isDisplayOptionButton
     if isDisplayOptionButton {
@@ -416,13 +487,29 @@ class PlayableTableCell: BasicTableCell {
       if let rootView = rootView {
         let playContext = playContextCb != nil ? { self.playContextCb?(self) } : nil
         let playIndex = playerIndexCb != nil ? { self.playerIndexCb?(self) } : nil
+        // Options menu: actions-only when the chevron carries exploration,
+        // otherwise the historical full combined menu.
+        let optionsMenuMode: EntityMenuMode = isDisplayExploreButton ? .actionsOnly : .full
         optionsButton.menu = UIMenu.lazyMenu {
           EntityPreviewActionBuilder(
             container: playable,
             on: rootView,
             playContextCb: playContext,
-            playerIndexCb: playIndex
+            playerIndexCb: playIndex,
+            menuMode: optionsMenuMode
           ).createMenuActions()
+        }
+        // Chevron menu: exploration-only.
+        if isDisplayExploreButton {
+          exploreButton?.menu = UIMenu.lazyMenu {
+            EntityPreviewActionBuilder(
+              container: playable,
+              on: rootView,
+              playContextCb: playContext,
+              playerIndexCb: playIndex,
+              menuMode: .explorationOnly
+            ).createMenuActions()
+          }
         }
       }
     }

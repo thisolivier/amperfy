@@ -30,12 +30,44 @@ typealias GetPlayerIndexCallback = () -> PlayerIndex?
 // MARK: - EntityPreviewActionBuilder
 
 @MainActor
+// MARK: - EntityMenuMode
+
+/// Which slice of the combined action set a built menu contains.
+///
+/// Song rows carry two trailing buttons (fork 2026-07): a `…` options button
+/// and a `chevron.right` exploration button. Splitting the one combined menu
+/// keeps each button focused — `…` = actions you take on the item, chevron =
+/// onward exploration ("Show Album/Artist", "Related Tracks", "Show Lyrics",
+/// "Show in Playlists"). Non-row surfaces (long-press previews) keep `.full`.
+public enum EntityMenuMode {
+  /// Everything — the historical single combined menu. Used by long-press
+  /// previews and anywhere a single menu must stand alone.
+  case full
+  /// ONLY the onward-exploration items (Show Album/Artist/Playlists/Lyrics/
+  /// Podcast details + Related Tracks). Backs the chevron button.
+  case explorationOnly
+  /// Everything EXCEPT the exploration items — play/queue/favorite/rating/
+  /// add-to-playlist/download/share/… Backs the `…` options button.
+  case actionsOnly
+}
+
 class EntityPreviewActionBuilder {
   private var entityContainer: PlayableContainable
   private var rootView: UIViewController
   private var playContextCb: GetPlayContextCallback?
   private var playerIndexCb: GetPlayerIndexCallback?
+  private var menuMode: EntityMenuMode
   private var appDelegate: AppDelegate
+
+  /// True when the current mode wants the onward-exploration items.
+  private var includesExploration: Bool {
+    menuMode == .full || menuMode == .explorationOnly
+  }
+
+  /// True when the current mode wants the non-exploration action items.
+  private var includesActions: Bool {
+    menuMode == .full || menuMode == .actionsOnly
+  }
 
   /// Present from here, never from `rootView` directly: when actions run from
   /// inside a modal (e.g. a track's menu inside the Related Tracks sheet),
@@ -93,13 +125,15 @@ class EntityPreviewActionBuilder {
     container: PlayableContainable,
     on rootView: UIViewController,
     playContextCb: GetPlayContextCallback? = nil,
-    playerIndexCb: GetPlayerIndexCallback? = nil
+    playerIndexCb: GetPlayerIndexCallback? = nil,
+    menuMode: EntityMenuMode = .full
   ) {
     self.appDelegate = (UIApplication.shared.delegate as! AppDelegate)
     self.entityContainer = container
     self.rootView = rootView
     self.playContextCb = playContextCb
     self.playerIndexCb = playerIndexCb
+    self.menuMode = menuMode
   }
 
   public func createMenu() -> UIMenu {
@@ -116,85 +150,95 @@ class EntityPreviewActionBuilder {
     var ratingFavActions = [UIMenuElement]()
     var elementHandlingActions = [UIMenuElement]()
 
-    if isPlay {
-      playActions.append(createPlayAction())
+    // ACTIONS — play / queue (backs `…`, and part of `.full`).
+    if includesActions {
+      if isPlay {
+        playActions.append(createPlayAction())
+      }
+      if isShuffle {
+        playActions.append(createPlayShuffledAction())
+      }
+      if isInstantMix {
+        playActions.append(createInstantMixAction())
+      }
+      if !playActions.isEmpty {
+        menuActions.append(UIMenu(options: .displayInline, children: playActions))
+      }
+      if isMusicQueue {
+        menuActions.append(createMusicQueueAction())
+      }
+      if isPodcastQueue {
+        menuActions.append(createPodcastQueueAction())
+      }
     }
-    if isShuffle {
-      playActions.append(createPlayShuffledAction())
+    // EXPLORATION — onward navigation (backs the chevron, and part of `.full`).
+    if includesExploration {
+      if isShowAlbum {
+        gotoActions.append(createShowAlbumAction())
+      }
+      if isShowArtist {
+        gotoActions.append(createShowArtistAction())
+      }
+      if isShowSongDetails,
+         let song = (entityContainer as? AbstractPlayable)?.asSong,
+         let lyricsShowAction = createShowLyricsAction(song: song) {
+        gotoActions.append(lyricsShowAction)
+      }
+      if isShowPodcastDetails,
+         let podcastEpisode = (entityContainer as? AbstractPlayable)?.asPodcastEpisode {
+        gotoActions.append(createShowEpisodeDetailsAction(podcastEpisode: podcastEpisode))
+      }
+      if isShowPodcastDetails, let podcast = entityContainer as? Podcast {
+        gotoActions.append(createShowPodcastDetailsAction(podcast: podcast))
+      }
+      if isShowPlaylists {
+        gotoActions.append(createShowPlaylistsAction())
+      }
+      if isRelatedTracks {
+        gotoActions.append(createRelatedTracksAction())
+      }
+      if !gotoActions.isEmpty {
+        menuActions.append(UIMenu(options: .displayInline, children: gotoActions))
+      }
     }
-    if isInstantMix {
-      playActions.append(createInstantMixAction())
-    }
-    if !playActions.isEmpty {
-      menuActions.append(UIMenu(options: .displayInline, children: playActions))
-    }
-    if isMusicQueue {
-      menuActions.append(createMusicQueueAction())
-    }
-    if isPodcastQueue {
-      menuActions.append(createPodcastQueueAction())
-    }
-    if isShowAlbum {
-      gotoActions.append(createShowAlbumAction())
-    }
-    if isShowArtist {
-      gotoActions.append(createShowArtistAction())
-    }
-    if isShowSongDetails,
-       let song = (entityContainer as? AbstractPlayable)?.asSong,
-       let lyricsShowAction = createShowLyricsAction(song: song) {
-      gotoActions.append(lyricsShowAction)
-    }
-    if isShowPodcastDetails,
-       let podcastEpisode = (entityContainer as? AbstractPlayable)?.asPodcastEpisode {
-      gotoActions.append(createShowEpisodeDetailsAction(podcastEpisode: podcastEpisode))
-    }
-    if isShowPodcastDetails, let podcast = entityContainer as? Podcast {
-      gotoActions.append(createShowPodcastDetailsAction(podcast: podcast))
-    }
-    if !gotoActions.isEmpty {
-      menuActions.append(UIMenu(options: .displayInline, children: gotoActions))
-    }
-    if let libraryEntity = entityContainer as? AbstractLibraryEntity, entityContainer.isFavoritable,
-       appDelegate.storage.settings.user.isOnlineMode {
-      ratingFavActions.append(createFavoriteMenu(libraryEntity: libraryEntity))
-    }
-    if let libraryEntity = entityContainer as? AbstractLibraryEntity, entityContainer.isRateable,
-       appDelegate.storage.settings.user.isOnlineMode {
-      ratingFavActions.append(createRatingMenu(libraryEntity: libraryEntity))
-    }
-    if !ratingFavActions.isEmpty {
-      menuActions.append(UIMenu(options: .displayInline, children: ratingFavActions))
-    }
-    if isAddToPlaylist {
-      elementHandlingActions.append(createAddToPlaylistAction())
-    }
-    if isShowPlaylists {
-      elementHandlingActions.append(createShowPlaylistsAction())
-    }
-    if isRelatedTracks {
-      elementHandlingActions.append(createRelatedTracksAction())
-    }
-    if isDownloadPossible {
-      elementHandlingActions.append(createDownloadAction())
-    }
-    if entityContainer.playables.hasCachedItems {
-      elementHandlingActions.append(createDeleteCacheAction())
-    }
-    if isDeleteOnServer {
-      elementHandlingActions.append(createDeleteOnServerAction())
-    }
-    if isShareSong, let playable = entityContainer as? AbstractPlayable {
-      elementHandlingActions.append(createShareAction(playable: playable))
-    }
-    if isGoToSiteUrl, let url = (entityContainer as? AbstractPlayable)?.asRadio?.siteURL {
-      elementHandlingActions.append(createGoToSiteUrl(url: url))
-    }
-    if !elementHandlingActions.isEmpty {
-      menuActions.append(UIMenu(options: .displayInline, children: elementHandlingActions))
-    }
-    if appDelegate.storage.settings.user.isShowDetailedInfo {
-      menuActions.append(createCopyIdToClipboardAction())
+    // ACTIONS — rating/favorite/add-to-playlist/download/delete/share/site.
+    if includesActions {
+      if let libraryEntity = entityContainer as? AbstractLibraryEntity,
+         entityContainer.isFavoritable,
+         appDelegate.storage.settings.user.isOnlineMode {
+        ratingFavActions.append(createFavoriteMenu(libraryEntity: libraryEntity))
+      }
+      if let libraryEntity = entityContainer as? AbstractLibraryEntity, entityContainer.isRateable,
+         appDelegate.storage.settings.user.isOnlineMode {
+        ratingFavActions.append(createRatingMenu(libraryEntity: libraryEntity))
+      }
+      if !ratingFavActions.isEmpty {
+        menuActions.append(UIMenu(options: .displayInline, children: ratingFavActions))
+      }
+      if isAddToPlaylist {
+        elementHandlingActions.append(createAddToPlaylistAction())
+      }
+      if isDownloadPossible {
+        elementHandlingActions.append(createDownloadAction())
+      }
+      if entityContainer.playables.hasCachedItems {
+        elementHandlingActions.append(createDeleteCacheAction())
+      }
+      if isDeleteOnServer {
+        elementHandlingActions.append(createDeleteOnServerAction())
+      }
+      if isShareSong, let playable = entityContainer as? AbstractPlayable {
+        elementHandlingActions.append(createShareAction(playable: playable))
+      }
+      if isGoToSiteUrl, let url = (entityContainer as? AbstractPlayable)?.asRadio?.siteURL {
+        elementHandlingActions.append(createGoToSiteUrl(url: url))
+      }
+      if !elementHandlingActions.isEmpty {
+        menuActions.append(UIMenu(options: .displayInline, children: elementHandlingActions))
+      }
+      if appDelegate.storage.settings.user.isShowDetailedInfo {
+        menuActions.append(createCopyIdToClipboardAction())
+      }
     }
 
     return menuActions
