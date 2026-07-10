@@ -37,6 +37,25 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 70,
+      date: "2026-07-09",
+      title: "Build 70 — Gigs fixes + cleaner song rows",
+      whatsNew: [
+        "Gigs now shows every valid show: a few venues with missing details (or a date but no time) used to hide a whole city's gigs — those shows now appear, with a 'Venue TBA' note and an all-day date where needed.",
+        "Tapping a gig opens its tickets inside Amperfy and returns you to the Gigs list when you close it; long-press a gig for 'Open in Safari'.",
+        "You can now see and remove the cities you follow — tap the list button in Gigs to manage them.",
+        "Song rows are cleaner: the downloaded dot now sits on the left of the artwork, and the two round buttons (actions and explore) are evenly sized.",
+        "When a source lists the same show twice, Amperfy now keeps the Ticketmaster listing, and empty cities say so instead of showing a blank list.",
+      ],
+      testingFocus: [
+        "Add a city with some shows that have missing venues or date-only listings (e.g. a Ticketmaster-heavy city) — every valid show should appear, none silently dropped.",
+        "Tap a gig, then close the ticket page — you should land back on the Gigs list, not Home. Long-press a gig and choose 'Open in Safari'.",
+        "In Gigs, tap the list button, then swipe or use Edit to remove a city — the Gigs list should update.",
+        "On song rows, confirm the downloaded dot is on the left of the album art and the two round trailing buttons are the same size; download a song and watch the dot appear live.",
+        "If you upgraded from an older build and never saw the Gigs tab, it should now appear in the library list automatically.",
+      ]
+    ),
+    ReleaseNote(
       id: 69,
       date: "2026-07-09",
       title: "Build 69 — Gigs + cleaner song menus",
@@ -88,19 +107,6 @@ enum ReleaseNotes {
       testingFocus: [
         "Start playback so the mini player shows, then open Related Tracks on iPhone — the play/shuffle/queue controls should sit above the mini player with a clear gap, not clipped behind it",
         "Open 'Show in Playlists' for a song a few times — it should open instantly without triggering a full library sync",
-      ]
-    ),
-    ReleaseNote(
-      id: 65,
-      date: "2026-07-09",
-      title: "Build 65 — Related Tracks controls and honest playlist membership",
-      whatsNew: [
-        "Related Tracks: the bulk-queue controls are no longer hidden behind the tab bar and mini player — the toolbar now sits clear of the safe area on iPhone, so you can reach every action",
-        "Playlist membership ('Show in Playlists') is now accurate — it no longer misses playlists a song is really in",
-      ],
-      testingFocus: [
-        "Open a Related Tracks deck on iPhone with the mini player showing — the bulk-queue controls should be fully visible and tappable, not clipped by the tab bar",
-        "Open 'Show in Playlists' for a song you know is in several playlists — every one should be listed, none missing",
       ]
     ),
   ]
