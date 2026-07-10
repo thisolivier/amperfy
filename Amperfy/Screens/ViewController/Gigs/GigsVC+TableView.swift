@@ -90,7 +90,14 @@ extension GigsVC: UITableViewDataSource, UITableViewDelegate {
       ) { _ in
         self?.openTicket(for: event)
       }
-      return UIMenu(children: [showArtist, openTicket])
+      // Escape hatch: leave the app for the system browser.
+      let openInSafari = UIAction(
+        title: "Open in Safari",
+        image: UIImage(systemName: "safari")
+      ) { _ in
+        self?.openTicketExternally(for: event)
+      }
+      return UIMenu(children: [showArtist, openTicket, openInSafari])
     }
   }
 

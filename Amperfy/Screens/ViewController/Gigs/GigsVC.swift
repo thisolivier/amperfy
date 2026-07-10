@@ -288,10 +288,23 @@ class GigsVC: UIViewController {
 
   // MARK: - Navigation from a gig
 
+  /// Open the ticket page IN-APP (SFSafariViewController). Presenting from
+  /// GigsVC's own navigation controller (rather than bare `self`) keeps the
+  /// dismiss anchored to the Gigs surface: in a collapsed split view, presenting
+  /// off `self` could return the user to Home on close (QA B-P1-2). The
+  /// long-press "Open in Safari" context action is the external escape hatch.
   func openTicket(for event: GigEvent) {
     guard let url = event.ticketURL else { return }
     let safari = SFSafariViewController(url: url)
-    present(safari, animated: true)
+    safari.modalPresentationStyle = .automatic
+    let presenter: UIViewController = navigationController ?? self
+    presenter.present(safari, animated: true)
+  }
+
+  /// Escape hatch: hand the ticket URL to the system browser.
+  func openTicketExternally(for event: GigEvent) {
+    guard let url = event.ticketURL else { return }
+    UIApplication.shared.open(url)
   }
 
   func showArtistInLibrary(named artistName: String) {
