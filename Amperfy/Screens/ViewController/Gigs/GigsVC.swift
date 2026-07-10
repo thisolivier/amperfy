@@ -134,7 +134,16 @@ class GigsVC: UIViewController {
       target: self,
       action: #selector(nearMeTapped)
     )
-    navigationItem.rightBarButtonItems = [addCity, nearMe]
+    // Manage the followed-city list (view + remove) — QA B-P1-3: the scope was
+    // previously add-only, so a typo'd/experimental city stayed forever.
+    let manageCities = UIBarButtonItem(
+      image: UIImage(systemName: "list.bullet"),
+      style: .plain,
+      target: self,
+      action: #selector(manageCitiesTapped)
+    )
+    manageCities.accessibilityLabel = "Manage Cities"
+    navigationItem.rightBarButtonItems = [addCity, nearMe, manageCities]
   }
 
   // MARK: - Loading
@@ -254,6 +263,26 @@ class GigsVC: UIViewController {
       reload()
     })
     present(alert, animated: true)
+  }
+
+  @objc
+  private func manageCitiesTapped() {
+    let citiesVC = GigsCitiesVC()
+    citiesVC.onChange = { [weak self] in
+      self?.reload()
+    }
+    let nav = UINavigationController(rootViewController: citiesVC)
+    citiesVC.navigationItem.leftBarButtonItem = UIBarButtonItem(
+      barButtonSystemItem: .done,
+      target: self,
+      action: #selector(dismissPresentedManagement)
+    )
+    present(nav, animated: true)
+  }
+
+  @objc
+  private func dismissPresentedManagement() {
+    presentedViewController?.dismiss(animated: true)
   }
 
   @objc

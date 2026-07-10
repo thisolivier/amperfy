@@ -543,6 +543,7 @@
 		5E49B381B7BE21E9E8383ED1 /* AuditionDeckHomeEntryContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17D3411E10BB3EDE27EF914F /* AuditionDeckHomeEntryContent.swift */; };
 		5FAA0A4372E2C1880F959A4E /* AuditionDeckCardArtworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A4F252AA1D448BC53A4989 /* AuditionDeckCardArtworkView.swift */; };
 		602B68CE691571422AC72B5F /* GigsVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A1E4FD407E8A73C4B52494 /* GigsVC.swift */; };
+		A1B2C3D40000000000000001 /* GigsCitiesVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000002 /* GigsCitiesVC.swift */; };
 		628ED22FD9FD47992DFD5854 /* NavidromeServerApi.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15DA30D0866FA18446DFAE11 /* NavidromeServerApi.swift */; };
 		63060401189E924AF205F06A /* AuditionDeckController+Dealing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79A3A6DB3E79C8FC69237046 /* AuditionDeckController+Dealing.swift */; };
 		631C166B2C6D3D9A0085F62E /* SettingsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 631C166A2C6D3D9A0085F62E /* SettingsRow.swift */; };
@@ -1341,6 +1342,7 @@
 		8527D8D392314291A9BE69CA /* SettingEnumerations+UIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingEnumerations+UIKit.swift"; sourceTree = "<group>"; };
 		86519AE157CB31DDA0056DD3 /* DeckSeedResolution.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckSeedResolution.swift; sourceTree = "<group>"; };
 		86A1E4FD407E8A73C4B52494 /* GigsVC.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GigsVC.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000002 /* GigsCitiesVC.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GigsCitiesVC.swift; sourceTree = "<group>"; };
 		87045C62548E017865B9D516 /* AdjacencySidecarClientTest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdjacencySidecarClientTest.swift; sourceTree = "<group>"; };
 		87B8BD93A2F7AC3EA0F8B243 /* DiscoveryDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryDiagnosticsView.swift; sourceTree = "<group>"; };
 		8AE98C211B1EDEC684100C7C /* AuditionDeckCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckCardView.swift; sourceTree = "<group>"; };
@@ -2568,6 +2570,7 @@
 			children = (
 				86A1E4FD407E8A73C4B52494 /* GigsVC.swift */,
 				67CD5B4D0978F9D7ED80FBBF /* GigsVC+TableView.swift */,
+				A1B2C3D40000000000000002 /* GigsCitiesVC.swift */,
 				5644DE0ABADFA04BDF9BDDC9 /* GigsLocationProvider.swift */,
 			);
 			name = Gigs;
@@ -3275,6 +3278,7 @@
 				5AB84D1AB060AD12D5C07AF2 /* HomeVC+DiscoveryEntryPoints.swift in Sources */,
 				93C6CFA44A56A889D740824A /* NeedleDropDebugAutostart.swift in Sources */,
 				602B68CE691571422AC72B5F /* GigsVC.swift in Sources */,
+				A1B2C3D40000000000000001 /* GigsCitiesVC.swift in Sources */,
 				2EC5D7CA43BFB0A16FD2CD2F /* GigsVC+TableView.swift in Sources */,
 				331A235CA4F5DB4E5D921F15 /* GigsLocationProvider.swift in Sources */,
 			);
