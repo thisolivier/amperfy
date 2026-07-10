@@ -233,6 +233,34 @@ public class LibraryUpdater {
         type: .info
       )
     }
+    if storage.settings.app.librarySyncVersion < .v22,
+       let activeAccountInfo = storage.settings.accounts.active {
+      // Add Gigs to libraryDisplaySettings for upgrading users (QA A-P2-3):
+      // saved settings predate the gigs case, so gigs is absent from BOTH inUse
+      // and notUsed on decode and the tab never appears. Inject it into inUse
+      // exactly once. A user who later removes it moves gigs to notUsed, so the
+      // "absent from both" guard (plus the one-time version gate) prevent any
+      // re-injection. Runs LAST so the v18–v21 migrations above are unaffected.
+      let existingSettings = storage.settings.accounts.getSetting(activeAccountInfo).read
+        .libraryDisplaySettings
+      let knownTypes = Set(existingSettings.combined.flatMap { $0 })
+      if !knownTypes.contains(.gigs) {
+        var libraryDisplaySettingsInUse = existingSettings.inUse
+        libraryDisplaySettingsInUse.append(.gigs)
+        storage.settings.accounts.updateSetting(activeAccountInfo) { accountSettings in
+          accountSettings
+            .libraryDisplaySettings = LibraryDisplaySettings(inUse: libraryDisplaySettingsInUse)
+        }
+      }
+      storage
+        .settings.app.librarySyncVersion =
+        .v22 // one-time: don't re-inject on next launch
+      os_log(
+        "Perform blocking library update (DONE): Gigs tab display migration",
+        log: self.log,
+        type: .info
+      )
+    }
   }
 
   @MainActor

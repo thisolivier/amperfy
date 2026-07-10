@@ -41,6 +41,7 @@ public enum LibrarySyncVersion: Int, Comparable, CustomStringConvertible, Sendab
   case v19 = 13 // Playlist items are as NSOrderedSet
   case v20 = 14 // Streaming transcoding format preference is split in wifi and celluar
   case v21 = 15 // Account support
+  case v22 = 16 // Gigs added to libraryDisplaySettings for upgrading users
 
   public var description: String {
     switch self {
@@ -60,6 +61,7 @@ public enum LibrarySyncVersion: Int, Comparable, CustomStringConvertible, Sendab
     case .v19: return "v19"
     case .v20: return "v20"
     case .v21: return "v21"
+    case .v22: return "v22"
     }
   }
 
@@ -67,7 +69,7 @@ public enum LibrarySyncVersion: Int, Comparable, CustomStringConvertible, Sendab
     self == Self.newestVersion
   }
 
-  public static let newestVersion: LibrarySyncVersion = .v21
+  public static let newestVersion: LibrarySyncVersion = .v22
   public static let defaultValue: LibrarySyncVersion = .v6
 
   public static func < (lhs: LibrarySyncVersion, rhs: LibrarySyncVersion) -> Bool {
