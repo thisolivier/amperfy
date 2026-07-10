@@ -27,9 +27,6 @@ import UIKit
 typealias GetPlayContextCallback = () -> PlayContext?
 typealias GetPlayerIndexCallback = () -> PlayerIndex?
 
-// MARK: - EntityPreviewActionBuilder
-
-@MainActor
 // MARK: - EntityMenuMode
 
 /// Which slice of the combined action set a built menu contains.
@@ -51,6 +48,9 @@ public enum EntityMenuMode {
   case actionsOnly
 }
 
+// MARK: - EntityPreviewActionBuilder
+
+@MainActor
 class EntityPreviewActionBuilder {
   private var entityContainer: PlayableContainable
   private var rootView: UIViewController
