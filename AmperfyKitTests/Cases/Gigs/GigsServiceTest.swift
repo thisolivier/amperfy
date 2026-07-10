@@ -164,6 +164,91 @@ class GigsServiceTest: XCTestCase {
     let total = sections.reduce(0) { $0 + $1.events.count }
     XCTAssertEqual(total, events.count)
   }
+
+  // MARK: - Cross-source dedupe (QA B-P2-4)
+
+  private func nearDuplicatePair() -> (tm: GigEvent, skiddle: GigEvent) {
+    // Same gig from two sources: same artist + venue (spelled slightly
+    // differently), starts 30 min apart (< 1h window). Ticketmaster must win
+    // the display row regardless of input order.
+    let tm = GigEvent(
+      id: "tm-justice",
+      artistId: "art-justice",
+      artistName: "Justice",
+      priorityScore: 50,
+      venueName: "The Marble Factory",
+      city: "Bristol",
+      countryCode: "GB",
+      latitude: nil,
+      longitude: nil,
+      startsAt: ISO8601DateFormatter().date(from: "2026-08-01T19:00:00Z")!,
+      url: "https://ticketmaster.example.com/justice",
+      source: "ticketmaster",
+      fetchedAt: nil
+    )
+    let skiddle = GigEvent(
+      id: "skiddle-justice",
+      artistId: "art-justice",
+      artistName: "Justice",
+      priorityScore: 50,
+      venueName: "Marble Factory",
+      city: "Bristol",
+      countryCode: "GB",
+      latitude: nil,
+      longitude: nil,
+      startsAt: ISO8601DateFormatter().date(from: "2026-08-01T19:30:00Z")!,
+      url: "https://skiddle.example.com/justice",
+      source: "skiddle",
+      fetchedAt: nil
+    )
+    return (tm, skiddle)
+  }
+
+  func testCrossSourceDedupePrefersTicketmaster_tmFirst() {
+    let pair = nearDuplicatePair()
+    let deduped = GigsWeekGrouper.dedupe([pair.tm, pair.skiddle])
+    XCTAssertEqual(deduped.count, 1)
+    XCTAssertEqual(deduped.first?.source, "ticketmaster")
+    XCTAssertEqual(deduped.first?.url, "https://ticketmaster.example.com/justice")
+  }
+
+  func testCrossSourceDedupePrefersTicketmaster_skiddleFirst() {
+    let pair = nearDuplicatePair()
+    let deduped = GigsWeekGrouper.dedupe([pair.skiddle, pair.tm])
+    XCTAssertEqual(deduped.count, 1)
+    XCTAssertEqual(deduped.first?.source, "ticketmaster")
+    XCTAssertEqual(deduped.first?.url, "https://ticketmaster.example.com/justice")
+  }
+
+  func testDistinctGigsAtSameVenueAreNotMerged() {
+    // Same artist + venue but starts 3h apart (outside the 1h window) are two
+    // separate shows and must both survive.
+    let pair = nearDuplicatePair()
+    let laterShow = GigEvent(
+      id: "tm-justice-night2",
+      artistId: "art-justice",
+      artistName: "Justice",
+      priorityScore: 50,
+      venueName: "The Marble Factory",
+      city: "Bristol",
+      countryCode: "GB",
+      latitude: nil,
+      longitude: nil,
+      startsAt: ISO8601DateFormatter().date(from: "2026-08-01T23:00:00Z")!,
+      url: "https://ticketmaster.example.com/justice-2",
+      source: "ticketmaster",
+      fetchedAt: nil
+    )
+    let deduped = GigsWeekGrouper.dedupe([pair.tm, pair.skiddle, laterShow])
+    XCTAssertEqual(deduped.count, 2)
+  }
+
+  func testNormalizeKeyTextCollapsesPunctuationAndThe() {
+    XCTAssertEqual(
+      GigsWeekGrouper.normalizeKeyText("The O2 Academy, Brixton!"),
+      GigsWeekGrouper.normalizeKeyText("o2 academy brixton")
+    )
+  }
 }
 
 // MARK: - GigsSettingsTest
