@@ -76,19 +76,41 @@ class PlayableTableCell: BasicTableCell {
   @IBOutlet
   weak var deleteButton: UIButton!
 
-  /// Onward-exploration button (SF `chevron.right`), a fork addition (2026-07)
-  /// sitting to the LEFT of `optionsButton`. Its menu is the exploration-only
+  /// Onward-exploration button (SF `chevron.right` in a circular background), a
+  /// fork addition (2026-07) sitting to the RIGHT of `optionsButton` in the
+  /// trailing pair (user redesign 2026-07-10). Its menu is the exploration-only
   /// slice (Show Album/Artist/Playlists/Lyrics + Related Tracks); `optionsButton`
   /// keeps everything else. Created lazily and hosted in `trailingButtonStack`.
   private var exploreButton: UIButton?
-  /// Horizontal stack that wraps `[exploreButton, optionsButton]` so the two
-  /// trailing buttons lay out together. Built once, on first `refresh`.
+  /// Horizontal stack that wraps `[optionsButton, exploreButton]` — options (…)
+  /// on the LEFT, exploration arrow on the RIGHT — so the two identically-sized
+  /// circular trailing buttons lay out together. Built once, on first `refresh`.
   private var trailingButtonStack: UIStackView?
+  /// Diameter of each circular trailing button (both identical, user redesign).
+  private static let trailingButtonDiameter: CGFloat = 30.0
+  /// Spacing between the two trailing circular buttons.
+  private static let trailingButtonSpacing: CGFloat = 6.0
   /// Width reserved on the trailing edge for the button column: one button
-  /// (30pt) normally, two (chevron + options) when the exploration button shows.
+  /// normally, two (options + chevron) when the exploration button shows.
   private var trailingButtonColumnWidth: CGFloat {
-    (exploreButton?.isHidden == false) ? 60.0 : 30.0
+    let one = Self.trailingButtonDiameter
+    return (exploreButton?.isHidden == false)
+      ? (one * 2 + Self.trailingButtonSpacing)
+      : one
   }
+
+  /// A small semi-opaque dot rendered on the LEFT edge of the album art
+  /// (extending into the left margin) marking a downloaded/cached track — the
+  /// user redesign (2026-07-10) that moves the cached signal OFF the trailing
+  /// area. Lazily added as a subview of `entityImage`.
+  private var cachedDotView: UIView?
+  private static let cachedDotDiameter: CGFloat = 10.0
+  /// Whether this cell has registered for the download-finished notification
+  /// (guards against double-registration across reuse).
+  private var isDownloadObserverRegistered = false
+  /// Retained so its per-account `.downloadFinishedSuccess` registrations live
+  /// for the cell's lifetime.
+  private var downloadAccountNotificationHandler: AccountNotificationHandler?
 
   @IBOutlet
   weak var playOverArtworkButton: UIButton!
@@ -181,33 +203,91 @@ class PlayableTableCell: BasicTableCell {
       constraint.isActive = false
     }
 
+    // User redesign (2026-07-10): both trailing controls sit in identical
+    // circular backgrounds. `…` (options) on the LEFT, exploration arrow on the
+    // RIGHT. Style the xib-provided options button to match the new explore one.
+    let diameter = Self.trailingButtonDiameter
+    styleCircularTrailingButton(
+      optionsButton,
+      systemImageName: "ellipsis",
+      accessibilityLabel: "More Actions"
+    )
+
     let chevron = UIButton(type: .system)
     chevron.translatesAutoresizingMaskIntoConstraints = false
-    chevron.setImage(
-      UIImage(systemName: "chevron.right"),
-      for: .normal
+    styleCircularTrailingButton(
+      chevron,
+      systemImageName: "chevron.right",
+      accessibilityLabel: "Explore"
     )
-    chevron.tintColor = .secondaryLabel
     chevron.showsMenuAsPrimaryAction = true
-    chevron.accessibilityLabel = "Explore"
     chevron.isHidden = true
     NSLayoutConstraint.activate([
-      chevron.widthAnchor.constraint(equalToConstant: 30),
+      chevron.widthAnchor.constraint(equalToConstant: diameter),
+      chevron.heightAnchor.constraint(equalToConstant: diameter),
     ])
     exploreButton = chevron
 
-    let stack = UIStackView(arrangedSubviews: [chevron, optionsButton])
+    // options (…) LEFT, explore (arrow) RIGHT.
+    let stack = UIStackView(arrangedSubviews: [optionsButton, chevron])
     stack.axis = .horizontal
     stack.alignment = .center
     stack.distribution = .fill
-    stack.spacing = 0
+    stack.spacing = Self.trailingButtonSpacing
     stack.translatesAutoresizingMaskIntoConstraints = false
     contentView.addSubview(stack)
     NSLayoutConstraint.activate([
       stack.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
       stack.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+      optionsButton.widthAnchor.constraint(equalToConstant: diameter),
+      optionsButton.heightAnchor.constraint(equalToConstant: diameter),
     ])
     trailingButtonStack = stack
+  }
+
+  /// Give a trailing button the shared circular-background look: a fixed-size
+  /// tinted circle with a centered SF Symbol glyph. Both `…` and the exploration
+  /// arrow use this so they are visually identical (user redesign 2026-07-10).
+  private func styleCircularTrailingButton(
+    _ button: UIButton,
+    systemImageName: String,
+    accessibilityLabel: String
+  ) {
+    var config = UIButton.Configuration.plain()
+    config.image = UIImage(systemName: systemImageName)
+    config.background.backgroundColor = .secondarySystemFill
+    config.background.cornerRadius = Self.trailingButtonDiameter / 2
+    config.contentInsets = .zero
+    button.configuration = config
+    button.tintColor = .secondaryLabel
+    button.accessibilityLabel = accessibilityLabel
+    button.layer.cornerRadius = Self.trailingButtonDiameter / 2
+    button.clipsToBounds = true
+  }
+
+  /// Lazily build the cached-state dot on the LEFT edge of the album art. It sits
+  /// slightly into the left margin (negative leading) and vertically centered.
+  private func setupCachedDotIfNeeded() {
+    guard cachedDotView == nil else { return }
+    let dot = UIView()
+    dot.translatesAutoresizingMaskIntoConstraints = false
+    dot.backgroundColor = UIColor.label.withAlphaComponent(0.55)
+    dot.layer.cornerRadius = Self.cachedDotDiameter / 2
+    dot.layer.borderWidth = 1
+    dot.layer.borderColor = UIColor.systemBackground.withAlphaComponent(0.9).cgColor
+    dot.isUserInteractionEnabled = false
+    dot.isHidden = true
+    dot.isAccessibilityElement = false
+    entityImage.addSubview(dot)
+    NSLayoutConstraint.activate([
+      dot.widthAnchor.constraint(equalToConstant: Self.cachedDotDiameter),
+      dot.heightAnchor.constraint(equalToConstant: Self.cachedDotDiameter),
+      // Extend into the left margin: centre the dot on the art's leading edge.
+      dot.centerXAnchor.constraint(equalTo: entityImage.leadingAnchor),
+      dot.centerYAnchor.constraint(equalTo: entityImage.centerYAnchor),
+    ])
+    entityImage.clipsToBounds = false
+    cachedDotView = dot
   }
 
   private func setupRatingStars() {
@@ -332,6 +412,44 @@ class PlayableTableCell: BasicTableCell {
       singleTapGestureRecognizer.isEnabled = (displayMode == .normal)
     #endif
     backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
+    registerForDownloadFinishIfNeeded()
+    refresh()
+  }
+
+  /// Observe download completion so the cached dot (and any accessory) refresh
+  /// LIVE on the visible cell (QA A-P2-1: the indicator previously only updated
+  /// after leaving and re-entering the view). Registered once per cell against
+  /// all accounts' playable download managers; the handler filters by the
+  /// displayed playable's uniqueID.
+  private func registerForDownloadFinishIfNeeded() {
+    guard !isDownloadObserverRegistered else { return }
+    isDownloadObserverRegistered = true
+    let accountNotificationHandler = AccountNotificationHandler(
+      storage: appDelegate.storage,
+      notificationHandler: appDelegate.notificationHandler
+    )
+    accountNotificationHandler.registerCallbackForAllAccounts { [weak self] accountInfo in
+      guard let self else { return }
+      appDelegate.notificationHandler.register(
+        self,
+        selector: #selector(downloadFinishedSuccessful(notification:)),
+        name: .downloadFinishedSuccess,
+        object: appDelegate.getMeta(accountInfo).playableDownloadManager
+      )
+    }
+    // Retain the handler for the cell's lifetime so its per-account
+    // registrations stay live.
+    downloadAccountNotificationHandler = accountNotificationHandler
+  }
+
+  @objc
+  private func downloadFinishedSuccessful(notification: Notification) {
+    guard let downloadNotification = DownloadNotification.fromNotification(notification),
+          let playable = playable,
+          playable.uniqueID == downloadNotification.id
+    else { return }
+    // The download just landed — refresh the visible cell so the cached dot
+    // (and any download accessory) reflect the new state immediately.
     refresh()
   }
 
@@ -532,15 +650,14 @@ class PlayableTableCell: BasicTableCell {
     let starWidth = CGFloat(songRating * 8 + 2) // Actual star width for this rating
     let ratingExtraSpace: CGFloat = isRatingVisible ? max(0, starWidth - 26) + 6 : 0.0
 
+    // The cached signal now lives as a dot on the LEFT of the album art (user
+    // redesign 2026-07-10), so the trailing area no longer reserves width for a
+    // cache glyph — only the duration (when shown) still claims trailing space.
     if traitCollection.horizontalSizeClass == .regular {
       labelTrailingCellConstraint.constant = 80 + durationTrailing
     } else {
       var lableTrailing = durationTrailing
-      if playable.isCached, isDurationVisible {
-        lableTrailing += 4 + cacheIconWidth + 4 + durationWidth
-      } else if playable.isCached {
-        lableTrailing += 4 + cacheIconWidth
-      } else if isDurationVisible {
+      if isDurationVisible {
         lableTrailing += 8 + durationWidth
       }
       // Add extra space for rating stars when duration is not visible
@@ -549,15 +666,29 @@ class PlayableTableCell: BasicTableCell {
       }
       labelTrailingCellConstraint.constant = lableTrailing
     }
+    _ = cacheIconWidth // retained for the regular-width layout comment above
 
     durationTrailingCellConstraint.constant = durationTrailing
-    cacheIconImage.isHidden = !playable.isCached
+    // Hide the old trailing cache glyph; its role moved to the left-side dot.
+    cacheIconImage.isHidden = true
+    setupCachedDotIfNeeded()
+    updateCachedDot()
     cacheTrailingCellConstaint
       .constant = durationTrailing + (isDurationVisible ? (4.0 + durationWidth) : 0.0)
     durationLabel.isHidden = !isDurationVisible
     if isDurationVisible {
       durationLabel.text = playable.duration.asColonDurationString
     }
+  }
+
+  /// Show the left-of-artwork cached dot only for downloaded/cached tracks, and
+  /// only in the artwork style (there is no album art in the track-number
+  /// style, so no anchor for the dot).
+  private func updateCachedDot() {
+    let showDot = (playable?.isCached ?? false)
+      && !isDislayAlbumTrackNumberStyle
+      && !entityImage.isHidden
+    cachedDotView?.isHidden = !showDot
   }
 
   private func refreshSubtitleColor() {
