@@ -89,6 +89,7 @@ class PlayableTableCell: BasicTableCell {
   private var trailingButtonColumnWidth: CGFloat {
     (exploreButton?.isHidden == false) ? 60.0 : 30.0
   }
+
   @IBOutlet
   weak var playOverArtworkButton: UIButton!
   @IBOutlet
