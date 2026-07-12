@@ -37,6 +37,22 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 73,
+      date: "2026-07-12",
+      title: "Build 73 — Faster filing on Recently Added",
+      whatsNew: [
+        "Recently Added Tracks bulk-select now has a 'Select All' button in the edit bar — one tap ticks every track in the list. With the 'Hide tracks already in playlists' filter on, that's exactly your unfiled backlog, so you can file the whole inbox in a couple of taps. Tap again for 'Deselect All'.",
+        "When the 'Hide tracks already in playlists' filter is on, the header now shows a small 'Filtered · N unfiled' caption so you can see at a glance how many tracks are left to file. It updates live as you file them.",
+      ],
+      testingFocus: [
+        "Open Recently Added Tracks, tap options → 'Select Tracks'. Tap 'Select All' — every visible row should tick and the count should match. The button should flip to 'Deselect All'; tap it and everything should un-tick.",
+        "Turn on 'Hide tracks already in playlists', then 'Select All' — only the visible (unfiled) tracks should be selected. Tap 'Add to Playlist…', pick a playlist; the added tracks should disappear from the list.",
+        "With the filter on, 'Select All', then toggle the filter or file some tracks — the selection should reconcile (vanished tracks drop out) and the button should still read correctly.",
+        "With the filter ON, confirm the header shows 'Filtered · N unfiled' and that N matches the visible count and drops as you file tracks. With the filter OFF, there should be NO caption (and no pop-up/toast).",
+        "When the list is empty, 'Select All' should be disabled.",
+      ]
+    ),
+    ReleaseNote(
       id: 72,
       date: "2026-07-11",
       title: "Build 72 — Steadier Gigs + tidier song rows",

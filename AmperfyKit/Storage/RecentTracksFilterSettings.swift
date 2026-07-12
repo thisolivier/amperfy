@@ -21,6 +21,8 @@
 
 import Foundation
 
+// MARK: - RecentTracksFilterSettings
+
 /// Persisted settings for the Recently Added detail screen's triage filter.
 ///
 /// The user treats "Recently Added" as an inbox: new tracks arrive and get
@@ -46,5 +48,23 @@ public final class RecentTracksFilterSettings {
   public var hideSongsInPlaylists: Bool {
     get { defaults.bool(forKey: hideSongsInPlaylistsKey) }
     set { defaults.set(newValue, forKey: hideSongsInPlaylistsKey) }
+  }
+}
+
+// MARK: - RecentTracksFilterCaption
+
+/// Pure formatter for the section-header filter caption (B2). Kept UIKit-free
+/// and separate from the view controller so the presence/count logic is unit-
+/// testable. Caption only — there is no toast anywhere in this feature.
+public enum RecentTracksFilterCaption {
+  /// The caption string for the section header, or `nil` when nothing should be
+  /// shown.
+  ///
+  /// * Filter off ⇒ `nil` (header shows no caption).
+  /// * Filter on  ⇒ `"Filtered · N unfiled"` where N is the current VISIBLE
+  ///   (filtered) count, so it reads as the size of the remaining backlog.
+  public static func text(hideSongsInPlaylists: Bool, visibleCount: Int) -> String? {
+    guard hideSongsInPlaylists else { return nil }
+    return "Filtered · \(visibleCount) unfiled"
   }
 }

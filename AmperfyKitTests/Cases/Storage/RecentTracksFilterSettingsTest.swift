@@ -66,4 +66,34 @@ class RecentTracksFilterSettingsTest: XCTestCase {
       defaults.bool(forKey: "amperfy.fork.recentTracks.hideSongsInPlaylists")
     )
   }
+
+  // MARK: - Filter caption (B2)
+
+  /// No caption at all when the filter is off (no toast anywhere either).
+  func testCaptionIsNilWhenFilterOff() {
+    XCTAssertNil(
+      RecentTracksFilterCaption.text(hideSongsInPlaylists: false, visibleCount: 12)
+    )
+  }
+
+  /// When the filter is on, the caption reads "Filtered · N unfiled" with N the
+  /// current visible count.
+  func testCaptionFormatAndCountWhenFilterOn() {
+    XCTAssertEqual(
+      RecentTracksFilterCaption.text(hideSongsInPlaylists: true, visibleCount: 12),
+      "Filtered · 12 unfiled"
+    )
+  }
+
+  /// The count is live — a different visible count yields a different caption.
+  func testCaptionCountIsLive() {
+    XCTAssertEqual(
+      RecentTracksFilterCaption.text(hideSongsInPlaylists: true, visibleCount: 1),
+      "Filtered · 1 unfiled"
+    )
+    XCTAssertEqual(
+      RecentTracksFilterCaption.text(hideSongsInPlaylists: true, visibleCount: 0),
+      "Filtered · 0 unfiled"
+    )
+  }
 }

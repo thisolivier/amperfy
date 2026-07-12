@@ -119,6 +119,10 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
   private let modeControl = UISegmentedControl(items: ["Top N", "Last M days"])
   private let stepperLabel = UILabel()
   private let stepper = UIStepper()
+  /// Subtle caption shown in the section header ONLY while the "hide filed
+  /// tracks" filter is active: "Filtered · N unfiled" (N = current visible
+  /// count, live-updating). Hidden entirely when the filter is off. No toast.
+  private let filterCaptionLabel = UILabel()
   private var cachedHeaderView: UIView?
 
   // MARK: - Filter bar button
@@ -136,6 +140,7 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
   /// action buttons anchored above the mini-player safe area.
   private let editActionBar = UIView()
   private var addToPlaylistButton: UIButton!
+  private var selectAllButton: UIButton!
   private var selectionCountLabel: UILabel!
   private static let editActionBarHeight: CGFloat = 68
 
@@ -191,6 +196,11 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
 
     stepper.translatesAutoresizingMaskIntoConstraints = false
     stepper.addTarget(self, action: #selector(stepperChanged), for: .valueChanged)
+
+    filterCaptionLabel.translatesAutoresizingMaskIntoConstraints = false
+    filterCaptionLabel.font = .preferredFont(forTextStyle: .caption1)
+    filterCaptionLabel.textColor = .secondaryLabel
+    filterCaptionLabel.isHidden = true
 
     syncStepperToCurrentMode()
 
@@ -248,6 +258,7 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
       )
     }
     songs = songMOs.map { Song(managedObject: $0) }
+    updateFilterCaption()
     tableView.reloadData()
     // A wholesale reload drops UIKit's selection state. Reconcile the id-keyed
     // model against the new visible list (a just-filed track hidden by the
@@ -277,6 +288,23 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
       contentUnavailableConfiguration = emptyConfig
     } else {
       contentUnavailableConfiguration = nil
+    }
+  }
+
+  /// Updates the section-header filter caption. Shows "Filtered · N unfiled"
+  /// (N = current visible count) ONLY while the "hide filed tracks" filter is
+  /// on; hides it (empty text, zero height) when off. Caption only — no toast.
+  /// Safe to call before the header is built (the label exists from init).
+  private func updateFilterCaption() {
+    if let caption = RecentTracksFilterCaption.text(
+      hideSongsInPlaylists: hideSongsInPlaylists,
+      visibleCount: songs.count
+    ) {
+      filterCaptionLabel.text = caption
+      filterCaptionLabel.isHidden = false
+    } else {
+      filterCaptionLabel.text = ""
+      filterCaptionLabel.isHidden = true
     }
   }
 
@@ -392,6 +420,23 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     editActionBar.addSubview(countLabel)
     selectionCountLabel = countLabel
 
+    // Leading "Select All" / "Deselect All" toggle on the count row. Borderless
+    // so it reads as a secondary control next to the count and the primary
+    // filled "Add to Playlist…" button below.
+    var selectAllConfig = UIButton.Configuration.plain()
+    selectAllConfig.title = "Select All"
+    selectAllConfig.buttonSize = .small
+    selectAllConfig.contentInsets = .zero
+    let selectAllToggle = UIButton(configuration: selectAllConfig)
+    selectAllToggle.translatesAutoresizingMaskIntoConstraints = false
+    selectAllToggle.addTarget(
+      self,
+      action: #selector(toggleSelectAll),
+      for: .touchUpInside
+    )
+    editActionBar.addSubview(selectAllToggle)
+    selectAllButton = selectAllToggle
+
     var config = UIButton.Configuration.filled()
     config.title = "Add to Playlist…"
     config.image = UIImage(systemName: "text.badge.plus")
@@ -419,6 +464,12 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
       countLabel.topAnchor.constraint(equalTo: separator.bottomAnchor, constant: 4),
       countLabel.centerXAnchor.constraint(equalTo: editActionBar.centerXAnchor),
 
+      selectAllToggle.leadingAnchor.constraint(
+        equalTo: editActionBar.leadingAnchor,
+        constant: 16
+      ),
+      selectAllToggle.centerYAnchor.constraint(equalTo: countLabel.centerYAnchor),
+
       addButton.topAnchor.constraint(equalTo: countLabel.bottomAnchor, constant: 4),
       addButton.leadingAnchor.constraint(equalTo: editActionBar.leadingAnchor, constant: 16),
       addButton.trailingAnchor.constraint(equalTo: editActionBar.trailingAnchor, constant: -16),
@@ -430,6 +481,39 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     let count = selection.count
     addToPlaylistButton.isEnabled = count > 0
     selectionCountLabel.text = count == 1 ? "1 selected" : "\(count) selected"
+
+    // Select All ⇄ Deselect All toggle: flip the label based on whether every
+    // VISIBLE (filtered) row is already ticked. Disabled when the list is empty
+    // (nothing to select). Standard batch-edit pattern.
+    let allSelected = selection.areAllSelected(in: songs)
+    selectAllButton.isEnabled = !songs.isEmpty
+    selectAllButton.configuration?.title = allSelected ? "Deselect All" : "Select All"
+  }
+
+  /// Select All / Deselect All handler for the edit bar. Toggles between the two
+  /// based on current state: if every visible row is already selected, this
+  /// clears the selection; otherwise it selects the whole VISIBLE (filtered)
+  /// list. With the "hide filed tracks" filter on, the visible list is exactly
+  /// the unfiled backlog, so one tap selects the entire inbox. Keeps the id-keyed
+  /// model and the UIKit table checkmarks in sync.
+  @objc
+  private func toggleSelectAll() {
+    if selection.areAllSelected(in: songs) {
+      selection.clear()
+      for row in songs.indices {
+        tableView.deselectRow(at: IndexPath(row: row, section: 0), animated: false)
+      }
+    } else {
+      selection.selectAll(visibleSongs: songs)
+      for row in songs.indices {
+        tableView.selectRow(
+          at: IndexPath(row: row, section: 0),
+          animated: false,
+          scrollPosition: .none
+        )
+      }
+    }
+    updateEditActionBarState()
   }
 
   // MARK: - Bulk select: edit mode
@@ -590,6 +674,7 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     headerView.addSubview(modeControl)
     headerView.addSubview(stepperLabel)
     headerView.addSubview(stepper)
+    headerView.addSubview(filterCaptionLabel)
 
     NSLayoutConstraint.activate([
       modeControl.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
@@ -598,7 +683,6 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
 
       stepperLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
       stepperLabel.topAnchor.constraint(equalTo: modeControl.bottomAnchor, constant: 12),
-      stepperLabel.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -12),
 
       stepper.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
       stepper.centerYAnchor.constraint(equalTo: stepperLabel.centerYAnchor),
@@ -606,9 +690,22 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
         greaterThanOrEqualTo: stepperLabel.trailingAnchor,
         constant: 12
       ),
+
+      // Caption sits under the stepper row and defines the header's bottom.
+      // When the filter is off it is hidden with empty text (zero height), so
+      // the small top spacing is the only residual — negligible, and the header
+      // uses automaticDimension so it re-measures either way.
+      filterCaptionLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
+      filterCaptionLabel.trailingAnchor.constraint(
+        lessThanOrEqualTo: headerView.trailingAnchor,
+        constant: -16
+      ),
+      filterCaptionLabel.topAnchor.constraint(equalTo: stepperLabel.bottomAnchor, constant: 8),
+      filterCaptionLabel.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -12),
     ])
 
     cachedHeaderView = headerView
+    updateFilterCaption()
     return headerView
   }
 
