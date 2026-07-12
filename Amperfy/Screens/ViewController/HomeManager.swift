@@ -514,14 +514,28 @@ class HomeManager: NSObject {
   /// last 7 days" footer count.
   func updateRecentTracks() {
     let context = storage.main.context
+    // The Home-tab preview row is deliberately left UNFILTERED (
+    // `hideSongsInPlaylists: false`): the "hide tracks already in playlists"
+    // triage toggle lives on the Recently Added detail screen only. The Home
+    // preview is a stable glance-at snapshot; suppressing filed tracks there
+    // would make the row flicker/shrink every time the user files something,
+    // which is not the intent. (Toggle scoped to the detail surface — see
+    // RecentTracksDetailVC.)
     let topSongs = RecentTracksQuery.topN(
       context: context,
-      n: Self.recentTracksWidgetItemCount
+      n: Self.recentTracksWidgetItemCount,
+      hideSongsInPlaylists: false,
+      account: account
     )
     data[.recentTracks] = topSongs.compactMap { Song(managedObject: $0) }.compactMap {
       HomeItem(playableContainable: $0)
     }
-    let lastWeekCount = RecentTracksQuery.lastMDaysCount(context: context, m: 7)
+    let lastWeekCount = RecentTracksQuery.lastMDaysCount(
+      context: context,
+      m: 7,
+      hideSongsInPlaylists: false,
+      account: account
+    )
     // Subtract the visible rows that are themselves in the 7-day window so
     // the footer reads "X more" rather than double-counting.
     let visibleFreshCount = topSongs.filter { song in

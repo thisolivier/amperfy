@@ -611,6 +611,12 @@
 		A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */; };
 		A5B0950000000000000050A0 /* RecentTracksPlaybackResolverTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0960000000000000050A0 /* RecentTracksPlaybackResolverTest.swift */; };
 		A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */; };
+		A5B0A90000000000000050A0 /* RecentTracksFilterSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0AA0000000000000050A0 /* RecentTracksFilterSettings.swift */; };
+		A5B0AB0000000000000050A0 /* RecentTracksFilterSettingsTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0AC0000000000000050A0 /* RecentTracksFilterSettingsTest.swift */; };
+		A5C0020000000000000050A0 /* RecentTracksSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0010000000000000050A0 /* RecentTracksSelection.swift */; };
+		A5C0040000000000000050A0 /* PlaylistSongAdder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0030000000000000050A0 /* PlaylistSongAdder.swift */; };
+		A5C0060000000000000050A0 /* RecentTracksSelectionTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0050000000000000050A0 /* RecentTracksSelectionTest.swift */; };
+		A5C0080000000000000050A0 /* PlaylistSongAdderTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0070000000000000050A0 /* PlaylistSongAdderTest.swift */; };
 		A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */; };
 		A5B0A30000000000000050A1 /* PlaylistItemsSyncTrackerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A40000000000000050A1 /* PlaylistItemsSyncTrackerTest.swift */; };
 		A5B0A50000000000000050A0 /* PlaylistMembershipVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */; };
@@ -1385,6 +1391,12 @@
 		A5B0940000000000000050A0 /* AlbumFetchedResultsControllerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumFetchedResultsControllerTest.swift; sourceTree = "<group>"; };
 		A5B0960000000000000050A0 /* RecentTracksPlaybackResolverTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksPlaybackResolverTest.swift; sourceTree = "<group>"; };
 		A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQuery.swift; sourceTree = "<group>"; };
+		A5B0AA0000000000000050A0 /* RecentTracksFilterSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksFilterSettings.swift; sourceTree = "<group>"; };
+		A5B0AC0000000000000050A0 /* RecentTracksFilterSettingsTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksFilterSettingsTest.swift; sourceTree = "<group>"; };
+		A5C0010000000000000050A0 /* RecentTracksSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksSelection.swift; sourceTree = "<group>"; };
+		A5C0030000000000000050A0 /* PlaylistSongAdder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistSongAdder.swift; sourceTree = "<group>"; };
+		A5C0050000000000000050A0 /* RecentTracksSelectionTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksSelectionTest.swift; sourceTree = "<group>"; };
+		A5C0070000000000000050A0 /* PlaylistSongAdderTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistSongAdderTest.swift; sourceTree = "<group>"; };
 		A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipQueryTest.swift; sourceTree = "<group>"; };
 		A5B0A40000000000000050A1 /* PlaylistItemsSyncTrackerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistItemsSyncTrackerTest.swift; sourceTree = "<group>"; };
 		A5B0A60000000000000050A0 /* PlaylistMembershipVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistMembershipVC.swift; sourceTree = "<group>"; };
@@ -1949,6 +1961,9 @@
 				5095F98F23CA94BC008B0805 /* ManagedObjects */,
 				A5B0630000000000000050A0 /* ResultController */,
 				A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */,
+				A5B0AC0000000000000050A0 /* RecentTracksFilterSettingsTest.swift */,
+				A5C0050000000000000050A0 /* RecentTracksSelectionTest.swift */,
+				A5C0070000000000000050A0 /* PlaylistSongAdderTest.swift */,
 				A5B0A40000000000000050A1 /* PlaylistItemsSyncTrackerTest.swift */,
 				9779F04373BB7D951F3B3163 /* TrackAdjacencyStoreTest.swift */,
 				A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */,
@@ -2089,6 +2104,9 @@
 				50C3B9AB2EED848B00F5CAB7 /* LegacySettings.swift */,
 				50BA930521D5715D00E5901D /* LibraryStorage.swift */,
 				A5B0A20000000000000050A0 /* PlaylistMembershipQuery.swift */,
+				A5B0AA0000000000000050A0 /* RecentTracksFilterSettings.swift */,
+				A5C0010000000000000050A0 /* RecentTracksSelection.swift */,
+				A5C0030000000000000050A0 /* PlaylistSongAdder.swift */,
 				A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */,
 				A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */,
 				50223EF2264543EA007445BC /* LibrarySyncVersion.swift */,
@@ -3357,6 +3375,9 @@
 				A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */,
 				A5B0730000000000000050A0 /* RecentTracksPlaybackResolver.swift in Sources */,
 				A5B0A10000000000000050A0 /* PlaylistMembershipQuery.swift in Sources */,
+				A5B0A90000000000000050A0 /* RecentTracksFilterSettings.swift in Sources */,
+				A5C0020000000000000050A0 /* RecentTracksSelection.swift in Sources */,
+				A5C0040000000000000050A0 /* PlaylistSongAdder.swift in Sources */,
 				A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */,
 				A5B0E10000000000000050A0 /* PlaylistFolderStore.swift in Sources */,
 				A5B0B10000000000000050A0 /* PinnedPlaylistStore.swift in Sources */,
@@ -3581,6 +3602,9 @@
 				A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */,
 				A5B0950000000000000050A0 /* RecentTracksPlaybackResolverTest.swift in Sources */,
 				A5B0A30000000000000050A0 /* PlaylistMembershipQueryTest.swift in Sources */,
+				A5B0AB0000000000000050A0 /* RecentTracksFilterSettingsTest.swift in Sources */,
+				A5C0060000000000000050A0 /* RecentTracksSelectionTest.swift in Sources */,
+				A5C0080000000000000050A0 /* PlaylistSongAdderTest.swift in Sources */,
 				A5B0A30000000000000050A1 /* PlaylistItemsSyncTrackerTest.swift in Sources */,
 				6B54DADE2AD80F4769973080 /* TrackAdjacencyStoreTest.swift in Sources */,
 				A5B0B30000000000000050A0 /* PinnedPlaylistStoreTest.swift in Sources */,

@@ -55,6 +55,12 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     static let lastMDays = "recentTracksDetailLastMDays"
   }
 
+  /// Persistence for the fork-only triage filter. Lives in AmperfyKit (
+  /// `amperfy.fork.*` namespace) so it is unit-tested in isolation; the
+  /// pre-existing mode/count keys above predate that convention and stay
+  /// inline to preserve users' stored values.
+  private let filterSettings = RecentTracksFilterSettings()
+
   // MARK: - Defaults / bounds
 
   private static let defaultTopN = 14
@@ -98,12 +104,40 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     }
   }
 
+  /// When on, the list hides tracks the user has already filed into at least
+  /// one real user playlist (Recently Added acts as a triage inbox). Persisted
+  /// in the `amperfy.fork.*` namespace; defaults to off, so upgrading users see
+  /// the unchanged, unfiltered list until they opt in. See
+  /// `RecentTracksQuery.songNotInAnyUserPlaylist`.
+  private var hideSongsInPlaylists: Bool {
+    get { filterSettings.hideSongsInPlaylists }
+    set { filterSettings.hideSongsInPlaylists = newValue }
+  }
+
   // MARK: - Header subviews
 
   private let modeControl = UISegmentedControl(items: ["Top N", "Last M days"])
   private let stepperLabel = UILabel()
   private let stepper = UIStepper()
   private var cachedHeaderView: UIView?
+
+  // MARK: - Filter bar button
+
+  private var optionsButton: UIBarButtonItem!
+
+  // MARK: - Bulk select
+
+  /// Id-keyed selection model for Edit mode (survives live `refreshSongs()`
+  /// reloads; see `RecentTracksSelection`).
+  private let selection = RecentTracksSelection()
+
+  /// Floating action bar shown while in Edit mode, mirroring
+  /// `PlaylistFolderContentsVC`'s convention: a count label plus filled
+  /// action buttons anchored above the mini-player safe area.
+  private let editActionBar = UIView()
+  private var addToPlaylistButton: UIButton!
+  private var selectionCountLabel: UILabel!
+  private static let editActionBarHeight: CGFloat = 68
 
   // MARK: - Init
 
@@ -120,6 +154,14 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     title = "Recently Added Tracks"
+
+    optionsButton = UIBarButtonItem.createOptionsBarButton()
+    updateOptionsMenu()
+    navigationItem.rightBarButtonItem = optionsButton
+
+    // Bulk-select support: multi-select checkmarks appear only in Edit mode.
+    tableView.allowsMultipleSelectionDuringEditing = true
+    configureEditActionBar()
 
     tableView.register(nibName: PlayableTableCell.typeName)
     tableView.rowHeight = PlayableTableCell.rowHeight
@@ -191,16 +233,47 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     let songMOs: [SongMO]
     switch mode {
     case .topN:
-      songMOs = RecentTracksQuery.topN(context: context, n: topNValue)
+      songMOs = RecentTracksQuery.topN(
+        context: context,
+        n: topNValue,
+        hideSongsInPlaylists: hideSongsInPlaylists,
+        account: account
+      )
     case .lastMDays:
-      songMOs = RecentTracksQuery.lastMDays(context: context, m: lastMDaysValue)
+      songMOs = RecentTracksQuery.lastMDays(
+        context: context,
+        m: lastMDaysValue,
+        hideSongsInPlaylists: hideSongsInPlaylists,
+        account: account
+      )
     }
     songs = songMOs.map { Song(managedObject: $0) }
     tableView.reloadData()
+    // A wholesale reload drops UIKit's selection state. Reconcile the id-keyed
+    // model against the new visible list (a just-filed track hidden by the
+    // filter must fall out of the selection) then re-apply checkmarks for any
+    // still-visible selected rows so Edit mode survives a live refresh.
+    if isEditing {
+      selection.retainOnly(visibleSongs: songs)
+      for (row, song) in songs.enumerated() where selection.isSelected(songId: song.id) {
+        tableView.selectRow(
+          at: IndexPath(row: row, section: 0),
+          animated: false,
+          scrollPosition: .none
+        )
+      }
+      updateEditActionBarState()
+    }
     if songs.isEmpty {
       var emptyConfig = UIContentUnavailableConfiguration.empty()
-      emptyConfig.text = "No recently added singles or EPs"
-      emptyConfig.secondaryText = "Tracks from albums with fewer than 5 songs will appear here"
+      if hideSongsInPlaylists {
+        emptyConfig.text = "Nothing left to file"
+        emptyConfig.secondaryText =
+          "Every recently added single or EP is already in a playlist. Turn off the filter to see them all."
+      } else {
+        emptyConfig.text = "No recently added singles or EPs"
+        emptyConfig.secondaryText = "Tracks from albums with fewer than 5 songs will appear here"
+      }
       contentUnavailableConfiguration = emptyConfig
     } else {
       contentUnavailableConfiguration = nil
@@ -253,6 +326,147 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
       let days = lastMDaysValue
       stepperLabel.text = "Last \(days) day\(days == 1 ? "" : "s")"
     }
+  }
+
+  // MARK: - Filter menu
+
+  /// Installs the options menu. It is a `lazyMenu` so the "Select Tracks" /
+  /// "Done" row and the filter toggle's checkmark are rebuilt from the current
+  /// state on every open — following the `PlaylistFolderContentsVC` +
+  /// `createOptionsBarButton` convention used by the fork's list screens.
+  private func updateOptionsMenu() {
+    optionsButton.menu = UIMenu.lazyMenu { [weak self] in
+      guard let self else { return [] }
+
+      let toggleFiled = UIAction(
+        title: "Hide tracks already in playlists",
+        image: UIImage(systemName: "text.badge.minus"),
+        state: hideSongsInPlaylists ? .on : .off,
+        handler: { [weak self] _ in
+          guard let self else { return }
+          hideSongsInPlaylists.toggle()
+          refreshSongs()
+        }
+      )
+      let filterMenu = UIMenu(
+        title: "Filter",
+        options: .displayInline,
+        children: [toggleFiled]
+      )
+
+      let selectTracks = UIAction(
+        title: isEditing ? "Done" : "Select Tracks",
+        image: UIImage(systemName: "checkmark.circle"),
+        handler: { [weak self] _ in
+          guard let self else { return }
+          setEditing(!isEditing, animated: true)
+        }
+      )
+      let selectMenu = UIMenu(options: .displayInline, children: [selectTracks])
+
+      return [selectMenu, filterMenu]
+    }
+  }
+
+  // MARK: - Bulk select: action bar
+
+  /// Builds the floating "Add to Playlist" action bar shown in Edit mode,
+  /// mirroring `PlaylistFolderContentsVC.configureEditActionBar`.
+  private func configureEditActionBar() {
+    editActionBar.translatesAutoresizingMaskIntoConstraints = false
+    editActionBar.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
+    editActionBar.isHidden = true
+    view.addSubview(editActionBar)
+
+    let separator = UIView()
+    separator.translatesAutoresizingMaskIntoConstraints = false
+    separator.backgroundColor = .separator
+    editActionBar.addSubview(separator)
+
+    let countLabel = UILabel()
+    countLabel.translatesAutoresizingMaskIntoConstraints = false
+    countLabel.font = .preferredFont(forTextStyle: .caption1)
+    countLabel.textColor = ThemeStore.shared.dynamicSecondaryText ?? .secondaryLabel
+    countLabel.textAlignment = .center
+    countLabel.text = "0 selected"
+    editActionBar.addSubview(countLabel)
+    selectionCountLabel = countLabel
+
+    var config = UIButton.Configuration.filled()
+    config.title = "Add to Playlist…"
+    config.image = UIImage(systemName: "text.badge.plus")
+    config.imagePadding = 8
+    config.cornerStyle = .medium
+    config.buttonSize = .medium
+    let addButton = UIButton(configuration: config)
+    addButton.translatesAutoresizingMaskIntoConstraints = false
+    addButton.addTarget(self, action: #selector(addSelectedToPlaylist), for: .touchUpInside)
+    addButton.isEnabled = false
+    editActionBar.addSubview(addButton)
+    addToPlaylistButton = addButton
+
+    NSLayoutConstraint.activate([
+      editActionBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      editActionBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      editActionBar.heightAnchor.constraint(equalToConstant: Self.editActionBarHeight),
+      editActionBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+
+      separator.topAnchor.constraint(equalTo: editActionBar.topAnchor),
+      separator.leadingAnchor.constraint(equalTo: editActionBar.leadingAnchor),
+      separator.trailingAnchor.constraint(equalTo: editActionBar.trailingAnchor),
+      separator.heightAnchor.constraint(equalToConstant: 0.5),
+
+      countLabel.topAnchor.constraint(equalTo: separator.bottomAnchor, constant: 4),
+      countLabel.centerXAnchor.constraint(equalTo: editActionBar.centerXAnchor),
+
+      addButton.topAnchor.constraint(equalTo: countLabel.bottomAnchor, constant: 4),
+      addButton.leadingAnchor.constraint(equalTo: editActionBar.leadingAnchor, constant: 16),
+      addButton.trailingAnchor.constraint(equalTo: editActionBar.trailingAnchor, constant: -16),
+      addButton.bottomAnchor.constraint(equalTo: editActionBar.bottomAnchor, constant: -8),
+    ])
+  }
+
+  private func updateEditActionBarState() {
+    let count = selection.count
+    addToPlaylistButton.isEnabled = count > 0
+    selectionCountLabel.text = count == 1 ? "1 selected" : "\(count) selected"
+  }
+
+  // MARK: - Bulk select: edit mode
+
+  override func setEditing(_ editing: Bool, animated: Bool) {
+    super.setEditing(editing, animated: animated)
+    if !editing {
+      selection.clear()
+    }
+    editActionBar.isHidden = !editing
+    tableView.contentInset.bottom = editing ? Self.editActionBarHeight : 0
+    // The options menu's "Select Tracks"/"Done" label depends on isEditing;
+    // it is a lazyMenu so it rebuilds on next open, no explicit reinstall
+    // needed here.
+    updateEditActionBarState()
+  }
+
+  /// Collects the selected songs (in list order) and reuses the app-wide
+  /// playlist picker (`PlaylistSelectorVC`) to add them — the same flow the
+  /// add-to-playlist swipe action, context menu, and player use. The picker
+  /// performs the server upload + local append itself (see
+  /// `PlaylistSongAdder`, which centralises that ordering and is unit-tested).
+  /// After presenting we leave Edit mode; when the user returns, the list
+  /// re-runs its fetch on `viewIsAppearing`, so with the "hide filed tracks"
+  /// filter on the just-added tracks disappear live — the inbox completing
+  /// itself.
+  @objc
+  private func addSelectedToPlaylist() {
+    let selectedSongs = selection.selectedSongs(from: songs)
+    guard !selectedSongs.isEmpty else { return }
+    let selectPlaylistVC = AppStoryboard.Main.segueToPlaylistSelector(
+      account: account,
+      itemsToAdd: selectedSongs
+    )
+    let selectPlaylistNav = UINavigationController(rootViewController: selectPlaylistVC)
+    present(selectPlaylistNav, animated: true)
+    setEditing(false, animated: true)
   }
 
   // MARK: - PlayContext helper
@@ -321,6 +535,16 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
   }
 
   override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    // In Edit mode a tap ticks/unticks the row for bulk actions instead of
+    // playing. Keep the row visibly selected (checkmark) and update the bar.
+    if isEditing {
+      if let song = songs.element(at: indexPath.row) {
+        selection.select(songId: song.id)
+      }
+      updateEditActionBarState()
+      return
+    }
+
     tableView.deselectRow(at: indexPath, animated: true)
     // Resolve by the tapped CELL's currently-bound song identity, not by
     // `indexPath.row` indexing into `songs` directly: `songs` may have been
@@ -337,6 +561,14 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
           )
     else { return }
     appDelegate.player.play(context: playContext)
+  }
+
+  override func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
+    guard isEditing else { return }
+    if let song = songs.element(at: indexPath.row) {
+      selection.deselect(songId: song.id)
+    }
+    updateEditActionBarState()
   }
 
   override func tableView(
