@@ -55,6 +55,12 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     static let lastMDays = "recentTracksDetailLastMDays"
   }
 
+  /// Persistence for the fork-only triage filter. Lives in AmperfyKit (
+  /// `amperfy.fork.*` namespace) so it is unit-tested in isolation; the
+  /// pre-existing mode/count keys above predate that convention and stay
+  /// inline to preserve users' stored values.
+  private let filterSettings = RecentTracksFilterSettings()
+
   // MARK: - Defaults / bounds
 
   private static let defaultTopN = 14
@@ -98,12 +104,26 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     }
   }
 
+  /// When on, the list hides tracks the user has already filed into at least
+  /// one real user playlist (Recently Added acts as a triage inbox). Persisted
+  /// in the `amperfy.fork.*` namespace; defaults to off, so upgrading users see
+  /// the unchanged, unfiltered list until they opt in. See
+  /// `RecentTracksQuery.songNotInAnyUserPlaylist`.
+  private var hideSongsInPlaylists: Bool {
+    get { filterSettings.hideSongsInPlaylists }
+    set { filterSettings.hideSongsInPlaylists = newValue }
+  }
+
   // MARK: - Header subviews
 
   private let modeControl = UISegmentedControl(items: ["Top N", "Last M days"])
   private let stepperLabel = UILabel()
   private let stepper = UIStepper()
   private var cachedHeaderView: UIView?
+
+  // MARK: - Filter bar button
+
+  private var optionsButton: UIBarButtonItem!
 
   // MARK: - Init
 
@@ -120,6 +140,10 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     title = "Recently Added Tracks"
+
+    optionsButton = UIBarButtonItem.createOptionsBarButton()
+    updateOptionsMenu()
+    navigationItem.rightBarButtonItem = optionsButton
 
     tableView.register(nibName: PlayableTableCell.typeName)
     tableView.rowHeight = PlayableTableCell.rowHeight
@@ -191,16 +215,32 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     let songMOs: [SongMO]
     switch mode {
     case .topN:
-      songMOs = RecentTracksQuery.topN(context: context, n: topNValue)
+      songMOs = RecentTracksQuery.topN(
+        context: context,
+        n: topNValue,
+        hideSongsInPlaylists: hideSongsInPlaylists,
+        account: account
+      )
     case .lastMDays:
-      songMOs = RecentTracksQuery.lastMDays(context: context, m: lastMDaysValue)
+      songMOs = RecentTracksQuery.lastMDays(
+        context: context,
+        m: lastMDaysValue,
+        hideSongsInPlaylists: hideSongsInPlaylists,
+        account: account
+      )
     }
     songs = songMOs.map { Song(managedObject: $0) }
     tableView.reloadData()
     if songs.isEmpty {
       var emptyConfig = UIContentUnavailableConfiguration.empty()
-      emptyConfig.text = "No recently added singles or EPs"
-      emptyConfig.secondaryText = "Tracks from albums with fewer than 5 songs will appear here"
+      if hideSongsInPlaylists {
+        emptyConfig.text = "Nothing left to file"
+        emptyConfig.secondaryText =
+          "Every recently added single or EP is already in a playlist. Turn off the filter to see them all."
+      } else {
+        emptyConfig.text = "No recently added singles or EPs"
+        emptyConfig.secondaryText = "Tracks from albums with fewer than 5 songs will appear here"
+      }
       contentUnavailableConfiguration = emptyConfig
     } else {
       contentUnavailableConfiguration = nil
@@ -253,6 +293,32 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
       let days = lastMDaysValue
       stepperLabel.text = "Last \(days) day\(days == 1 ? "" : "s")"
     }
+  }
+
+  // MARK: - Filter menu
+
+  /// Rebuilds the options menu so the "Hide tracks already in playlists"
+  /// toggle reflects the persisted state (checkmark when on). Follows the
+  /// app's `createOptionsBarButton` + `UIMenu` convention used by the library
+  /// list screens.
+  private func updateOptionsMenu() {
+    let toggleFiled = UIAction(
+      title: "Hide tracks already in playlists",
+      image: UIImage(systemName: "text.badge.minus"),
+      state: hideSongsInPlaylists ? .on : .off,
+      handler: { [weak self] _ in
+        guard let self else { return }
+        hideSongsInPlaylists.toggle()
+        updateOptionsMenu()
+        refreshSongs()
+      }
+    )
+    let filterMenu = UIMenu(
+      title: "Filter",
+      options: .displayInline,
+      children: [toggleFiled]
+    )
+    optionsButton.menu = UIMenu(children: [filterMenu])
   }
 
   // MARK: - PlayContext helper
