@@ -39,13 +39,16 @@ enum ReleaseNotes {
     ReleaseNote(
       id: 71,
       date: "2026-07-11",
-      title: "Build 71 — Filter filed tracks out of Recently Added",
+      title: "Build 71 — Triage your Recently Added tracks",
       whatsNew: [
         "Recently Added Tracks now has a filter: tap the options button (top right) and turn on 'Hide tracks already in playlists' to see only the tracks you still need to file. It's a triage inbox — once a track is in a playlist, it drops off the list.",
+        "New bulk-select: on Recently Added Tracks, tap the options button and choose 'Select Tracks', tick as many as you like, then 'Add to Playlist…' to file them all at once. With the filter on, the tracks you just added disappear from the list right away — inbox zero.",
         "The filter is off by default and remembers your choice. Smart playlists don't count (a track only in a smart playlist still shows), and playlists from other accounts are ignored.",
       ],
       testingFocus: [
         "Open Recently Added Tracks, tap the options button, and toggle 'Hide tracks already in playlists'. Add one of the listed tracks to a playlist, come back — it should disappear when the filter is on, reappear when off.",
+        "Tap options → 'Select Tracks', tick several tracks (the count updates), tap 'Add to Playlist…', pick a playlist. All ticked tracks should be added; check the playlist to confirm.",
+        "With the filter ON, bulk-add some tracks, then reopen the list — the added tracks should be gone (they're now filed).",
         "Remove a track from its only playlist and reopen the list with the filter on — the track should come back.",
         "With the filter on and every recent single already filed, the list should show a 'Nothing left to file' message, not a blank screen.",
         "Confirm the Home tab's Recently Added preview row is unchanged (it stays unfiltered).",
