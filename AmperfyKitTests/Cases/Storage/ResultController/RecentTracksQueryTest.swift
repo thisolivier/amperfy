@@ -107,7 +107,12 @@ class RecentTracksQueryTest: XCTestCase {
     makeSong(id: "t-4", addedDate: nowReference.addingTimeInterval(-4 * 86400), onAlbum: single)
     library.saveContext()
 
-    let result = RecentTracksQuery.topN(context: testContext, n: 2)
+    let result = RecentTracksQuery.topN(
+      context: testContext,
+      n: 2,
+      hideSongsInPlaylists: false,
+      account: account
+    )
     XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-1", "t-2"])
   }
 
@@ -127,7 +132,12 @@ class RecentTracksQueryTest: XCTestCase {
     )
     library.saveContext()
 
-    let result = RecentTracksQuery.topN(context: testContext, n: 7)
+    let result = RecentTracksQuery.topN(
+      context: testContext,
+      n: 7,
+      hideSongsInPlaylists: false,
+      account: account
+    )
     XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-from-single"])
   }
 
@@ -148,7 +158,12 @@ class RecentTracksQueryTest: XCTestCase {
     )
     library.saveContext()
 
-    let result = RecentTracksQuery.topN(context: testContext, n: 7)
+    let result = RecentTracksQuery.topN(
+      context: testContext,
+      n: 7,
+      hideSongsInPlaylists: false,
+      account: account
+    )
     XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-small"])
   }
 
@@ -162,7 +177,13 @@ class RecentTracksQueryTest: XCTestCase {
     makeSong(id: "t-9d", addedDate: nowReference.addingTimeInterval(-9 * 86400), onAlbum: single)
     library.saveContext()
 
-    let result = RecentTracksQuery.lastMDays(context: testContext, m: 7, now: nowReference)
+    let result = RecentTracksQuery.lastMDays(
+      context: testContext,
+      m: 7,
+      hideSongsInPlaylists: false,
+      account: account,
+      now: nowReference
+    )
     XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-2d", "t-5d"])
   }
 
@@ -179,7 +200,13 @@ class RecentTracksQueryTest: XCTestCase {
     }
     library.saveContext()
 
-    let result = RecentTracksQuery.lastMDays(context: testContext, m: 30, now: nowReference)
+    let result = RecentTracksQuery.lastMDays(
+      context: testContext,
+      m: 30,
+      hideSongsInPlaylists: false,
+      account: account,
+      now: nowReference
+    )
     XCTAssertEqual(ids(result, withPrefix: "t-").count, 20)
   }
 
@@ -203,13 +230,25 @@ class RecentTracksQueryTest: XCTestCase {
     makeSong(id: "t-old", addedDate: nowReference.addingTimeInterval(-30 * 86400), onAlbum: single)
     library.saveContext()
 
-    let count = RecentTracksQuery.lastMDaysCount(context: testContext, m: 7, now: nowReference)
+    let count = RecentTracksQuery.lastMDaysCount(
+      context: testContext,
+      m: 7,
+      hideSongsInPlaylists: false,
+      account: account,
+      now: nowReference
+    )
     // Note: count is for ALL songs (not just t-prefixed), but seed albums
     // contribute no songs in their default state so this is safe in practice.
     // We assert >= 3 to allow the seeder to add unrelated playables, and
     // separately verify the breakdown via lastMDays itself below.
     XCTAssertGreaterThanOrEqual(count, 3)
-    let fetched = RecentTracksQuery.lastMDays(context: testContext, m: 7, now: nowReference)
+    let fetched = RecentTracksQuery.lastMDays(
+      context: testContext,
+      m: 7,
+      hideSongsInPlaylists: false,
+      account: account,
+      now: nowReference
+    )
     XCTAssertEqual(ids(fetched, withPrefix: "t-"), ["t-1", "t-2", "t-3"])
   }
 
@@ -236,7 +275,12 @@ class RecentTracksQueryTest: XCTestCase {
     }
     library.saveContext()
 
-    let result = RecentTracksQuery.topN(context: testContext, n: 10)
+    let result = RecentTracksQuery.topN(
+      context: testContext,
+      n: 10,
+      hideSongsInPlaylists: false,
+      account: account
+    )
     XCTAssertEqual(ids(result, withPrefix: "t-"), expectedIds)
   }
 
@@ -277,7 +321,12 @@ class RecentTracksQueryTest: XCTestCase {
     }
     library.saveContext()
 
-    let result = RecentTracksQuery.topN(context: testContext, n: 10)
+    let result = RecentTracksQuery.topN(
+      context: testContext,
+      n: 10,
+      hideSongsInPlaylists: false,
+      account: account
+    )
     XCTAssertEqual(ids(result, withPrefix: "t-"), freshIds + olderIds)
   }
 
@@ -301,7 +350,12 @@ class RecentTracksQueryTest: XCTestCase {
     }
     library.saveContext()
 
-    let result = RecentTracksQuery.topN(context: testContext, n: 10)
+    let result = RecentTracksQuery.topN(
+      context: testContext,
+      n: 10,
+      hideSongsInPlaylists: false,
+      account: account
+    )
     XCTAssertEqual(ids(result, withPrefix: "t-"), expectedIds)
   }
 
@@ -333,7 +387,12 @@ class RecentTracksQueryTest: XCTestCase {
     )
     library.saveContext()
 
-    let result = RecentTracksQuery.topN(context: testContext, n: 10)
+    let result = RecentTracksQuery.topN(
+      context: testContext,
+      n: 10,
+      hideSongsInPlaylists: false,
+      account: account
+    )
     XCTAssertEqual(ids(result, withPrefix: "t-"), expectedIds)
   }
 
@@ -378,7 +437,237 @@ class RecentTracksQueryTest: XCTestCase {
     }
     library.saveContext()
 
-    let result = RecentTracksQuery.topN(context: testContext, n: 10)
+    let result = RecentTracksQuery.topN(
+      context: testContext,
+      n: 10,
+      hideSongsInPlaylists: false,
+      account: account
+    )
     XCTAssertEqual(ids(result, withPrefix: "t-"), [])
+  }
+
+  // MARK: - hideSongsInPlaylists filter (triage inbox)
+
+  //
+  // These cover the "Hide tracks already in playlists" toggle: a Recently
+  // Added track disappears once the user has filed it into at least one real
+  // user playlist. See `RecentTracksQuery.songNotInAnyUserPlaylist`.
+
+  /// Creates a real user playlist (non-smart, named) owned by the given
+  /// account (defaults to the primary test account).
+  @discardableResult
+  private func makePlaylist(
+    id: String,
+    name: String,
+    ownedBy owner: Account? = nil
+  )
+    -> Playlist {
+    let playlist = library.createPlaylist(account: owner ?? account)
+    playlist.id = id
+    playlist.name = name
+    return playlist
+  }
+
+  /// With the toggle OFF, a song already in a playlist is still returned
+  /// (baseline — the filter is opt-in).
+  func testHideFilterOffKeepsSongInPlaylist() {
+    let single = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 1)
+    let filed = makeSong(id: "t-filed", addedDate: nowReference, onAlbum: single)
+    let playlist = makePlaylist(id: "raf-pl-1", name: "My Mix")
+    playlist.append(playable: filed)
+    library.saveContext()
+
+    let result = RecentTracksQuery.topN(
+      context: testContext, n: 10, hideSongsInPlaylists: false, account: account
+    )
+    XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-filed"])
+  }
+
+  /// With the toggle ON, a song in exactly one user playlist is hidden while
+  /// an unfiled song remains.
+  func testHideFilterOnHidesSongInOnePlaylist() {
+    let single = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 1)
+    let filed = makeSong(
+      id: "t-filed", addedDate: nowReference.addingTimeInterval(-1 * 86400), onAlbum: single
+    )
+    makeSong(
+      id: "t-unfiled", addedDate: nowReference.addingTimeInterval(-2 * 86400), onAlbum: single
+    )
+    let playlist = makePlaylist(id: "raf-pl-1", name: "My Mix")
+    playlist.append(playable: filed)
+    library.saveContext()
+
+    let result = RecentTracksQuery.topN(
+      context: testContext, n: 10, hideSongsInPlaylists: true, account: account
+    )
+    XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-unfiled"])
+  }
+
+  /// A song in several user playlists is hidden exactly once (still absent,
+  /// not double-counted or resurfaced).
+  func testHideFilterOnHidesSongInSeveralPlaylists() {
+    let single = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 1)
+    let filed = makeSong(
+      id: "t-filed", addedDate: nowReference.addingTimeInterval(-1 * 86400), onAlbum: single
+    )
+    makeSong(
+      id: "t-unfiled", addedDate: nowReference.addingTimeInterval(-2 * 86400), onAlbum: single
+    )
+    makePlaylist(id: "raf-pl-a", name: "Alpha").append(playable: filed)
+    makePlaylist(id: "raf-pl-b", name: "Beta").append(playable: filed)
+    makePlaylist(id: "raf-pl-c", name: "Gamma").append(playable: filed)
+    library.saveContext()
+
+    let result = RecentTracksQuery.topN(
+      context: testContext, n: 10, hideSongsInPlaylists: true, account: account
+    )
+    XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-unfiled"])
+  }
+
+  /// A song in zero playlists is kept even when the toggle is ON.
+  func testHideFilterOnKeepsUnfiledSong() {
+    let single = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 1)
+    makeSong(id: "t-unfiled", addedDate: nowReference, onAlbum: single)
+    makePlaylist(id: "raf-pl-empty", name: "Empty")
+    library.saveContext()
+
+    let result = RecentTracksQuery.topN(
+      context: testContext, n: 10, hideSongsInPlaylists: true, account: account
+    )
+    XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-unfiled"])
+  }
+
+  /// A song that appears ONLY in a smart playlist is treated as unfiled (smart
+  /// playlists are derived rules, not user triage) and is kept when ON.
+  func testHideFilterOnKeepsSongOnlyInSmartPlaylist() {
+    let single = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 1)
+    let song = makeSong(id: "t-smart-only", addedDate: nowReference, onAlbum: single)
+    let smart = makePlaylist(
+      id: "\(Playlist.smartPlaylistIdPrefix)auto", name: "Auto Mix"
+    )
+    smart.append(playable: song)
+    library.saveContext()
+
+    let result = RecentTracksQuery.topN(
+      context: testContext, n: 10, hideSongsInPlaylists: true, account: account
+    )
+    XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-smart-only"])
+  }
+
+  /// A song that appears ONLY in an unnamed playlist (which also models the
+  /// Player's internal system playlists) is treated as unfiled and kept.
+  func testHideFilterOnKeepsSongOnlyInUnnamedPlaylist() {
+    let single = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 1)
+    let song = makeSong(id: "t-sys-only", addedDate: nowReference, onAlbum: single)
+    let unnamed = makePlaylist(id: "raf-pl-sys", name: "")
+    unnamed.append(playable: song)
+    library.saveContext()
+
+    let result = RecentTracksQuery.topN(
+      context: testContext, n: 10, hideSongsInPlaylists: true, account: account
+    )
+    XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-sys-only"])
+  }
+
+  /// Membership is scoped to the active account: a song filed only into a
+  /// playlist owned by ANOTHER account must not be hidden on the active
+  /// account.
+  func testHideFilterOnIgnoresOtherAccountPlaylists() {
+    let otherAccount = library.getAccount(info: TestAccountInfo.create2())
+    let single = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 1)
+    let song = makeSong(id: "t-cross", addedDate: nowReference, onAlbum: single)
+    // Playlist + its items belong to the OTHER account.
+    let otherPlaylist = makePlaylist(
+      id: "raf-pl-other", name: "Their Mix", ownedBy: otherAccount
+    )
+    otherPlaylist.append(playable: song)
+    library.saveContext()
+
+    let result = RecentTracksQuery.topN(
+      context: testContext, n: 10, hideSongsInPlaylists: true, account: account
+    )
+    XCTAssertEqual(
+      ids(result, withPrefix: "t-"),
+      ["t-cross"],
+      "A playlist on another account must not hide the song on the active account"
+    )
+  }
+
+  /// The lastMDays entry point honours the toggle identically to topN.
+  func testHideFilterAppliesToLastMDays() {
+    let single = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 1)
+    let filed = makeSong(
+      id: "t-filed", addedDate: nowReference.addingTimeInterval(-1 * 86400), onAlbum: single
+    )
+    makeSong(
+      id: "t-unfiled", addedDate: nowReference.addingTimeInterval(-2 * 86400), onAlbum: single
+    )
+    makePlaylist(id: "raf-pl-1", name: "My Mix").append(playable: filed)
+    library.saveContext()
+
+    let result = RecentTracksQuery.lastMDays(
+      context: testContext, m: 7, hideSongsInPlaylists: true, account: account, now: nowReference
+    )
+    XCTAssertEqual(ids(result, withPrefix: "t-"), ["t-unfiled"])
+  }
+
+  /// The lastMDaysCount entry point honours the toggle: a filed song within
+  /// the window is not counted when the filter is on.
+  func testHideFilterAppliesToLastMDaysCount() {
+    removeSeededContaminantSongs()
+    let single = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 1)
+    let filed = makeSong(
+      id: "t-filed", addedDate: nowReference.addingTimeInterval(-1 * 86400), onAlbum: single
+    )
+    makeSong(
+      id: "t-unfiled", addedDate: nowReference.addingTimeInterval(-2 * 86400), onAlbum: single
+    )
+    makePlaylist(id: "raf-pl-1", name: "My Mix").append(playable: filed)
+    library.saveContext()
+
+    let filteredCount = RecentTracksQuery.lastMDaysCount(
+      context: testContext, m: 7, hideSongsInPlaylists: true, account: account, now: nowReference
+    )
+    XCTAssertEqual(filteredCount, 1, "Only the unfiled song is counted when the filter is on")
+
+    let unfilteredCount = RecentTracksQuery.lastMDaysCount(
+      context: testContext, m: 7, hideSongsInPlaylists: false, account: account, now: nowReference
+    )
+    XCTAssertEqual(unfilteredCount, 2, "Both songs are counted when the filter is off")
+  }
+
+  /// A song filed then removed from its only playlist reappears (live state,
+  /// no stale membership).
+  func testHideFilterReflectsLiveRemovalFromPlaylist() {
+    let single = makeAlbum(id: "alb-single", releaseType: "single", remoteSongCount: 1)
+    let song = makeSong(id: "t-toggle", addedDate: nowReference, onAlbum: single)
+    let playlist = makePlaylist(id: "raf-pl-1", name: "My Mix")
+    playlist.append(playable: song)
+    library.saveContext()
+
+    XCTAssertEqual(
+      ids(
+        RecentTracksQuery.topN(
+          context: testContext, n: 10, hideSongsInPlaylists: true, account: account
+        ),
+        withPrefix: "t-"
+      ),
+      [],
+      "While filed, the song is hidden"
+    )
+
+    playlist.remove(at: playlist.playables.firstIndex(where: { $0.id == "t-toggle" })!)
+    library.saveContext()
+
+    XCTAssertEqual(
+      ids(
+        RecentTracksQuery.topN(
+          context: testContext, n: 10, hideSongsInPlaylists: true, account: account
+        ),
+        withPrefix: "t-"
+      ),
+      ["t-toggle"],
+      "After live removal from its only playlist, the song reappears"
+    )
   }
 }
