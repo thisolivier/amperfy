@@ -119,6 +119,10 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
   private let modeControl = UISegmentedControl(items: ["Top N", "Last M days"])
   private let stepperLabel = UILabel()
   private let stepper = UIStepper()
+  /// Subtle caption shown in the section header ONLY while the "hide filed
+  /// tracks" filter is active: "Filtered · N unfiled" (N = current visible
+  /// count, live-updating). Hidden entirely when the filter is off. No toast.
+  private let filterCaptionLabel = UILabel()
   private var cachedHeaderView: UIView?
 
   // MARK: - Filter bar button
@@ -193,6 +197,11 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     stepper.translatesAutoresizingMaskIntoConstraints = false
     stepper.addTarget(self, action: #selector(stepperChanged), for: .valueChanged)
 
+    filterCaptionLabel.translatesAutoresizingMaskIntoConstraints = false
+    filterCaptionLabel.font = .preferredFont(forTextStyle: .caption1)
+    filterCaptionLabel.textColor = .secondaryLabel
+    filterCaptionLabel.isHidden = true
+
     syncStepperToCurrentMode()
 
     containableAtIndexPathCallback = { [weak self] indexPath in
@@ -249,6 +258,7 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
       )
     }
     songs = songMOs.map { Song(managedObject: $0) }
+    updateFilterCaption()
     tableView.reloadData()
     // A wholesale reload drops UIKit's selection state. Reconcile the id-keyed
     // model against the new visible list (a just-filed track hidden by the
@@ -278,6 +288,23 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
       contentUnavailableConfiguration = emptyConfig
     } else {
       contentUnavailableConfiguration = nil
+    }
+  }
+
+  /// Updates the section-header filter caption. Shows "Filtered · N unfiled"
+  /// (N = current visible count) ONLY while the "hide filed tracks" filter is
+  /// on; hides it (empty text, zero height) when off. Caption only — no toast.
+  /// Safe to call before the header is built (the label exists from init).
+  private func updateFilterCaption() {
+    if let caption = RecentTracksFilterCaption.text(
+      hideSongsInPlaylists: hideSongsInPlaylists,
+      visibleCount: songs.count
+    ) {
+      filterCaptionLabel.text = caption
+      filterCaptionLabel.isHidden = false
+    } else {
+      filterCaptionLabel.text = ""
+      filterCaptionLabel.isHidden = true
     }
   }
 
@@ -647,6 +674,7 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     headerView.addSubview(modeControl)
     headerView.addSubview(stepperLabel)
     headerView.addSubview(stepper)
+    headerView.addSubview(filterCaptionLabel)
 
     NSLayoutConstraint.activate([
       modeControl.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
@@ -655,7 +683,6 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
 
       stepperLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
       stepperLabel.topAnchor.constraint(equalTo: modeControl.bottomAnchor, constant: 12),
-      stepperLabel.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -12),
 
       stepper.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
       stepper.centerYAnchor.constraint(equalTo: stepperLabel.centerYAnchor),
@@ -663,9 +690,22 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
         greaterThanOrEqualTo: stepperLabel.trailingAnchor,
         constant: 12
       ),
+
+      // Caption sits under the stepper row and defines the header's bottom.
+      // When the filter is off it is hidden with empty text (zero height), so
+      // the small top spacing is the only residual — negligible, and the header
+      // uses automaticDimension so it re-measures either way.
+      filterCaptionLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
+      filterCaptionLabel.trailingAnchor.constraint(
+        lessThanOrEqualTo: headerView.trailingAnchor,
+        constant: -16
+      ),
+      filterCaptionLabel.topAnchor.constraint(equalTo: stepperLabel.bottomAnchor, constant: 8),
+      filterCaptionLabel.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -12),
     ])
 
     cachedHeaderView = headerView
+    updateFilterCaption()
     return headerView
   }
 
