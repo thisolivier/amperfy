@@ -82,6 +82,24 @@ public final class RecentTracksSelection {
     selectedSongIds.removeAll()
   }
 
+  /// Selects every song in `visibleSongs`, leaving any already-selected ids
+  /// untouched. Scoped to the VISIBLE (filtered) list on purpose: with the
+  /// "hide filed tracks" filter on, the visible list *is* the unfiled backlog,
+  /// so "Select All" ticks exactly that and nothing that has scrolled out of
+  /// existence. Backs the edit bar's "Select All" action.
+  public func selectAll(visibleSongs: [Song]) {
+    selectedSongIds.formUnion(visibleSongs.map(\.id))
+  }
+
+  /// Whether every song in `visibleSongs` is currently selected. Drives the
+  /// edit bar's Select All ⇄ Deselect All label toggle. An empty visible list
+  /// is treated as NOT all-selected so the button stays on "Select All" (and
+  /// disabled) rather than flipping to "Deselect All" with nothing to clear.
+  public func areAllSelected(in visibleSongs: [Song]) -> Bool {
+    guard !visibleSongs.isEmpty else { return false }
+    return visibleSongs.allSatisfy { selectedSongIds.contains($0.id) }
+  }
+
   /// Reconciles the selection against the list the user can currently see:
   /// any selected id no longer present in `visibleSongs` is dropped. Call this
   /// after a live `refreshSongs()` so the count and the resolved selection

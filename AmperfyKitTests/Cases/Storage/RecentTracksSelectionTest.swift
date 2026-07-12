@@ -144,4 +144,96 @@ class RecentTracksSelectionTest: XCTestCase {
     selection.retainOnly(visibleSongs: [])
     XCTAssertTrue(selection.isEmpty)
   }
+
+  // MARK: - Select All / Deselect All (B1)
+
+  /// Select All ticks exactly the visible list.
+  func testSelectAllSelectsWholeVisibleList() {
+    let s1 = makeSong(id: "t-1")
+    let s2 = makeSong(id: "t-2")
+    let s3 = makeSong(id: "t-3")
+    selection.selectAll(visibleSongs: [s1, s2, s3])
+    XCTAssertEqual(selection.count, 3)
+    XCTAssertTrue(selection.isSelected(songId: "t-1"))
+    XCTAssertTrue(selection.isSelected(songId: "t-2"))
+    XCTAssertTrue(selection.isSelected(songId: "t-3"))
+  }
+
+  /// Select All is scoped to the VISIBLE (filtered) list: an id outside the
+  /// visible list is never selected, and an already-selected visible id is not
+  /// duplicated.
+  func testSelectAllIsScopedToVisibleAndIdempotent() {
+    let s1 = makeSong(id: "t-1")
+    let s2 = makeSong(id: "t-2")
+    // t-1 already ticked before Select All; t-hidden is NOT in the visible list.
+    selection.select(songId: "t-1")
+    selection.selectAll(visibleSongs: [s1, s2])
+    XCTAssertEqual(selection.count, 2, "no duplicate for the already-ticked t-1")
+    XCTAssertFalse(selection.isSelected(songId: "t-hidden"))
+  }
+
+  /// areAllSelected drives the Select All ⇄ Deselect All label.
+  func testAreAllSelectedLabelLogic() {
+    let s1 = makeSong(id: "t-1")
+    let s2 = makeSong(id: "t-2")
+    XCTAssertFalse(
+      selection.areAllSelected(in: [s1, s2]),
+      "nothing selected ⇒ Select All"
+    )
+    selection.select(songId: "t-1")
+    XCTAssertFalse(
+      selection.areAllSelected(in: [s1, s2]),
+      "partial selection ⇒ still Select All"
+    )
+    selection.select(songId: "t-2")
+    XCTAssertTrue(
+      selection.areAllSelected(in: [s1, s2]),
+      "everything visible selected ⇒ Deselect All"
+    )
+  }
+
+  /// An empty visible list is treated as NOT all-selected, so the button stays
+  /// on "Select All" (disabled) rather than flipping to "Deselect All".
+  func testAreAllSelectedIsFalseForEmptyVisibleList() {
+    XCTAssertFalse(selection.areAllSelected(in: []))
+  }
+
+  /// B1 + B2 interplay: Select All the whole list, then the "hide filed" filter
+  /// change removes a track from the visible list. After reconciliation the
+  /// vanished track drops out AND the selection is still "all selected" for the
+  /// now-shorter visible list (so the button correctly reads "Deselect All").
+  func testSelectAllThenFilterChangeReconciles() {
+    let s1 = makeSong(id: "t-1")
+    let s2 = makeSong(id: "t-2")
+    let s3 = makeSong(id: "t-3")
+    selection.selectAll(visibleSongs: [s1, s2, s3])
+    XCTAssertEqual(selection.count, 3)
+    XCTAssertTrue(selection.areAllSelected(in: [s1, s2, s3]))
+
+    // Filter change / bulk-add hides t-2: visible list is now [t-1, t-3].
+    let newVisible = [s1, s3]
+    selection.retainOnly(visibleSongs: newVisible)
+
+    XCTAssertEqual(selection.count, 2, "t-2 pruned from the selection")
+    XCTAssertFalse(selection.isSelected(songId: "t-2"))
+    XCTAssertTrue(
+      selection.areAllSelected(in: newVisible),
+      "still all-selected for the shorter visible list ⇒ button reads Deselect All"
+    )
+  }
+
+  /// Deselect All (the toggle's other branch is just `clear()`): after selecting
+  /// all, clearing empties the selection and flips the label back to Select All.
+  func testDeselectAllClearsAndFlipsLabel() {
+    let s1 = makeSong(id: "t-1")
+    let s2 = makeSong(id: "t-2")
+    selection.selectAll(visibleSongs: [s1, s2])
+    XCTAssertTrue(selection.areAllSelected(in: [s1, s2]))
+    selection.clear()
+    XCTAssertTrue(selection.isEmpty)
+    XCTAssertFalse(
+      selection.areAllSelected(in: [s1, s2]),
+      "after Deselect All the label returns to Select All"
+    )
+  }
 }

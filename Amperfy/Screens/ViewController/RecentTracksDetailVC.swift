@@ -136,6 +136,7 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
   /// action buttons anchored above the mini-player safe area.
   private let editActionBar = UIView()
   private var addToPlaylistButton: UIButton!
+  private var selectAllButton: UIButton!
   private var selectionCountLabel: UILabel!
   private static let editActionBarHeight: CGFloat = 68
 
@@ -392,6 +393,23 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     editActionBar.addSubview(countLabel)
     selectionCountLabel = countLabel
 
+    // Leading "Select All" / "Deselect All" toggle on the count row. Borderless
+    // so it reads as a secondary control next to the count and the primary
+    // filled "Add to Playlist…" button below.
+    var selectAllConfig = UIButton.Configuration.plain()
+    selectAllConfig.title = "Select All"
+    selectAllConfig.buttonSize = .small
+    selectAllConfig.contentInsets = .zero
+    let selectAllToggle = UIButton(configuration: selectAllConfig)
+    selectAllToggle.translatesAutoresizingMaskIntoConstraints = false
+    selectAllToggle.addTarget(
+      self,
+      action: #selector(toggleSelectAll),
+      for: .touchUpInside
+    )
+    editActionBar.addSubview(selectAllToggle)
+    selectAllButton = selectAllToggle
+
     var config = UIButton.Configuration.filled()
     config.title = "Add to Playlist…"
     config.image = UIImage(systemName: "text.badge.plus")
@@ -419,6 +437,12 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
       countLabel.topAnchor.constraint(equalTo: separator.bottomAnchor, constant: 4),
       countLabel.centerXAnchor.constraint(equalTo: editActionBar.centerXAnchor),
 
+      selectAllToggle.leadingAnchor.constraint(
+        equalTo: editActionBar.leadingAnchor,
+        constant: 16
+      ),
+      selectAllToggle.centerYAnchor.constraint(equalTo: countLabel.centerYAnchor),
+
       addButton.topAnchor.constraint(equalTo: countLabel.bottomAnchor, constant: 4),
       addButton.leadingAnchor.constraint(equalTo: editActionBar.leadingAnchor, constant: 16),
       addButton.trailingAnchor.constraint(equalTo: editActionBar.trailingAnchor, constant: -16),
@@ -430,6 +454,39 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     let count = selection.count
     addToPlaylistButton.isEnabled = count > 0
     selectionCountLabel.text = count == 1 ? "1 selected" : "\(count) selected"
+
+    // Select All ⇄ Deselect All toggle: flip the label based on whether every
+    // VISIBLE (filtered) row is already ticked. Disabled when the list is empty
+    // (nothing to select). Standard batch-edit pattern.
+    let allSelected = selection.areAllSelected(in: songs)
+    selectAllButton.isEnabled = !songs.isEmpty
+    selectAllButton.configuration?.title = allSelected ? "Deselect All" : "Select All"
+  }
+
+  /// Select All / Deselect All handler for the edit bar. Toggles between the two
+  /// based on current state: if every visible row is already selected, this
+  /// clears the selection; otherwise it selects the whole VISIBLE (filtered)
+  /// list. With the "hide filed tracks" filter on, the visible list is exactly
+  /// the unfiled backlog, so one tap selects the entire inbox. Keeps the id-keyed
+  /// model and the UIKit table checkmarks in sync.
+  @objc
+  private func toggleSelectAll() {
+    if selection.areAllSelected(in: songs) {
+      selection.clear()
+      for row in songs.indices {
+        tableView.deselectRow(at: IndexPath(row: row, section: 0), animated: false)
+      }
+    } else {
+      selection.selectAll(visibleSongs: songs)
+      for row in songs.indices {
+        tableView.selectRow(
+          at: IndexPath(row: row, section: 0),
+          animated: false,
+          scrollPosition: .none
+        )
+      }
+    }
+    updateEditActionBarState()
   }
 
   // MARK: - Bulk select: edit mode
