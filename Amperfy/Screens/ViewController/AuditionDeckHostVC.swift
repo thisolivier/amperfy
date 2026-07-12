@@ -237,18 +237,21 @@ class AuditionDeckHostVC: UIViewController {
 // MARK: - Entry-point routing
 
 extension UIViewController {
-  /// Push the Audition Deck onto the current navigation stack, with the same routing fallbacks
-  /// the user-settled push-navigation rule established in ec5fff6 (Related Tracks): popup player
-  /// closes into the library tab first; a caller with no navigation controller routes through the
-  /// main window host.
+  /// Push the Audition Deck onto the current navigation stack, matching the
+  /// onward-exploration routing used by EntityPreviewActionBuilder: from the
+  /// popup player, collapse the player (playback continues) then push onto the
+  /// CURRENTLY-SELECTED tab's stack — never switch to the Library tab, never
+  /// replace a root (the pre-fix behaviour bricked navigation from the Home
+  /// tab). A caller with no navigation controller routes through the main
+  /// window host onto the current tab.
   func pushAuditionDeck(seed: DeckSeed, defaultKind: DeckCandidateKind) {
     let deckVC = AuditionDeckHostVC(seed: seed, defaultKind: defaultKind)
     if let popupPlayer = self as? PopupPlayerVC {
-      popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: deckVC)
+      popupPlayer.closePopupPlayerAndDisplayInCurrentTab(vc: deckVC)
     } else if let navController = navigationController {
       navController.pushViewController(deckVC, animated: true)
     } else if let hostingSplitVC = AppDelegate.mainWindowHostVC {
-      hostingSplitVC.pushNavLibrary(vc: deckVC)
+      hostingSplitVC.pushNavCurrentTab(vc: deckVC)
     }
   }
 }

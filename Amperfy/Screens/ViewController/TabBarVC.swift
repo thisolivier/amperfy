@@ -241,6 +241,33 @@ class TabBarVC: UITabBarController {
     libraryGroup.managingNavigationController?.pushViewController(vc, animated: true)
     selectedTab = libraryGroup
   }
+
+  /// Resolve the navigation controller of whichever tab is currently selected,
+  /// so an onward push lands on the stack the user is already looking at. The
+  /// Library group manages its own `managingNavigationController` rather than
+  /// exposing it through `selectedViewController`, so handle that case first;
+  /// otherwise fall back to the selected tab's own nav controller.
+  private var selectedTabNavigationController: UINavigationController? {
+    if selectedTab === libraryGroup {
+      return libraryGroup?.managingNavigationController
+    }
+    if let nav = selectedTab?.viewController as? UINavigationController {
+      return nav
+    }
+    return selectedTab?.viewController?.navigationController ?? selectedViewController?
+      .navigationController ?? (selectedViewController as? UINavigationController)
+  }
+
+  /// Push onto the CURRENTLY-SELECTED tab's stack without switching tabs. Never
+  /// replaces a root. Falls back to the Library push only if no selected-tab
+  /// nav can be resolved (should not happen in normal operation).
+  public func pushOnCurrentTab(vc: UIViewController) {
+    guard let nav = selectedTabNavigationController else {
+      push(vc: vc)
+      return
+    }
+    nav.pushViewController(vc, animated: true)
+  }
 }
 
 // MARK: UITabBarControllerDelegate
@@ -268,6 +295,10 @@ extension TabBarVC: UITabBarControllerDelegate {
 extension TabBarVC: MainSceneHostingViewController {
   public func pushNavLibrary(vc: UIViewController) {
     push(vc: vc)
+  }
+
+  public func pushNavCurrentTab(vc: UIViewController) {
+    pushOnCurrentTab(vc: vc)
   }
 
   public func pushLibraryCategory(vc: UIViewController) {

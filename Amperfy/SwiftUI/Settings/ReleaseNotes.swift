@@ -37,6 +37,20 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 74,
+      date: "2026-07-12",
+      title: "Build 74 — Navigation from the player no longer hijacks another tab",
+      whatsNew: [
+        "Fixed: navigation from the player could hijack another tab. Opening a page from the now-playing player — 'Show in Playlists', 'Show Album', 'Show Artist', 'Related Tracks', or tapping the artwork/title — while you were on the Home tab would drop that page onto the Library tab instead. You'd land there with no back button and no way to return to Home short of restarting the app. These now open on the tab you're already on, with a normal back button, and the player just collapses (playback keeps going).",
+      ],
+      testingFocus: [
+        "On the Home tab, play a track, expand the mini player, tap the chevron/… → 'Show in Playlists'. The player should collapse and Playlists membership should push onto the HOME tab with a working back button. You should still be on Home, not yanked to Library.",
+        "Repeat for 'Show Album', 'Show Artist', and 'Related Tracks' from the player — each should push onto the current tab with a back button; playback should continue.",
+        "Tap the artwork or title inside the full-screen player to go to the album/artist — same expectation: opens on the current tab, back button works.",
+        "From the Search tab and from a Library tab, confirm the same actions push onto whichever tab you were on (never a different one), and Back always returns you where you started.",
+      ]
+    ),
+    ReleaseNote(
       id: 73,
       date: "2026-07-12",
       title: "Build 73 — Faster filing on Recently Added",

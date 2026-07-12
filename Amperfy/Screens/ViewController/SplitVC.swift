@@ -169,6 +169,15 @@ extension SplitVC: MainSceneHostingViewController {
     push(vc: vc)
   }
 
+  /// On the split layout there is a single detail (secondary) navigation stack
+  /// that hosts whatever the user is currently browsing, so pushing onto the
+  /// "current tab" is the same as pushing onto the secondary nav — a genuine
+  /// push, never a `setViewController` root-replace. (`pushLibraryCategory`
+  /// below is the deliberate root-replace path for switching sidebar sections.)
+  public func pushNavCurrentTab(vc: UIViewController) {
+    push(vc: vc)
+  }
+
   public func pushLibraryCategory(vc: UIViewController) {
     setViewController(embeddInNavigation(vc: vc), for: .secondary)
   }

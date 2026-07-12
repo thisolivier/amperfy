@@ -262,7 +262,7 @@ class PopupPlayerVC: UIViewController, UIScrollViewDelegate {
     if let song = player.currentlyPlaying?.asSong, let artist = song.artist,
        let account = artist.account {
       let artistDetailVC = AppStoryboard.Main.segueToArtistDetail(account: account, artist: artist)
-      closePopupPlayerAndDisplayInLibraryTab(vc: artistDetailVC)
+      closePopupPlayerAndDisplayInCurrentTab(vc: artistDetailVC)
     }
   }
 
@@ -274,7 +274,7 @@ class PopupPlayerVC: UIViewController, UIScrollViewDelegate {
         album: album,
         songToScrollTo: song
       )
-      closePopupPlayerAndDisplayInLibraryTab(vc: albumDetailVC)
+      closePopupPlayerAndDisplayInCurrentTab(vc: albumDetailVC)
     }
   }
 
@@ -287,7 +287,7 @@ class PopupPlayerVC: UIViewController, UIScrollViewDelegate {
         podcast: podcast,
         episodeToScrollTo: podcastEpisode
       )
-      closePopupPlayerAndDisplayInLibraryTab(vc: podcastDetailVC)
+      closePopupPlayerAndDisplayInCurrentTab(vc: podcastDetailVC)
     }
   }
 
@@ -296,10 +296,19 @@ class PopupPlayerVC: UIViewController, UIScrollViewDelegate {
     hostingSplitVC.visualizePopupPlayer(direction: .close, animated: true)
   }
 
-  func closePopupPlayerAndDisplayInLibraryTab(vc: UIViewController) {
+  /// Onward-exploration destination for actions taken from the popup/mini
+  /// player (Show Album/Artist/Playlists, Related Tracks, Audition Deck, and
+  /// the player's own artwork/title taps). Collapses the full-screen player
+  /// (playback continues — this only dismisses the sheet) and then PUSHES `vc`
+  /// onto the currently-selected tab's navigation stack. This never switches to
+  /// the Library tab and never replaces a tab's root, so the user gets a normal
+  /// back button on the tab they were already on. Replaced the former
+  /// `closePopupPlayerAndDisplayInLibraryTab`, which switched to Library and
+  /// pushed onto its stack — bricking Home-tab navigation (fix/popup-navigation).
+  func closePopupPlayerAndDisplayInCurrentTab(vc: UIViewController) {
     guard let hostingSplitVC = AppDelegate.mainWindowHostVC else { return }
     hostingSplitVC.visualizePopupPlayer(direction: .close, animated: true, completion: { () in
-      hostingSplitVC.pushNavLibrary(vc: vc)
+      hostingSplitVC.pushNavCurrentTab(vc: vc)
     })
   }
 
