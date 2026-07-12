@@ -136,6 +136,50 @@ class EntityPreviewActionBuilder {
     self.menuMode = menuMode
   }
 
+  /// Single resolution point for every onward-exploration push (Show Album /
+  /// Artist / Playlists, Related Tracks, playlist-detail traversal). Each site
+  /// used to roll its own three-way `if popupPlayer / navigationController /
+  /// mainWindowHostVC` ladder, and the popup branch pushed onto the Library
+  /// tab's stack (and switched to it), bricking navigation when the user was on
+  /// the Home tab (no back button, restart required). Centralizing here gives
+  /// the correct semantics everywhere:
+  ///   • From the popup/mini player: collapse the player (playback continues),
+  ///     then PUSH onto the CURRENTLY-SELECTED tab's stack — never a different
+  ///     tab, never a root replace.
+  ///   • From a normal screen with a nav controller: push onto that stack.
+  ///   • Last-resort fallback (no nav, e.g. detached preview): push onto the
+  ///     current tab via the host, still never replacing a root.
+  static func pushExploration(_ vc: UIViewController, from rootView: UIViewController) {
+    // Classify the origin, then execute the steps the pure resolver dictates.
+    // Keeping the branch selection aligned with
+    // `PopupExplorationNavigationResolver` means the (unit-tested) invariant —
+    // always push, never replace a root, always the current tab — governs the
+    // real UIKit calls too.
+    let origin: PopupExplorationOrigin
+    if rootView is PopupPlayerVC {
+      origin = .popupPlayer
+    } else if rootView.navigationController != nil {
+      origin = .screenWithNavigationController
+    } else {
+      origin = .detached
+    }
+
+    for step in PopupExplorationNavigationResolver.steps(for: origin) {
+      switch step {
+      case .collapsePopupPlayer, .pushOntoCurrentTab:
+        // Both popup-player steps are performed by this one call: it collapses
+        // the sheet (playback continues) and then pushes onto the current tab.
+        guard step == .collapsePopupPlayer,
+              let popupPlayer = rootView as? PopupPlayerVC else { continue }
+        popupPlayer.closePopupPlayerAndDisplayInCurrentTab(vc: vc)
+      case .pushOntoOriginNavigationController:
+        rootView.navigationController?.pushViewController(vc, animated: true)
+      case .pushOntoCurrentTabViaHost:
+        AppDelegate.mainWindowHostVC?.pushNavCurrentTab(vc: vc)
+      }
+    }
+  }
+
   public func createMenu() -> UIMenu {
     UIMenu(children: createMenuActions())
   }
@@ -782,26 +826,13 @@ class EntityPreviewActionBuilder {
         account: account,
         playlist: selectedPlaylist
       )
-      if let popupPlayer = self.rootView as? PopupPlayerVC {
-        popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: detailVC)
-      } else if let navController = self.rootView.navigationController {
-        navController.pushViewController(detailVC, animated: true)
-      } else {
-        guard let hostingSplitVC = AppDelegate.mainWindowHostVC else { return }
-        hostingSplitVC.pushNavLibrary(vc: detailVC)
-      }
+      EntityPreviewActionBuilder.pushExploration(detailVC, from: self.rootView)
     }
     weakMembershipVC = membershipVC
 
     // Pushed, not presented (user-settled 2026-07-03): only short-lived modal
     // prompts get presented; membership traverses onward into playlist details.
-    if let popupPlayer = rootView as? PopupPlayerVC {
-      popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: membershipVC)
-    } else if let navController = rootView.navigationController {
-      navController.pushViewController(membershipVC, animated: true)
-    } else if let hostingSplitVC = AppDelegate.mainWindowHostVC {
-      hostingSplitVC.pushNavLibrary(vc: membershipVC)
-    }
+    EntityPreviewActionBuilder.pushExploration(membershipVC, from: rootView)
 
     await resolveMembership(songId: songId, account: account, into: membershipVC)
   }
@@ -862,15 +893,8 @@ class EntityPreviewActionBuilder {
         originRootView: self.rootView
       )
       // Pushed, not presented (user-settled 2026-07-03): Related Tracks is a
-      // page with deep onward traversals, so it belongs on the nav stack —
-      // same routing fallbacks as the membership flow below.
-      if let popupPlayer = self.rootView as? PopupPlayerVC {
-        popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: relatedTracksVC)
-      } else if let navController = self.rootView.navigationController {
-        navController.pushViewController(relatedTracksVC, animated: true)
-      } else if let hostingSplitVC = AppDelegate.mainWindowHostVC {
-        hostingSplitVC.pushNavLibrary(vc: relatedTracksVC)
-      }
+      // page with deep onward traversals, so it belongs on the nav stack.
+      EntityPreviewActionBuilder.pushExploration(relatedTracksVC, from: self.rootView)
     }
   }
 
@@ -890,14 +914,7 @@ class EntityPreviewActionBuilder {
       album: album,
       songToScrollTo: playable?.asSong
     )
-    if let popupPlayer = rootView as? PopupPlayerVC {
-      popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: albumDetailVC)
-    } else if let navController = rootView.navigationController {
-      navController.pushViewController(albumDetailVC, animated: true)
-    } else {
-      guard let hostingSplitVC = AppDelegate.mainWindowHostVC else { return }
-      hostingSplitVC.pushNavLibrary(vc: albumDetailVC)
-    }
+    EntityPreviewActionBuilder.pushExploration(albumDetailVC, from: rootView)
   }
 
   private func createShowArtistAction() -> UIAction {
@@ -920,14 +937,7 @@ class EntityPreviewActionBuilder {
         artist: artist,
         albumToScrollTo: album
       )
-      if let popupPlayer = rootView as? PopupPlayerVC {
-        popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: artistDetailVC)
-      } else if let navController = rootView.navigationController {
-        navController.pushViewController(artistDetailVC, animated: true)
-      } else {
-        guard let hostingSplitVC = AppDelegate.mainWindowHostVC else { return }
-        hostingSplitVC.pushNavLibrary(vc: artistDetailVC)
-      }
+      EntityPreviewActionBuilder.pushExploration(artistDetailVC, from: rootView)
     } else if let podcast = playable?.asPodcastEpisode?.podcast, let account = podcast.account {
       appDelegate.userStatistics.usedAction(.alertGoToPodcast)
       let podcastDetailVC = AppStoryboard.Main.segueToPodcastDetail(
@@ -935,14 +945,7 @@ class EntityPreviewActionBuilder {
         podcast: podcast,
         episodeToScrollTo: playable?.asPodcastEpisode
       )
-      if let popupPlayer = rootView as? PopupPlayerVC {
-        popupPlayer.closePopupPlayerAndDisplayInLibraryTab(vc: podcastDetailVC)
-      } else if let navController = rootView.navigationController {
-        navController.pushViewController(podcastDetailVC, animated: true)
-      } else {
-        guard let hostingSplitVC = AppDelegate.mainWindowHostVC else { return }
-        hostingSplitVC.pushNavLibrary(vc: podcastDetailVC)
-      }
+      EntityPreviewActionBuilder.pushExploration(podcastDetailVC, from: rootView)
     }
   }
 

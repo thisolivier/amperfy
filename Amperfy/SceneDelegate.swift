@@ -28,6 +28,14 @@ import UIKit
 @MainActor
 protocol MainSceneHostingViewController {
   func pushNavLibrary(vc: UIViewController)
+  /// Push `vc` onto the navigation stack of the CURRENTLY-SELECTED tab, without
+  /// switching tabs and without ever replacing a tab's root. This is the
+  /// correct destination for onward-exploration actions triggered from the
+  /// popup/mini player (Show Album/Artist/Playlists, Related Tracks, …): the
+  /// user expects a back button on the tab they were already on, not to be
+  /// yanked to the Library tab (which `pushNavLibrary` does). See
+  /// `PopupPlayerVC.closePopupPlayerAndDisplayInCurrentTab(vc:)`.
+  func pushNavCurrentTab(vc: UIViewController)
   func pushLibraryCategory(vc: UIViewController)
   func pushTabCategory(tabCategory: TabNavigatorItem)
   func displaySearch()
