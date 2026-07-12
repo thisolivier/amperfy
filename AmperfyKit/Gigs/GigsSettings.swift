@@ -81,14 +81,19 @@ public final class GigsSettings: @unchecked Sendable {
   }
 
   /// Add a city (trimmed, case-insensitively de-duplicated). No-op on blanks.
-  public func addCity(_ city: String) {
+  /// Returns `true` when a city was actually added, `false` when the input was
+  /// blank or already followed — so callers can give "Already following <city>"
+  /// feedback instead of silently swallowing a duplicate tap.
+  @discardableResult
+  public func addCity(_ city: String) -> Bool {
     let trimmed = city.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return }
+    guard !trimmed.isEmpty else { return false }
     var current = cities
     guard !current.contains(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame })
-    else { return }
+    else { return false }
     current.append(trimmed)
     cities = current
+    return true
   }
 
   public func removeCity(_ city: String) {

@@ -57,18 +57,12 @@ class PlayableTableCell: BasicTableCell {
   @IBOutlet
   weak var trackNumberLabel: UILabel!
   @IBOutlet
-  weak var downloadProgress: UIProgressView! // depricated: replaced with a spinner in the accessoryView
-  @IBOutlet
-  weak private var cacheIconImage: UIImageView!
-  @IBOutlet
   weak private var favoriteIconImage: UIImageView!
 
   @IBOutlet
   weak var titleContainerLeadingConstraint: NSLayoutConstraint!
   @IBOutlet
   weak var labelTrailingCellConstraint: NSLayoutConstraint!
-  @IBOutlet
-  weak var cacheTrailingCellConstaint: NSLayoutConstraint!
   @IBOutlet
   weak var durationTrailingCellConstraint: NSLayoutConstraint!
   @IBOutlet
@@ -180,7 +174,6 @@ class PlayableTableCell: BasicTableCell {
       playOverArtworkButton.layer.backgroundColor = UIColor.imageOverlayBackground.cgColor
       playOverArtworkButton.layer.cornerRadius = CornerRadius.small.asCGFloat
       selectionStyle = .none
-      downloadProgress.isHidden = true
       setupTrailingButtonStack()
       setupRatingStars()
       resetForReuse()
@@ -563,6 +556,41 @@ class PlayableTableCell: BasicTableCell {
     } else {
       ratingStackView?.isHidden = true
     }
+
+    refreshAccessibilityValue()
+  }
+
+  /// Compose a single spoken accessibilityValue for the whole cell covering the
+  /// states VoiceOver would otherwise miss: the cached dot is decorative
+  /// (`isAccessibilityElement = false`), the favorite heart is a bare tinted
+  /// glyph, and the download accessory is a spinner/checkmark/exclamation with
+  /// no label. Rolling them into the cell's value means one swipe announces
+  /// "<title>, <artist>, Downloaded, Favorite, Downloading" rather than the
+  /// title alone. Order mirrors the visual reading order (leading dot → heart →
+  /// trailing accessory).
+  private func refreshAccessibilityValue() {
+    guard let playable else {
+      accessibilityValue = nil
+      return
+    }
+    var spokenStates: [String] = []
+    if playable.isCached {
+      spokenStates.append("Downloaded")
+    }
+    if playable.isFavorite {
+      spokenStates.append("Favorite")
+    }
+    if let download {
+      if download.error != nil {
+        spokenStates.append("Download failed")
+      } else if download.isDownloading {
+        spokenStates.append("Downloading")
+      } else if download.isFinishedSuccessfully, !playable.isCached {
+        // Avoid saying "Downloaded" twice when isCached already covers it.
+        spokenStates.append("Downloaded")
+      }
+    }
+    accessibilityValue = spokenStates.isEmpty ? nil : spokenStates.joined(separator: ", ")
   }
 
   private func configureTrackNumberLabel() {
@@ -580,7 +608,6 @@ class PlayableTableCell: BasicTableCell {
         appDelegate.storage.settings.user
           .isShowSongDuration || (traitCollection.horizontalSizeClass == .regular)
       )
-    let cacheIconWidth = (traitCollection.horizontalSizeClass == .regular) ? 17.0 : 15.0
     let durationWidth = (
       traitCollection.horizontalSizeClass == .regular &&
         traitCollection.userInterfaceIdiom != .mac
@@ -666,15 +693,12 @@ class PlayableTableCell: BasicTableCell {
       }
       labelTrailingCellConstraint.constant = lableTrailing
     }
-    _ = cacheIconWidth // retained for the regular-width layout comment above
 
     durationTrailingCellConstraint.constant = durationTrailing
-    // Hide the old trailing cache glyph; its role moved to the left-side dot.
-    cacheIconImage.isHidden = true
+    // The cached signal is a dot on the LEFT of the album art (user redesign
+    // 2026-07-10); the old trailing cache glyph and its constraint are gone.
     setupCachedDotIfNeeded()
     updateCachedDot()
-    cacheTrailingCellConstaint
-      .constant = durationTrailing + (isDurationVisible ? (4.0 + durationWidth) : 0.0)
     durationLabel.isHidden = !isDurationVisible
     if isDurationVisible {
       durationLabel.text = playable.duration.asColonDurationString
@@ -695,11 +719,9 @@ class PlayableTableCell: BasicTableCell {
     let primaryColor = ThemeStore.shared.dynamicText ?? UIColor.labelColor
     let secondaryColor = ThemeStore.shared.dynamicSecondaryText ?? UIColor.secondaryLabelColor
     if playerIndexCb != nil {
-      cacheIconImage.tintColor = primaryColor
       artistLabel.textColor = primaryColor
       durationLabel.textColor = primaryColor
     } else {
-      cacheIconImage.tintColor = secondaryColor
       artistLabel.textColor = secondaryColor
       durationLabel.textColor = secondaryColor
     }
@@ -790,8 +812,6 @@ class PlayableTableCell: BasicTableCell {
             playOverNumberButton.isHidden = true
           }
         }
-        cacheIconImage.tintColor = appDelegate.storage.settings.accounts
-          .getSetting(playable?.account?.info).read.themePreference.asColor
         optionsButton.imageView?.tintColor = appDelegate.storage.settings.accounts
           .getSetting(playable?.account?.info).read.themePreference.asColor
         backgroundColor = (rootView is PopupPlayerVC) ?

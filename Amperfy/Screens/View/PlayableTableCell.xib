@@ -101,19 +101,6 @@
                             <constraint firstItem="ww2-RJ-EgX" firstAttribute="centerY" secondItem="ZTB-B7-OZR" secondAttribute="centerY" id="aK9-QK-WNg"/>
                         </constraints>
                     </view>
-                    <progressView opaque="NO" contentMode="scaleToFill" verticalHuggingPriority="750" progress="0.5" translatesAutoresizingMaskIntoConstraints="NO" id="4NS-Qv-02y">
-                        <rect key="frame" x="82" y="51" width="507" height="4"/>
-                    </progressView>
-                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="arrow.down.circle" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="2Xe-ur-neX" userLabel="Cache Icon">
-                        <rect key="frame" x="530" y="28" width="15" height="14"/>
-                        <color key="tintColor" systemColor="secondaryLabelColor"/>
-                        <constraints>
-                            <constraint firstAttribute="width" secondItem="2Xe-ur-neX" secondAttribute="height" multiplier="1:1" id="4oP-Gd-Zjy"/>
-                            <constraint firstAttribute="height" constant="15" id="FU5-gZ-NAG">
-                                <variation key="widthClass=regular" constant="17"/>
-                            </constraint>
-                        </constraints>
-                    </imageView>
                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="99:59:59" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.69999999999999996" translatesAutoresizingMaskIntoConstraints="NO" id="XQO-xE-pLx" userLabel="Duration">
                         <rect key="frame" x="549" y="26.5" width="40" height="17"/>
                         <constraints>
@@ -191,19 +178,15 @@
                     <constraint firstItem="HnA-Bb-1UQ" firstAttribute="left" secondItem="ZTB-B7-OZR" secondAttribute="right" id="0uP-N3-DaP"/>
                     <constraint firstItem="mUX-sN-oa8" firstAttribute="centerY" secondItem="WOq-tb-OTF" secondAttribute="centerY" id="1M6-yt-wX0"/>
                     <constraint firstAttribute="rightMargin" secondItem="mUX-sN-oa8" secondAttribute="right" id="46w-nK-8d4"/>
-                    <constraint firstItem="4NS-Qv-02y" firstAttribute="leading" secondItem="mUX-sN-oa8" secondAttribute="leading" id="4Fr-bx-vmN"/>
                     <constraint firstItem="TYw-rj-zE1" firstAttribute="trailing" secondItem="HnA-Bb-1UQ" secondAttribute="trailing" id="4UI-9r-Txc"/>
-                    <constraint firstAttribute="trailingMargin" secondItem="2Xe-ur-neX" secondAttribute="trailing" constant="44" id="689-Vc-7ao"/>
                     <constraint firstItem="euv-dS-9Rx" firstAttribute="bottom" secondItem="Uwb-Vy-dE7" secondAttribute="bottom" id="BsP-Ly-wBh"/>
                     <constraint firstItem="ZTB-B7-OZR" firstAttribute="left" secondItem="WOq-tb-OTF" secondAttribute="leftMargin" id="CSu-Tb-lqZ"/>
                     <constraint firstItem="l8v-65-XtX" firstAttribute="top" secondItem="Uwb-Vy-dE7" secondAttribute="top" constant="-4" id="Cg9-Lz-BOL"/>
                     <constraint firstItem="Uwb-Vy-dE7" firstAttribute="leading" secondItem="ZTB-B7-OZR" secondAttribute="trailing" id="Coh-TC-C5u"/>
-                    <constraint firstItem="2Xe-ur-neX" firstAttribute="centerY" secondItem="WOq-tb-OTF" secondAttribute="centerY" id="Evs-mq-aoE"/>
                     <constraint firstItem="TYw-rj-zE1" firstAttribute="leading" secondItem="HnA-Bb-1UQ" secondAttribute="leading" id="HN0-vg-ZbJ"/>
                     <constraint firstItem="SRF-Yt-kwz" firstAttribute="centerY" secondItem="WOq-tb-OTF" secondAttribute="centerY" id="NfZ-bC-0c2"/>
                     <constraint firstItem="l8v-65-XtX" firstAttribute="leading" secondItem="Uwb-Vy-dE7" secondAttribute="leading" constant="-4" id="QAw-hu-VDc"/>
                     <constraint firstItem="TYw-rj-zE1" firstAttribute="top" secondItem="HnA-Bb-1UQ" secondAttribute="top" id="SJR-m7-ou7"/>
-                    <constraint firstAttribute="bottomMargin" secondItem="4NS-Qv-02y" secondAttribute="bottom" id="Sxk-IV-5P0"/>
                     <constraint firstItem="euv-dS-9Rx" firstAttribute="trailing" secondItem="Uwb-Vy-dE7" secondAttribute="trailing" id="Trn-WR-LKv"/>
                     <constraint firstAttribute="trailingMargin" secondItem="SRF-Yt-kwz" secondAttribute="trailing" id="X7z-Kg-90N"/>
                     <constraint firstItem="mUX-sN-oa8" firstAttribute="left" secondItem="WOq-tb-OTF" secondAttribute="leftMargin" constant="66" id="XXa-cv-hEs"/>
@@ -213,7 +196,6 @@
                     <constraint firstItem="HnA-Bb-1UQ" firstAttribute="centerY" secondItem="WOq-tb-OTF" secondAttribute="centerY" id="cj6-KU-NTA"/>
                     <constraint firstItem="XQO-xE-pLx" firstAttribute="centerY" secondItem="WOq-tb-OTF" secondAttribute="centerY" id="evm-GL-FO9"/>
                     <constraint firstAttribute="trailingMargin" secondItem="XQO-xE-pLx" secondAttribute="trailing" id="ew4-ya-VWk"/>
-                    <constraint firstAttribute="rightMargin" secondItem="4NS-Qv-02y" secondAttribute="right" id="gV9-QO-4Ah"/>
                     <constraint firstAttribute="bottomMargin" secondItem="Uwb-Vy-dE7" secondAttribute="bottom" id="qSm-jS-v60"/>
                     <constraint firstItem="euv-dS-9Rx" firstAttribute="leading" secondItem="Uwb-Vy-dE7" secondAttribute="leading" id="rqn-Hl-suf"/>
                     <constraint firstItem="ZTB-B7-OZR" firstAttribute="centerY" secondItem="WOq-tb-OTF" secondAttribute="centerY" id="uNb-qq-0ME"/>
@@ -221,10 +203,7 @@
             </tableViewCellContentView>
             <connections>
                 <outlet property="artistLabel" destination="nJe-7h-3tU" id="SlX-ew-mVM"/>
-                <outlet property="cacheIconImage" destination="2Xe-ur-neX" id="Wt7-D7-TTG"/>
-                <outlet property="cacheTrailingCellConstaint" destination="689-Vc-7ao" id="6J7-6Z-UNH"/>
                 <outlet property="deleteButton" destination="l8v-65-XtX" id="BlT-4f-Hok"/>
-                <outlet property="downloadProgress" destination="4NS-Qv-02y" id="vZf-uL-wef"/>
                 <outlet property="durationLabel" destination="XQO-xE-pLx" id="LV8-46-i0Q"/>
                 <outlet property="durationTrailingCellConstraint" destination="ew4-ya-VWk" id="tBt-EX-jFh"/>
                 <outlet property="entityImage" destination="Uwb-Vy-dE7" id="hLh-iq-m4X"/>
@@ -241,7 +220,6 @@
         </tableViewCell>
     </objects>
     <resources>
-        <image name="arrow.down.circle" catalog="system" width="128" height="123"/>
         <image name="ellipsis" catalog="system" width="128" height="37"/>
         <image name="minus.circle.fill" catalog="system" width="128" height="123"/>
         <image name="play.fill" catalog="system" width="120" height="128"/>

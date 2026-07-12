@@ -249,6 +249,27 @@ class GigsServiceTest: XCTestCase {
       GigsWeekGrouper.normalizeKeyText("o2 academy brixton")
     )
   }
+
+  // MARK: - .notConfigured mapping (A4)
+
+  func testFetchThrowsNotConfiguredWhenNoUsableEndpoint() async {
+    // No gateway configured (fresh defaults) AND a serverUrl with no host means
+    // neither the gateway nor the direct URL can be built — the caller must see
+    // `.notConfigured` (distinct from `.unreachable`) so the view can say "Gigs
+    // isn't set up for this server yet" rather than an offline message.
+    let emptyDefaults = UserDefaults(suiteName: "GigsNotConfigured-\(UUID().uuidString)")!
+    let service = GigsService(
+      serverUrl: "not-a-url-with-no-host",
+      settings: GigsSettings(defaults: emptyDefaults),
+      gatewaySettings: AdjacencyGatewaySettings(defaults: emptyDefaults)
+    )
+    do {
+      _ = try await service.fetchEvents(scope: .city("London"))
+      XCTFail("Expected .notConfigured to be thrown")
+    } catch {
+      XCTAssertEqual(error as? GigsServiceError, .notConfigured)
+    }
+  }
 }
 
 // MARK: - GigsSettingsTest
@@ -274,6 +295,17 @@ class GigsSettingsTest: XCTestCase {
   func testAddBlankCityIsNoOp() {
     settings.addCity("   ")
     XCTAssertTrue(settings.cities.isEmpty)
+  }
+
+  func testAddCityReturnsTrueOnlyWhenNewlyAdded() {
+    // First add of a genuinely new city → true; a case-insensitive duplicate →
+    // false; a blank → false. Callers rely on this to show "Already following".
+    XCTAssertTrue(settings.addCity("London"))
+    XCTAssertFalse(settings.addCity("london"))
+    XCTAssertFalse(settings.addCity("  LONDON "))
+    XCTAssertFalse(settings.addCity("   "))
+    XCTAssertTrue(settings.addCity("Manchester"))
+    XCTAssertEqual(settings.cities, ["London", "Manchester"])
   }
 
   func testRemoveCityCaseInsensitive() {

@@ -37,7 +37,6 @@ class GigsCitiesVC: UIViewController {
 
   private let settings = GigsSettings.shared
   private let tableView = UITableView(frame: .zero, style: .insetGrouped)
-  private let emptyStateLabel = UILabel()
 
   /// Called after any add/remove so the presenting Gigs list can reload.
   var onChange: (() -> ())?
@@ -49,7 +48,6 @@ class GigsCitiesVC: UIViewController {
     setNavBarTitle(title: "Cities")
     view.backgroundColor = .systemGroupedBackground
     configureTableView()
-    configureEmptyState()
     configureNavItems()
     refreshEmptyState()
   }
@@ -65,23 +63,6 @@ class GigsCitiesVC: UIViewController {
       tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-    ])
-  }
-
-  private func configureEmptyState() {
-    emptyStateLabel.numberOfLines = 0
-    emptyStateLabel.textAlignment = .center
-    emptyStateLabel.textColor = .secondaryLabel
-    emptyStateLabel.font = .preferredFont(forTextStyle: .body)
-    emptyStateLabel.translatesAutoresizingMaskIntoConstraints = false
-    emptyStateLabel.text = "No cities yet.\n\nTap + to follow a city's upcoming gigs."
-    emptyStateLabel.isHidden = true
-    view.addSubview(emptyStateLabel)
-    NSLayoutConstraint.activate([
-      emptyStateLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-      emptyStateLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-      emptyStateLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
-      emptyStateLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
     ])
   }
 
@@ -101,29 +82,40 @@ class GigsCitiesVC: UIViewController {
 
   private func refreshEmptyState() {
     let isEmpty = cities.isEmpty
-    emptyStateLabel.isHidden = !isEmpty
     tableView.isHidden = isEmpty
     editButtonItem.isEnabled = !isEmpty
     if isEmpty, isEditing { setEditing(false, animated: true) }
+    if isEmpty {
+      var emptyConfig = UIContentUnavailableConfiguration.empty()
+      emptyConfig.text = "No cities yet"
+      emptyConfig.secondaryText = "Tap + to follow a city's upcoming gigs."
+      contentUnavailableConfiguration = emptyConfig
+    } else {
+      contentUnavailableConfiguration = nil
+    }
   }
 
   @objc
   private func promptAddCity() {
-    let alert = UIAlertController(
-      title: "Add City",
-      message: "Show upcoming gigs in this city.",
-      preferredStyle: .alert
-    )
-    alert.addTextField { $0.placeholder = "e.g. London" }
-    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-    alert.addAction(UIAlertAction(title: "Add", style: .default) { [weak self] _ in
-      guard let self, let text = alert.textFields?.first?.text else { return }
-      settings.addCity(text)
-      tableView.reloadData()
-      refreshEmptyState()
-      onChange?()
-    })
-    present(alert, animated: true)
+    GigsAddCityPrompt.present(from: self, settings: settings) { [weak self] result in
+      guard let self else { return }
+      switch result {
+      case .added:
+        tableView.reloadData()
+        refreshEmptyState()
+        onChange?()
+      case let .alreadyFollowing(city):
+        let alert = UIAlertController(
+          title: nil,
+          message: "Already following \(city)",
+          preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+      case .blank:
+        break
+      }
+    }
   }
 
   private func remove(at indexPath: IndexPath) {
