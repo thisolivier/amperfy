@@ -45,8 +45,14 @@ class GigsVC: UIViewController {
   private lazy var service = GigsService(serverUrl: account.serverUrl)
 
   private let tableView = UITableView(frame: .zero, style: .insetGrouped)
-  private let emptyStateLabel = UILabel()
   private let asOfLabel = UILabel()
+  /// The "as of" banner header, built ONCE (viewDidLoad) and shown/hidden by
+  /// swapping tableHeaderView; only asOfLabel.text is toggled thereafter.
+  private let asOfHeader = UIView()
+
+  /// The bar button for "Near me" — disabled while a location request is in
+  /// flight so a second tap can't overwrite the pending request (QA A4).
+  private var nearMeButton: UIBarButtonItem?
 
   /// Weekly sections currently shown — read by GigsVC+TableView.
   private(set) var weekSections: [GigsWeekSection] = []
@@ -68,7 +74,6 @@ class GigsVC: UIViewController {
     setNavBarTitle(title: "Gigs")
     view.backgroundColor = .systemGroupedBackground
     configureTableView()
-    configureEmptyState()
     configureAsOfBanner()
     configureNavItems()
   }
@@ -94,31 +99,23 @@ class GigsVC: UIViewController {
     ])
   }
 
-  private func configureEmptyState() {
-    emptyStateLabel.numberOfLines = 0
-    emptyStateLabel.textAlignment = .center
-    emptyStateLabel.textColor = .secondaryLabel
-    emptyStateLabel.font = .preferredFont(forTextStyle: .body)
-    emptyStateLabel.translatesAutoresizingMaskIntoConstraints = false
-    emptyStateLabel.isHidden = true
-    view.addSubview(emptyStateLabel)
-    NSLayoutConstraint.activate([
-      emptyStateLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-      emptyStateLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-      emptyStateLabel.leadingAnchor.constraint(
-        equalTo: view.leadingAnchor, constant: 40
-      ),
-      emptyStateLabel.trailingAnchor.constraint(
-        equalTo: view.trailingAnchor, constant: -40
-      ),
-    ])
-  }
-
+  /// Build the offline "as of" banner header ONCE. Thereafter updateAsOfBanner()
+  /// only toggles asOfLabel.text and whether the header is attached — it never
+  /// rebuilds the view or re-adds constraints (previously a fresh UIView + four
+  /// constraints were created on every render).
   private func configureAsOfBanner() {
     asOfLabel.font = .preferredFont(forTextStyle: .caption1)
     asOfLabel.textColor = .secondaryLabel
     asOfLabel.textAlignment = .center
     asOfLabel.numberOfLines = 0
+    asOfLabel.translatesAutoresizingMaskIntoConstraints = false
+    asOfHeader.addSubview(asOfLabel)
+    NSLayoutConstraint.activate([
+      asOfLabel.topAnchor.constraint(equalTo: asOfHeader.topAnchor, constant: 8),
+      asOfLabel.bottomAnchor.constraint(equalTo: asOfHeader.bottomAnchor, constant: -8),
+      asOfLabel.leadingAnchor.constraint(equalTo: asOfHeader.leadingAnchor, constant: 16),
+      asOfLabel.trailingAnchor.constraint(equalTo: asOfHeader.trailingAnchor, constant: -16),
+    ])
   }
 
   private func configureNavItems() {
@@ -134,6 +131,8 @@ class GigsVC: UIViewController {
       target: self,
       action: #selector(nearMeTapped)
     )
+    nearMe.accessibilityLabel = "Find Gigs Near Me"
+    nearMeButton = nearMe
     // Manage the followed-city list (view + remove) — QA B-P1-3: the scope was
     // previously add-only, so a typo'd/experimental city stayed forever.
     let manageCities = UIBarButtonItem(
@@ -152,7 +151,8 @@ class GigsVC: UIViewController {
     let cities = settings.cities
     guard !cities.isEmpty else {
       showEmptyState(
-        "No gigs scope yet.\n\nAdd a city with the + button, or tap the location button to find gigs near you."
+        title: "No gigs scope yet",
+        message: "Add a city with the + button, or tap the location button to find gigs near you."
       )
       return
     }
@@ -162,8 +162,29 @@ class GigsVC: UIViewController {
     )
   }
 
+  /// Describes what happened to a single scope's fetch, so the view can surface
+  /// a per-scope failure notice when SOME scopes succeed and others fail.
+  private struct ScopeOutcome {
+    let label: String
+    let didSucceedLive: Bool
+    /// True when the failure was `.notConfigured` (server has no gigs sidecar)
+    /// rather than a transient offline/unreachable error.
+    let isNotConfigured: Bool
+  }
+
+  /// A short human label for a scope, used in per-scope failure notices.
+  private func label(for scope: GigScope) -> String {
+    switch scope {
+    case let .city(name): return name
+    case .near: return "your location"
+    }
+  }
+
   /// Fetch several scopes concurrently, merge, group by week. On total failure,
-  /// fall back to any cached responses (with an "as of" banner).
+  /// fall back to any cached responses (with an "as of" banner). Per-scope
+  /// failures are tracked so a partial failure (some cities refresh, one
+  /// doesn't) surfaces an inline "Couldn't refresh: <city>" notice instead of
+  /// silently showing a stale subset.
   private func fetch(scopes: [GigScope], scopeDescription: String) {
     guard !isLoading else { return }
     isLoading = true
@@ -173,12 +194,18 @@ class GigsVC: UIViewController {
       var merged: [GigEvent] = []
       var anySucceeded = false
       var oldestCacheDate: Date?
+      var outcomes: [ScopeOutcome] = []
 
       for scope in scopes {
         do {
           let events = try await service.fetchEvents(scope: scope)
           merged.append(contentsOf: events)
           anySucceeded = true
+          outcomes.append(ScopeOutcome(
+            label: label(for: scope),
+            didSucceedLive: true,
+            isNotConfigured: false
+          ))
         } catch {
           // Fall back to this scope's cache if present.
           if let cached = service.cachedResponse(for: scope) {
@@ -187,6 +214,12 @@ class GigsVC: UIViewController {
               oldestCacheDate = cached.storedAt
             }
           }
+          let isNotConfigured = (error as? GigsServiceError) == .notConfigured
+          outcomes.append(ScopeOutcome(
+            label: label(for: scope),
+            didSucceedLive: false,
+            isNotConfigured: isNotConfigured
+          ))
         }
       }
 
@@ -194,79 +227,112 @@ class GigsVC: UIViewController {
       setNavBarTitle(title: "Gigs")
       cacheAsOf = anySucceeded ? nil : oldestCacheDate
       weekSections = GigsWeekGrouper.group(events: merged)
-      renderCurrentData(scopeDescription: scopeDescription, hadLiveSuccess: anySucceeded)
+      renderCurrentData(
+        scopeDescription: scopeDescription,
+        hadLiveSuccess: anySucceeded,
+        outcomes: outcomes
+      )
     }
   }
 
-  private func renderCurrentData(scopeDescription: String, hadLiveSuccess: Bool) {
+  private func renderCurrentData(
+    scopeDescription: String,
+    hadLiveSuccess: Bool,
+    outcomes: [ScopeOutcome]
+  ) {
     if weekSections.isEmpty {
       if hadLiveSuccess {
         // Explicit zero-events state (QA B-P2-6): the merged-list model
         // otherwise can't distinguish "city added, no events" from "add
         // failed". Name the scope and point at the manage-cities affordance.
         showEmptyState(
-          "No upcoming gigs for \(scopeDescription).\n\nWe'll keep checking — or manage your cities from the list button above."
+          title: "No upcoming gigs",
+          message: "Nothing found for \(scopeDescription).\n\nWe'll keep checking — or manage your cities from the list button above."
+        )
+      } else if outcomes.allSatisfy(\.isNotConfigured), !outcomes.isEmpty {
+        // The server simply has no gigs sidecar — a configuration state, not a
+        // transient outage. Say so distinctly (A4).
+        showEmptyState(
+          title: "Gigs isn't set up for this server yet",
+          message: "This server doesn't offer the gigs service. Check back later, or ask your server admin to enable it."
         )
       } else {
         showEmptyState(
-          "Couldn't reach the gigs service, and nothing is cached for \(scopeDescription) yet.\n\nCheck back when you're online."
+          title: "Couldn't reach the gigs service",
+          message: "Nothing is cached for \(scopeDescription) yet.\n\nCheck back when you're online."
         )
       }
       return
     }
-    emptyStateLabel.isHidden = true
+    contentUnavailableConfiguration = nil
     tableView.isHidden = false
-    updateAsOfBanner()
+    updateAsOfBanner(failedScopes: outcomes.filter { !$0.didSucceedLive }.map(\.label))
     tableView.reloadData()
   }
 
-  private func updateAsOfBanner() {
-    guard let cacheAsOf else {
+  /// Show/hide the offline "as of" banner and, when some scopes failed while
+  /// others refreshed, an inline "Couldn't refresh: <city>" line. The header
+  /// view + its constraints are built once (configureAsOfBanner); here we only
+  /// toggle the text and whether the header is attached.
+  private func updateAsOfBanner(failedScopes: [String]) {
+    var lines: [String] = []
+    if let cacheAsOf {
+      let formatter = RelativeDateTimeFormatter()
+      lines.append(
+        "Offline — showing cached gigs as of " +
+          formatter.localizedString(for: cacheAsOf, relativeTo: Date())
+      )
+    }
+    if !failedScopes.isEmpty {
+      // Only meaningful as a partial-failure notice: at least one scope did
+      // refresh (otherwise the empty/offline state already covers it).
+      lines.append("Couldn't refresh: \(failedScopes.joined(separator: ", "))")
+    }
+
+    guard !lines.isEmpty else {
       tableView.tableHeaderView = nil
       return
     }
-    let formatter = RelativeDateTimeFormatter()
-    asOfLabel.text = "Offline — showing cached gigs as of " +
-      formatter.localizedString(for: cacheAsOf, relativeTo: Date())
-    let header = UIView()
-    asOfLabel.translatesAutoresizingMaskIntoConstraints = false
-    header.addSubview(asOfLabel)
-    NSLayoutConstraint.activate([
-      asOfLabel.topAnchor.constraint(equalTo: header.topAnchor, constant: 8),
-      asOfLabel.bottomAnchor.constraint(equalTo: header.bottomAnchor, constant: -8),
-      asOfLabel.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 16),
-      asOfLabel.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -16),
-    ])
-    header.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: 40)
-    header.layoutIfNeeded()
-    tableView.tableHeaderView = header
+    asOfLabel.text = lines.joined(separator: "\n")
+    let targetHeight = failedScopes.isEmpty ? 40.0 : 56.0
+    asOfHeader.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: targetHeight)
+    asOfHeader.layoutIfNeeded()
+    tableView.tableHeaderView = asOfHeader
   }
 
-  private func showEmptyState(_ message: String) {
+  private func showEmptyState(title: String, message: String) {
     weekSections = []
     tableView.tableHeaderView = nil
     tableView.reloadData()
     tableView.isHidden = true
-    emptyStateLabel.text = message
-    emptyStateLabel.isHidden = false
+    var emptyConfig = UIContentUnavailableConfiguration.empty()
+    emptyConfig.text = title
+    emptyConfig.secondaryText = message
+    contentUnavailableConfiguration = emptyConfig
   }
 
   // MARK: - Scope actions
 
   @objc
   private func promptAddCity() {
-    let alert = UIAlertController(
-      title: "Add City",
-      message: "Show upcoming gigs in this city.",
-      preferredStyle: .alert
-    )
-    alert.addTextField { $0.placeholder = "e.g. London" }
-    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-    alert.addAction(UIAlertAction(title: "Add", style: .default) { [weak self] _ in
-      guard let self, let text = alert.textFields?.first?.text else { return }
-      settings.addCity(text)
-      reload()
-    })
+    GigsAddCityPrompt.present(from: self, settings: settings) { [weak self] result in
+      guard let self else { return }
+      switch result {
+      case .added:
+        reload()
+      case let .alreadyFollowing(city):
+        presentBriefNotice("Already following \(city)")
+      case .blank:
+        break
+      }
+    }
+  }
+
+  /// A brief, dismiss-only notice (used for "Already following <city>"). Kept as
+  /// a lightweight alert so it works identically on iPhone / iPad / Mac Catalyst.
+  private func presentBriefNotice(_ message: String) {
+    let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+    alert.addAction(UIAlertAction(title: "OK", style: .default))
     present(alert, animated: true)
   }
 
@@ -292,9 +358,15 @@ class GigsVC: UIViewController {
 
   @objc
   private func nearMeTapped() {
+    // Disable the button for the duration of the request so a second tap can't
+    // start (and overwrite) a second in-flight location request (QA A4). The
+    // 12s provider timeout guarantees this always re-enables.
+    guard nearMeButton?.isEnabled != false else { return }
+    nearMeButton?.isEnabled = false
     locationProvider.requestLocation { [weak self] result in
       Task { @MainActor in
         guard let self else { return }
+        self.nearMeButton?.isEnabled = true
         switch result {
         case let .success(coordinate):
           let scope = GigScope.near(
@@ -303,17 +375,21 @@ class GigsVC: UIViewController {
             radiusKm: 50
           )
           self.fetch(scopes: [scope], scopeDescription: "your location")
-        case .failure:
-          self.presentLocationDeniedAlert()
+        case let .failure(error):
+          self.presentLocationFailureAlert(error: error)
         }
       }
     }
   }
 
-  private func presentLocationDeniedAlert() {
+  private func presentLocationFailureAlert(error: Error) {
+    let isDenied = (error as? GigsLocationError) == .denied
+    let message = isDenied
+      ? "Allow location access in Settings to find gigs near you, or add a city instead."
+      : "Couldn't get your location. Try again, or add a city instead."
     let alert = UIAlertController(
       title: "Location Unavailable",
-      message: "Allow location access in Settings to find gigs near you, or add a city instead.",
+      message: message,
       preferredStyle: .alert
     )
     alert.addAction(UIAlertAction(title: "OK", style: .default))
@@ -328,7 +404,10 @@ class GigsVC: UIViewController {
   /// off `self` could return the user to Home on close (QA B-P1-2). The
   /// long-press "Open in Safari" context action is the external escape hatch.
   func openTicket(for event: GigEvent) {
-    guard let url = event.ticketURL else { return }
+    guard let url = event.ticketURL else {
+      presentBriefNotice("This gig has no ticket link.")
+      return
+    }
     let safari = SFSafariViewController(url: url)
     safari.modalPresentationStyle = .automatic
     let presenter: UIViewController = navigationController ?? self
@@ -337,7 +416,10 @@ class GigsVC: UIViewController {
 
   /// Escape hatch: hand the ticket URL to the system browser.
   func openTicketExternally(for event: GigEvent) {
-    guard let url = event.ticketURL else { return }
+    guard let url = event.ticketURL else {
+      presentBriefNotice("This gig has no ticket link.")
+      return
+    }
     UIApplication.shared.open(url)
   }
 

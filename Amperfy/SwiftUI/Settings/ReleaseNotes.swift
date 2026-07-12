@@ -37,6 +37,27 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 72,
+      date: "2026-07-11",
+      title: "Build 72 — Steadier Gigs + tidier song rows",
+      whatsNew: [
+        "Gigs 'Near me' no longer hangs: if your location can't be found within a few seconds it now gives up cleanly and tells you, instead of leaving the button stuck. Tapping it twice quickly can't jam it any more.",
+        "When you follow several cities and one of them can't refresh, Gigs now keeps showing the others and adds a small 'Couldn't refresh: <city>' note — rather than silently showing a stale or empty list.",
+        "If a server doesn't offer gigs at all, Gigs now says 'Gigs isn't set up for this server yet' instead of an offline-looking message.",
+        "Adding a city you already follow now says 'Already following <city>' instead of doing nothing.",
+        "Gigs empty screens now match the rest of the app's look.",
+        "VoiceOver now announces a song row's downloaded / favorite / downloading state in one read.",
+      ],
+      testingFocus: [
+        "In Gigs, tap 'Near me' somewhere with poor GPS (or decline the prompt) — after a few seconds you should get a clear 'Location Unavailable' message and the button should work again. Double-tap it fast; it should not get stuck.",
+        "Follow two or three cities where at least one server scope is down — the reachable cities should still list, with a 'Couldn't refresh: <city>' note at the top.",
+        "On a server without the gigs service, Gigs should say 'Gigs isn't set up for this server yet'.",
+        "Add a city you already follow (any casing) — expect 'Already following <city>'.",
+        "With VoiceOver on, swipe through song rows — each should announce downloaded / favorite / downloading state, not just the title.",
+        "Confirm song rows still look and lay out correctly (artwork, the two round trailing buttons, duration, the left-of-artwork downloaded dot).",
+      ]
+    ),
+    ReleaseNote(
       id: 71,
       date: "2026-07-11",
       title: "Build 71 — Triage your Recently Added tracks",

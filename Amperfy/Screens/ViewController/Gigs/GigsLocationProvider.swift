@@ -47,6 +47,14 @@ final class GigsLocationProvider: NSObject, CLLocationManagerDelegate {
   private let manager = CLLocationManager()
   private var completion: ((Result<CLLocationCoordinate2D, Error>) -> ())?
   private var selfReference: GigsLocationProvider?
+  private var timeoutTask: Task<(), Never>?
+
+  /// How long to wait for a fix (or an authorization decision) before giving up
+  /// with `.unavailable`. CoreLocation can silently never call back — e.g. the
+  /// user leaves the system permission prompt on screen, or a fix never lands
+  /// indoors — which previously hung the "Near me" flow forever (QA A4). The
+  /// caller gets a clear failure it can surface instead of a stuck spinner.
+  private static let requestTimeoutSeconds: UInt64 = 12
 
   override init() {
     super.init()
@@ -55,9 +63,15 @@ final class GigsLocationProvider: NSObject, CLLocationManagerDelegate {
   }
 
   /// Request one location fix, prompting for whenInUse authorization lazily.
+  /// A single in-flight request is enforced by the caller (GigsVC disables the
+  /// button); if one is already pending here we ignore the re-entry rather than
+  /// overwriting the live completion/selfReference (which would leak the first
+  /// caller's continuation).
   func requestLocation(completion: @escaping (Result<CLLocationCoordinate2D, Error>) -> ()) {
+    guard self.completion == nil else { return }
     self.completion = completion
     selfReference = self // keep alive until we finish
+    startTimeout()
 
     switch manager.authorizationStatus {
     case .notDetermined:
@@ -71,7 +85,21 @@ final class GigsLocationProvider: NSObject, CLLocationManagerDelegate {
     }
   }
 
+  private func startTimeout() {
+    timeoutTask?.cancel()
+    timeoutTask = Task { [weak self] in
+      try? await Task.sleep(nanoseconds: Self.requestTimeoutSeconds * 1_000_000_000)
+      guard !Task.isCancelled else { return }
+      await MainActor.run {
+        guard let self, self.completion != nil else { return }
+        self.finish(.failure(GigsLocationError.unavailable))
+      }
+    }
+  }
+
   private func finish(_ result: Result<CLLocationCoordinate2D, Error>) {
+    timeoutTask?.cancel()
+    timeoutTask = nil
     completion?(result)
     completion = nil
     selfReference = nil
