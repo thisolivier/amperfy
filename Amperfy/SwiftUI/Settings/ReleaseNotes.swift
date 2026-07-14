@@ -37,6 +37,25 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 75,
+      date: "2026-07-14",
+      title: "Build 75 — Playlist folders in Add-to-Playlist, plus Create Playlist",
+      whatsNew: [
+        "Add-to-Playlist now shows your playlist folders, not just loose playlists — tap a folder to open it and pick a playlist inside. It's the same folder view you see on the Playlists screen.",
+        "The confusing search-bar-style 'new playlist' box at the top of Add-to-Playlist is gone. The + button at the bottom now creates a playlist (and drops the song you're adding straight into it).",
+        "Add-to-Playlist no longer closes the moment you add one song — it stays open so you can add the same song to several playlists in a row, then close it yourself.",
+        "The multi-select 'tick several playlists then commit' mode has been removed in favour of simple one-tap adding.",
+        "The Playlists screen's ⋯ menu now has 'Create Playlist' (alongside New Folder).",
+        "Searching at the top of the Playlists screen now finds playlists inside folders too, not just loose ones.",
+      ],
+      testingFocus: [
+        "In Add-to-Playlist, confirm your folders appear and you can tap into a folder and add to a playlist inside it.",
+        "Add a song, then add it again to another playlist without the sheet closing; close it yourself when done.",
+        "Tap the + button, name a new playlist, and confirm the song you were adding lands in it (and that it's filed into the folder you were in, if any).",
+        "On the Playlists screen, use ⋯ → Create Playlist; and search at the top level for a playlist that lives inside a folder — it should appear.",
+      ]
+    ),
+    ReleaseNote(
       id: 74,
       date: "2026-07-12",
       title: "Build 74 — Navigation from the player no longer hijacks another tab",
@@ -104,79 +123,6 @@ enum ReleaseNotes {
         "With the filter on and every recent single already filed, the list should show a 'Nothing left to file' message, not a blank screen.",
         "Confirm the Home tab's Recently Added preview row is unchanged (it stays unfiltered).",
         "Toggle the filter, force-quit and relaunch — your choice should stick.",
-      ]
-    ),
-    ReleaseNote(
-      id: 70,
-      date: "2026-07-09",
-      title: "Build 70 — Gigs fixes + cleaner song rows",
-      whatsNew: [
-        "Gigs now shows every valid show: a few venues with missing details (or a date but no time) used to hide a whole city's gigs — those shows now appear, with a 'Venue TBA' note and an all-day date where needed.",
-        "Tapping a gig opens its tickets inside Amperfy and returns you to the Gigs list when you close it; long-press a gig for 'Open in Safari'.",
-        "You can now see and remove the cities you follow — tap the list button in Gigs to manage them.",
-        "Song rows are cleaner: the downloaded dot now sits on the left of the artwork, and the two round buttons (actions and explore) are evenly sized.",
-        "When a source lists the same show twice, Amperfy now keeps the Ticketmaster listing, and empty cities say so instead of showing a blank list.",
-      ],
-      testingFocus: [
-        "Add a city with some shows that have missing venues or date-only listings (e.g. a Ticketmaster-heavy city) — every valid show should appear, none silently dropped.",
-        "Tap a gig, then close the ticket page — you should land back on the Gigs list, not Home. Long-press a gig and choose 'Open in Safari'.",
-        "In Gigs, tap the list button, then swipe or use Edit to remove a city — the Gigs list should update.",
-        "On song rows, confirm the downloaded dot is on the left of the album art and the two round trailing buttons are the same size; download a song and watch the dot appear live.",
-        "If you upgraded from an older build and never saw the Gigs tab, it should now appear in the library list automatically.",
-      ]
-    ),
-    ReleaseNote(
-      id: 69,
-      date: "2026-07-09",
-      title: "Build 69 — Gigs + cleaner song menus",
-      whatsNew: [
-        "New: a Gigs tab shows upcoming live shows for the artists in your library. Add cities to follow, or tap the location button to find gigs near you, then tap a gig to open its ticket page.",
-        "Song menus are tidier: the … button now holds actions (play, queue, favorite, download, share), and a new chevron next to it holds ways to explore — Show Album, Show Artist, Show in Playlists, Related Tracks and Lyrics.",
-      ],
-      testingFocus: [
-        "Open the Gigs tab (enable it from the library tab bar if hidden). With no cities added you should see a friendly prompt to add a city or use your location.",
-        "Add a city in Gigs — with the gigs service offline you should get a clear 'couldn't reach / nothing cached' message, not a spinner or crash.",
-        "Tap 'Near me' in Gigs — the app should ask for location permission only at that moment (never at launch).",
-        "On any song row, tap the … button (actions only) and the new chevron (Show Album/Artist/Playlists/Related Tracks/Lyrics) — no item should appear in both menus.",
-        "Check song rows across Search, album detail, playlist detail, the queue and the popup player — the two buttons should render and behave sanely everywhere; the queue's reorder handle and checkmarks should be unaffected.",
-      ]
-    ),
-    ReleaseNote(
-      id: 68,
-      date: "2026-07-09",
-      title: "Build 68 — Reliability hardening",
-      whatsNew: [
-        "Reliability: fixed a rare cause of the 'search could not be parsed' message on your first search, and made the mini player more robust against briefly showing the wrong track.",
-      ],
-      testingFocus: [
-        "Do your very first search right after launch a few times — no 'search could not be parsed' message should appear",
-        "Start a track so the mini player shows it, then background and reopen the app — the mini player should still show the correct track, and tapping it opens the full player with that track",
-      ]
-    ),
-    ReleaseNote(
-      id: 67,
-      date: "2026-07-09",
-      title: "Build 67 — Consistent player + quieter first search",
-      whatsNew: [
-        "Fixed: the full player could show 'No music playing' after tapping the mini player during a library sync.",
-        "Fixed: a harmless 'search could not be parsed' message that could flash on your first search.",
-      ],
-      testingFocus: [
-        "Start a track so the mini player shows it, then tap the mini player during a sync — the full player should show the SAME track, never 'No music playing'",
-        "Do your very first search right after launch — no 'XML response could not be parsed' banner should appear",
-      ]
-    ),
-    ReleaseNote(
-      id: 66,
-      date: "2026-07-09",
-      title: "Build 66 — Reachable Related Tracks controls + faster Show in Playlists",
-      whatsNew: [
-        "Related Tracks: the play/shuffle/queue controls now sit above the mini player and tab bar so they're reachable.",
-        "'Show in Playlists' is fast again — it no longer re-syncs your whole library each time you open it.",
-      ],
-      testingFocus: [
-        "Start playback so the mini player shows, then open Related Tracks on iPhone — the play/shuffle/queue controls should sit above the mini player with a clear gap, not clipped behind it",
-        "Open 'Show in Playlists' for a song a few times — it should open instantly without triggering a full library sync",
       ]
     ),
   ]
