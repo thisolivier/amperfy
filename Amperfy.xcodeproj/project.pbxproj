@@ -152,8 +152,6 @@
 		508AA57D2B6A3E1D00BE8117 /* CarPlayFetchControllerExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508AA57C2B6A3E1D00BE8117 /* CarPlayFetchControllerExtension.swift */; };
 		508EBB282850C8D90053D9F0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 508385EE21C5965E00C4BB32 /* Assets.xcassets */; };
 		508EBB292850C8DF0053D9F0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 508385EE21C5965E00C4BB32 /* Assets.xcassets */; };
-		508FDE3621F1E130005A0724 /* NewPlaylistTableHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508FDE3521F1E130005A0724 /* NewPlaylistTableHeader.swift */; };
-		508FDE3821F1E14F005A0724 /* NewPlaylistTableHeader.xib in Resources */ = {isa = PBXBuildFile; fileRef = 508FDE3721F1E14F005A0724 /* NewPlaylistTableHeader.xib */; };
 		508FDE4C21F58AFC005A0724 /* AppStoryboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508FDE4B21F58AFC005A0724 /* AppStoryboard.swift */; };
 		508FDE5021F64ED6005A0724 /* TabBarVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508FDE4F21F64ED6005A0724 /* TabBarVC.swift */; };
 		509001B62716C7F600A8056D /* AppDelegateAlertExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 509001B52716C7F600A8056D /* AppDelegateAlertExtensions.swift */; };
@@ -1009,8 +1007,6 @@
 		5088A8A426A955AD00B4C8C6 /* DownloadProtocols.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadProtocols.swift; sourceTree = "<group>"; };
 		508AA57A2B6A3DA700BE8117 /* CarPlayNowPlayingExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayNowPlayingExtension.swift; sourceTree = "<group>"; };
 		508AA57C2B6A3E1D00BE8117 /* CarPlayFetchControllerExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayFetchControllerExtension.swift; sourceTree = "<group>"; };
-		508FDE3521F1E130005A0724 /* NewPlaylistTableHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewPlaylistTableHeader.swift; sourceTree = "<group>"; };
-		508FDE3721F1E14F005A0724 /* NewPlaylistTableHeader.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = NewPlaylistTableHeader.xib; sourceTree = "<group>"; };
 		508FDE4921F44E91005A0724 /* BackendAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendAudioPlayer.swift; sourceTree = "<group>"; };
 		508FDE4B21F58AFC005A0724 /* AppStoryboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoryboard.swift; sourceTree = "<group>"; };
 		508FDE4F21F64ED6005A0724 /* TabBarVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarVC.swift; sourceTree = "<group>"; };
@@ -2264,8 +2260,6 @@
 				50DEEE05265E27070073FF20 /* DirectoryTableCell.swift */,
 				5055AA5526835A9000096B8D /* PodcastEpisodeTableCell.xib */,
 				5055AA5626835A9000096B8D /* PodcastEpisodeTableCell.swift */,
-				508FDE3721F1E14F005A0724 /* NewPlaylistTableHeader.xib */,
-				508FDE3521F1E130005A0724 /* NewPlaylistTableHeader.swift */,
 				50RA71NG2F5A01230085CBB3 /* RatingView.swift */,
 			);
 			path = View;
@@ -2974,7 +2968,6 @@
 				50AFA14E2632E95900F198DD /* GenericDetailTableHeader.xib in Resources */,
 				50DF1E5A28DDECEA00F3EA00 /* AlbumCollectionCell.xib in Resources */,
 				50C16C2621E7CBA500F086F0 /* GenericTableCell.xib in Resources */,
-				508FDE3821F1E14F005A0724 /* NewPlaylistTableHeader.xib in Resources */,
 				50D7709F2E4F1D1C0075D3BF /* AmperfyAppIcon.icon in Resources */,
 				5007CE4521EF639200BC5CBA /* PlaylistTableCell.xib in Resources */,
 				50CCD0572B6C38670073793B /* PlainDetailsVC.xib in Resources */,
@@ -3201,7 +3194,6 @@
 				50CFB59228D483AD00A47D44 /* AddSwipeActionView.swift in Sources */,
 				50C1714E2D1070A500C0C53A /* PlaylistAddGenresVC.swift in Sources */,
 				507BA5C32F01B9A400B4EA8B /* SetShuffleIntent.swift in Sources */,
-				508FDE3621F1E130005A0724 /* NewPlaylistTableHeader.swift in Sources */,
 				50722747286794FC00910574 /* AppDelegateKeyboardCommands.swift in Sources */,
 				50C9D7102850759B007F18D0 /* OptionsButton.swift in Sources */,
 				50BA930421D10F0000E5901D /* SyncVC.swift in Sources */,
