@@ -625,6 +625,7 @@
 		A5B0E10000000000000050A0 /* PlaylistFolderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */; };
 		A5B0E30000000000000050A0 /* PlaylistFolderStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */; };
 		A5B0E50000000000000050A0 /* PlaylistFolderContentsVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E60000000000000050A0 /* PlaylistFolderContentsVC.swift */; };
+		A5B0E70000000000000050A0 /* PlaylistFolderBrowsingTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E80000000000000050A0 /* PlaylistFolderBrowsingTableViewController.swift */; };
 		A5B0F10000000000000050A0 /* ReleaseNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0F20000000000000050A0 /* ReleaseNotes.swift */; };
 		A5B0F30000000000000050A0 /* WhatsNewSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0F40000000000000050A0 /* WhatsNewSettingsView.swift */; };
 		A5B1B20000000000000050A0 /* SharedContainerMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B1A20000000000000050A0 /* SharedContainerMigration.swift */; };
@@ -1405,6 +1406,7 @@
 		A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderStore.swift; sourceTree = "<group>"; };
 		A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderStoreTest.swift; sourceTree = "<group>"; };
 		A5B0E60000000000000050A0 /* PlaylistFolderContentsVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderContentsVC.swift; sourceTree = "<group>"; };
+		A5B0E80000000000000050A0 /* PlaylistFolderBrowsingTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderBrowsingTableViewController.swift; sourceTree = "<group>"; };
 		A5B0F20000000000000050A0 /* ReleaseNotes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotes.swift; sourceTree = "<group>"; };
 		A5B0F40000000000000050A0 /* WhatsNewSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewSettingsView.swift; sourceTree = "<group>"; };
 		A5B1A20000000000000050A0 /* SharedContainerMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedContainerMigration.swift; sourceTree = "<group>"; };
@@ -1727,6 +1729,7 @@
 				505CA2102B88ECC700AA81CD /* SingleFetchedResultsTableViewController.swift */,
 				505CA2132B88ED6100AA81CD /* SingleSnapshotFetchedResultsTableViewController.swift */,
 				505CA2032B88E69500AA81CD /* MultiSourceTableViewController.swift */,
+				A5B0E80000000000000050A0 /* PlaylistFolderBrowsingTableViewController.swift */,
 			);
 			path = TableViewHelper;
 			sourceTree = "<group>";
@@ -3092,6 +3095,7 @@
 				501944182B78F97F00082D2E /* LargeCurrentlyPlayingPlayerView.swift in Sources */,
 				5007CE4121EF5F4300BC5CBA /* PlaylistsVC.swift in Sources */,
 				A5B0E50000000000000050A0 /* PlaylistFolderContentsVC.swift in Sources */,
+				A5B0E70000000000000050A0 /* PlaylistFolderBrowsingTableViewController.swift in Sources */,
 				631C166D2C6D61110085F62E /* NavigationTarget.swift in Sources */,
 				B02A20D89351678C1FD6D316 /* DiscoveryDiagnosticsView.swift in Sources */,
 				A5B0F10000000000000050A0 /* ReleaseNotes.swift in Sources */,
