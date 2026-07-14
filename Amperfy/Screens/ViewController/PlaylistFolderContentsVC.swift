@@ -148,6 +148,13 @@ class PlaylistFolderContentsVC: UITableViewController {
           setEditing(!isEditing, animated: true)
         }
 
+        let addPlaylistAction = UIAction(
+          title: "Create Playlist",
+          image: UIImage(systemName: "music.note.list")
+        ) { [weak self] _ in
+          self?.promptCreatePlaylist()
+        }
+
         let addFolderAction = UIAction(
           title: "New Folder",
           image: UIImage(systemName: "folder.badge.plus")
@@ -155,7 +162,7 @@ class PlaylistFolderContentsVC: UITableViewController {
           self?.promptCreateFolder()
         }
 
-        return [selectItemsAction, addFolderAction, createSortMenu()]
+        return [selectItemsAction, addPlaylistAction, addFolderAction, createSortMenu()]
       }
     )
 
@@ -354,7 +361,10 @@ class PlaylistFolderContentsVC: UITableViewController {
       displayedFolders = folder.subfolders
       displayedPlaylists = fetchPlaylists(ids: folder.playlistIds)
     } else {
-      displayedFolders = folderStore.folders
+      // During an active root search the playlist list is exhaustive (it
+      // surfaces playlists nested in folders too), so hide the folder section
+      // to keep results flat and unambiguous.
+      displayedFolders = searchText.isEmpty ? folderStore.folders : []
       displayedPlaylists = fetchUnfiledPlaylists()
     }
     tableView.reloadData()
@@ -366,8 +376,17 @@ class PlaylistFolderContentsVC: UITableViewController {
     let allPlaylists = library.getPlaylists(for: account)
     let filedIds = folderStore.allFiledPlaylistIds
     let isOffline = appDelegate.storage.settings.user.isOfflineMode
-    var playlists = allPlaylists
-      .filter { !$0.isSmartPlaylist && !filedIds.contains($0.id) }
+
+    // At the root, an active search surfaces every playlist — including those
+    // nested inside folders at any depth — so a search from the top level is
+    // exhaustive. With no search text we show only unfiled playlists (folders
+    // carry the rest). Folder-scoped views never reach this method.
+    var playlists: [Playlist]
+    if searchText.isEmpty {
+      playlists = allPlaylists.filter { !$0.isSmartPlaylist && !filedIds.contains($0.id) }
+    } else {
+      playlists = allPlaylists.filter { !$0.isSmartPlaylist }
+    }
 
     if isOffline {
       playlists = playlists.filter { $0.playables.contains { $0.isCached } }
@@ -700,6 +719,48 @@ class PlaylistFolderContentsVC: UITableViewController {
   }
 
   // MARK: - Folder management prompts
+
+  private func promptCreatePlaylist() {
+    let alert = UIAlertController(title: "New Playlist", message: nil, preferredStyle: .alert)
+    alert.addTextField { textField in
+      textField.placeholder = "Playlist name"
+      textField.autocapitalizationType = .words
+    }
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak self] _ in
+      guard let self,
+            let name = alert.textFields?.first?.text?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !name.isEmpty
+      else { return }
+      createPlaylist(named: name)
+    })
+    present(alert, animated: true)
+  }
+
+  /// Creates a playlist, files it into the current folder when this view is
+  /// folder-scoped, syncs the new name to the server when online, and reloads.
+  private func createPlaylist(named name: String) {
+    let library = appDelegate.storage.main.library
+    let playlist = library.createPlaylist(account: account)
+    playlist.name = name
+    appDelegate.storage.main.saveContext()
+
+    if let parentFolderId {
+      folderStore.addPlaylists([playlist.id], to: parentFolderId)
+    }
+
+    if appDelegate.storage.settings.user.isOnlineMode {
+      Task { @MainActor in do {
+        try await self.appDelegate.getMeta(self.account.info).librarySyncer
+          .syncUpload(playlistToUpdateName: playlist)
+      } catch {
+        self.appDelegate.eventLogger.report(topic: "Playlist Create", error: error)
+      }}
+    }
+
+    reloadContent()
+  }
 
   private func promptCreateFolder() {
     let alert = UIAlertController(title: "New Folder", message: nil, preferredStyle: .alert)

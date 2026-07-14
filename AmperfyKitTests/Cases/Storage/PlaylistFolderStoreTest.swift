@@ -261,4 +261,36 @@ class PlaylistFolderStoreTest: XCTestCase {
     XCTAssertEqual(store.folder(byId: folderB.id)?.playlistIds, ["p1"])
     XCTAssertEqual(store.allFiledPlaylistIds, ["p1"])
   }
+
+  // MARK: - 13. allPlaylistIdsRecursive on the struct traverses depth
+
+  //             This is the primitive the root-level recursive search in
+  //             PlaylistFolderContentsVC relies on to surface playlists nested
+  //             anywhere in the folder tree.
+
+  func testAllPlaylistIdsRecursiveTraversesDepth() {
+    let grandchild = PlaylistFolder(name: "Metal", playlistIds: ["p3"])
+    let child = PlaylistFolder(name: "Rock", playlistIds: ["p2"], subfolders: [grandchild])
+    let root = PlaylistFolder(name: "Music", playlistIds: ["p1"], subfolders: [child])
+    XCTAssertEqual(root.allPlaylistIdsRecursive, ["p1", "p2", "p3"])
+  }
+
+  func testAllPlaylistIdsRecursiveDeduplicatesAcrossDepth() {
+    let child = PlaylistFolder(name: "Child", playlistIds: ["shared"])
+    let root = PlaylistFolder(name: "Root", playlistIds: ["shared", "unique"], subfolders: [child])
+    XCTAssertEqual(root.allPlaylistIdsRecursive, ["shared", "unique"])
+  }
+
+  // MARK: - 14. Recursive-search membership: a playlist filed at any depth is
+
+  //             reported by allFiledPlaylistIds, so the root search can include
+  //             it even though it is not "unfiled".
+
+  func testDeeplyNestedPlaylistIsReportedAsFiled() {
+    let root = store.createFolder(name: "Level0", parent: nil)
+    let mid = store.createFolder(name: "Level1", parent: root.id)
+    let leaf = store.createFolder(name: "Level2", parent: mid.id)
+    store.addPlaylists(["deep"], to: leaf.id)
+    XCTAssertTrue(store.allFiledPlaylistIds.contains("deep"))
+  }
 }

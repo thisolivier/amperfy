@@ -23,368 +23,509 @@ import AmperfyKit
 import CoreData
 import UIKit
 
-// MARK: - AddToPlaylistSelectMode
-
-enum AddToPlaylistSelectMode {
-  case single
-  case multi
-}
-
-// MARK: - PlaylistsSelectorDiffableDataSource
-
-class PlaylistsSelectorDiffableDataSource: BasicUITableViewDiffableDataSource {
-  override func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
-    // Return false if you do not want the item to be re-orderable.
-    false
-  }
-}
-
 // MARK: - PlaylistSelectorVC
 
-class PlaylistSelectorVC: SingleSnapshotFetchedResultsTableViewController<PlaylistMO> {
-  override var sceneTitle: String? { "Playlists" }
+/// Modal picker used by "Add to Playlist". Mirrors the folder-aware layout of
+/// `PlaylistFolderContentsVC`: at the root it shows top-level folders plus
+/// unfiled playlists; tapping a folder pushes a folder-scoped picker instance;
+/// tapping a playlist adds the pending song(s) to it immediately (without
+/// dismissing). A bottom-corner "+" creates a new playlist. The modal only
+/// closes when the user taps the close button, so several playlists can be
+/// filled in one session.
+class PlaylistSelectorVC: UITableViewController {
+  // MARK: - Sections
 
+  private enum Section: Int, CaseIterable {
+    case folders = 0
+    case playlists = 1
+  }
+
+  // MARK: - Properties
+
+  private let account: Account
   let itemsToAdd: [Song]
-  private var selectedPlaylits = [Playlist: [Song]]()
+  private let parentFolderId: UUID?
+  private let folderStore = PlaylistFolderStore.shared
 
-  private var fetchedResultsController: PlaylistSelectorFetchedResultsController!
+  private var displayedFolders: [PlaylistFolder] = []
+  private var displayedPlaylists: [Playlist] = []
+  private var folderObserver: (any NSObjectProtocol)?
+
   private var sortType: PlaylistSortType = .name
-  private var selectMode = AddToPlaylistSelectMode.single
-  private var optionsButton: UIBarButtonItem!
+  private var searchText: String = ""
+
   private var closeButton: UIBarButtonItem!
-  private var selectBarButton: UIBarButtonItem!
+  private var optionsButton: UIBarButtonItem!
   private var addBarButton: UIBarButtonItem!
 
-  init(account: Account, itemsToAdd: [Song]) {
+  // MARK: - Search
+
+  private lazy var searchController: UISearchController = {
+    let controller = UISearchController(searchResultsController: nil)
+    controller.searchResultsUpdater = self
+    controller.obscuresBackgroundDuringPresentation = false
+    if let parentFolderId, let folder = folderStore.folder(byId: parentFolderId) {
+      controller.searchBar.placeholder = "Search in \"\(folder.name)\""
+    } else {
+      controller.searchBar.placeholder = "Search in \"Playlists\""
+    }
+    return controller
+  }()
+
+  // MARK: - Init
+
+  init(account: Account, itemsToAdd: [Song], parentFolderId: UUID? = nil) {
+    self.account = account
     self.itemsToAdd = itemsToAdd
-    super.init(style: .grouped, account: account)
+    self.parentFolderId = parentFolderId
+    super.init(style: .grouped)
   }
 
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
+  @available(*, unavailable)
+  required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-  override func createDiffableDataSource() -> BasicUITableViewDiffableDataSource {
-    let source =
-      PlaylistsSelectorDiffableDataSource(tableView: tableView) { tableView, indexPath, objectID -> UITableViewCell? in
-        guard let object = try? self.appDelegate.storage.main.context
-          .existingObject(with: objectID),
-          let playlistMO = object as? PlaylistMO
-        else {
-          return UITableViewCell()
-        }
-        let playlist = Playlist(
-          library: self.appDelegate.storage.main.library,
-          managedObject: playlistMO
-        )
-        return self.createCell(tableView, forRowAt: indexPath, playlist: playlist)
-      }
-    return source
-  }
+  // MARK: - Lifecycle
 
   override func viewDidLoad() {
     super.viewDidLoad()
 
-    optionsButton = UIBarButtonItem.createSortBarButton()
-
     appDelegate.userStatistics.visited(.playlistSelector)
-    setNavBarTitle(
-      title: ((itemsToAdd.count) > 1) ?
-        "Add \(itemsToAdd.count) Songs to Playlist" : "Add to Playlist"
-    )
+    sortType = appDelegate.storage.settings.user.playlistsSortSetting
 
-    change(sortType: appDelegate.storage.settings.user.playlistsSortSetting)
-
-    configureSearchController(placeholder: "Search in \"Playlists\"")
-    tableView.register(nibName: PlaylistTableCell.typeName)
-    tableView.rowHeight = PlaylistTableCell.rowHeight
-    tableView.estimatedRowHeight = PlaylistTableCell.rowHeight
-    tableView.sectionFooterHeight = 0.0
-    tableView.estimatedSectionFooterHeight = 0.0
-    tableView.sectionHeaderHeight = 0.0
-    tableView.estimatedSectionHeaderHeight = 0.0
-    tableView.backgroundColor = .backgroundColor
-
-    tableView.tableHeaderView = UIView(frame: CGRect(
-      x: 0,
-      y: 0,
-      width: view.bounds.size.width,
-      height: NewPlaylistTableHeader.frameHeight
-    ))
-    if let newPlaylistTableHeaderView = ViewCreator<NewPlaylistTableHeader>
-      .createFromNib(withinFixedFrame: CGRect(
-        x: 0,
-        y: 0,
-        width: view.bounds.size.width,
-        height: NewPlaylistTableHeader.frameHeight
-      )) {
-      tableView.tableHeaderView?.addSubview(newPlaylistTableHeaderView)
-      newPlaylistTableHeaderView.account = account
+    if let parentFolderId, let folder = folderStore.folder(byId: parentFolderId) {
+      title = folder.name
+    } else {
+      title = itemsToAdd.count > 1
+        ? "Add \(itemsToAdd.count) Songs to Playlist"
+        : "Add to Playlist"
     }
 
-    navigationController?.setToolbarHidden(false, animated: false)
-    let flexible = UIBarButtonItem(
-      barButtonSystemItem: UIBarButtonItem.SystemItem.flexibleSpace,
-      target: self,
-      action: nil
-    )
-    selectBarButton = UIBarButtonItem(
-      title: "Select",
-      style: .plain,
-      target: self,
-      action: #selector(selectBarButtonPressed)
-    )
-    addBarButton = UIBarButtonItem(
-      image: .plus,
-      style: .plain,
-      target: self,
-      action: #selector(addBarButtonPressed)
-    )
-    toolbarItems = [selectBarButton, flexible, addBarButton]
-    refreshAddButton()
+    tableView.rowHeight = UITableView.automaticDimension
+    tableView.estimatedRowHeight = UITableView.automaticDimension
+    tableView.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemGroupedBackground
+
+    navigationItem.searchController = searchController
+    definesPresentationContext = true
+
+    updateNavigationItems()
+    configureToolbar()
+
+    folderObserver = NotificationCenter.default.addObserver(
+      forName: PlaylistFolderStore.didChangeNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      self?.reloadContent()
+    }
   }
 
-  func change(sortType: PlaylistSortType) {
-    self.sortType = sortType
-    // sortType will not be saved permanently. This behaviour differs from PlaylistsVC
-    singleFetchedResultsController?.clearResults()
-    tableView.reloadData()
-    fetchedResultsController = PlaylistSelectorFetchedResultsController(
-      coreDataCompanion: appDelegate.storage.main, account: account,
-      sortType: sortType,
-      isGroupedInAlphabeticSections: sortType.asSectionIndexType != .none
-    )
-    singleFetchedResultsController = fetchedResultsController
-    singleFetchedResultsController?.delegate = self
-    singleFetchedResultsController?.fetch()
-    tableView.reloadData()
-    updateRightBarButtonItems()
+  override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    reloadContent()
   }
 
   override func viewIsAppearing(_ animated: Bool) {
     super.viewIsAppearing(animated)
-    updateRightBarButtonItems()
     guard appDelegate.storage.settings.user.isOnlineMode else { return }
     Task { @MainActor in do {
       try await self.appDelegate.getMeta(self.account.info).librarySyncer
         .syncDownPlaylistsWithoutSongs()
+      self.reloadContent()
     } catch {
       self.appDelegate.eventLogger.report(topic: "Playlists Sync", error: error)
     }}
   }
 
-  func updateRightBarButtonItems() {
+  override func viewDidDisappear(_ animated: Bool) {
+    super.viewDidDisappear(animated)
+    if isMovingFromParent, let folderObserver {
+      NotificationCenter.default.removeObserver(folderObserver)
+      self.folderObserver = nil
+    }
+  }
+
+  // MARK: - Navigation items
+
+  private func updateNavigationItems() {
     closeButton = UIBarButtonItem.createCloseBarButton(
       target: self,
-      selector: #selector(cancelBarButtonPressed)
+      selector: #selector(closeBarButtonPressed)
     )
     optionsButton = UIBarButtonItem.createOptionsBarButton()
     optionsButton.menu = createSortButtonMenu()
     navigationItem.rightBarButtonItems = [closeButton, optionsButton]
   }
 
-  @IBAction
-  func addBarButtonPressed(_ sender: UIBarButtonItem) {
-    addSongsToSelectedPlaylists()
-    refreshAddButton()
-    dismiss()
+  private func configureToolbar() {
+    navigationController?.setToolbarHidden(false, animated: false)
+    let flexible = UIBarButtonItem(
+      barButtonSystemItem: .flexibleSpace,
+      target: self,
+      action: nil
+    )
+    addBarButton = UIBarButtonItem(
+      image: .plus,
+      style: .plain,
+      target: self,
+      action: #selector(createPlaylistBarButtonPressed)
+    )
+    toolbarItems = [flexible, addBarButton]
   }
 
-  func addSongsToSelectedPlaylists() {
-    defer { selectedPlaylits.removeAll() }
-    guard !selectedPlaylits.isEmpty else { return }
-
-    let localCopySelectedPlaylits = selectedPlaylits
-    Task { @MainActor in do {
-      for (playlist, songs) in localCopySelectedPlaylits {
-        try await self.appDelegate.getMeta(self.account.info).librarySyncer.syncUpload(
-          playlistToAddSongs: playlist,
-          songs: songs
-        )
-        playlist.append(playables: songs)
+  private func createSortButtonMenu() -> UIMenu {
+    let sortOptions: [(String, PlaylistSortType)] = [
+      ("Name", .name),
+      ("Last time played", .lastPlayed),
+      ("Change date", .lastChanged),
+      ("Duration", .duration),
+    ]
+    let actions = sortOptions.map { title, option in
+      UIAction(
+        title: title,
+        image: sortType == option ? .check : nil
+      ) { [weak self] _ in
+        guard let self else { return }
+        sortType = option
+        updateNavigationItems()
+        reloadContent()
       }
+    }
+    return UIMenu(title: "Sort", image: .sort, options: [], children: actions)
+  }
+
+  // MARK: - Actions
+
+  @objc
+  private func closeBarButtonPressed(_ sender: UIBarButtonItem) {
+    dismissSelf()
+  }
+
+  @objc
+  private func createPlaylistBarButtonPressed(_ sender: UIBarButtonItem) {
+    promptCreatePlaylist()
+  }
+
+  private func dismissSelf() {
+    searchController.dismiss(animated: false, completion: nil)
+    dismiss(animated: true, completion: nil)
+  }
+
+  // MARK: - Create playlist
+
+  private func promptCreatePlaylist() {
+    let alert = UIAlertController(title: "New Playlist", message: nil, preferredStyle: .alert)
+    alert.addTextField { textField in
+      textField.placeholder = "Playlist name"
+      textField.autocapitalizationType = .words
+    }
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak self] _ in
+      guard let self,
+            let name = alert.textFields?.first?.text?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !name.isEmpty
+      else { return }
+      createPlaylistAndAddPendingSongs(named: name)
+    })
+    present(alert, animated: true)
+  }
+
+  /// Creates a playlist, adds the pending song(s) to it, files it into the
+  /// current folder when the picker is folder-scoped, and keeps the modal open.
+  private func createPlaylistAndAddPendingSongs(named name: String) {
+    let library = appDelegate.storage.main.library
+    let playlist = library.createPlaylist(account: account)
+    playlist.name = name
+    appDelegate.storage.main.saveContext()
+
+    if let parentFolderId {
+      folderStore.addPlaylists([playlist.id], to: parentFolderId)
+    }
+
+    addPendingSongs(to: playlist, playables: itemsToAdd, showConfirmationAt: nil)
+
+    if appDelegate.storage.settings.user.isOnlineMode {
+      Task { @MainActor in do {
+        try await self.appDelegate.getMeta(self.account.info).librarySyncer
+          .syncUpload(playlistToUpdateName: playlist)
+      } catch {
+        self.appDelegate.eventLogger.report(topic: "Playlist Create", error: error)
+      }}
+    }
+
+    reloadContent()
+  }
+
+  // MARK: - Adding songs
+
+  /// Uploads the given playables to the playlist and appends them locally.
+  /// When `showConfirmationAt` is provided, a transient checkmark is flashed on
+  /// that row so the user gets non-blocking feedback that the add succeeded.
+  private func addPendingSongs(
+    to playlist: Playlist,
+    playables: [AbstractPlayable],
+    showConfirmationAt indexPath: IndexPath?
+  ) {
+    let songs = playables.filterSongs()
+    guard !songs.isEmpty else { return }
+
+    playlist.append(playables: songs)
+    if let indexPath {
+      flashAddedConfirmation(at: indexPath)
+    }
+
+    guard appDelegate.storage.settings.user.isOnlineMode else { return }
+    Task { @MainActor in do {
+      try await self.appDelegate.getMeta(self.account.info).librarySyncer.syncUpload(
+        playlistToAddSongs: playlist,
+        songs: songs
+      )
     } catch {
       self.appDelegate.eventLogger.report(topic: "Playlist Add Songs", error: error)
     }}
   }
 
-  @IBAction
-  func selectBarButtonPressed(_ sender: Any) {
-    selectMode = ((selectMode == .single) ? .multi : .single)
-    selectBarButton.isSelected = (selectMode == .multi)
-    refreshAddButton()
-    selectedPlaylits.removeAll()
-    tableView.reloadData()
+  private func flashAddedConfirmation(at indexPath: IndexPath) {
+    guard let cell = tableView.cellForRow(at: indexPath) else { return }
+    let checkmark = UIImageView(image: .check)
+    checkmark.tintColor = appDelegate.storage.settings.accounts
+      .getSetting(account.info).read.themePreference.asColor
+    cell.accessoryView = checkmark
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak cell] in
+      cell?.accessoryView = nil
+    }
   }
 
-  func refreshAddButton() {
-    addBarButton.isEnabled = !selectedPlaylits.isEmpty
-  }
+  // MARK: - Data loading
 
-  @IBAction
-  func cancelBarButtonPressed(_ sender: UIBarButtonItem) {
-    dismiss()
-  }
-
-  private func createSortButtonMenu() -> UIMenu {
-    let sortByName = UIAction(
-      title: "Name",
-      image: sortType == .name ? .check : nil,
-      handler: { _ in
-        self.change(sortType: .name)
-        self.updateSearchResults(for: self.searchController)
-        self.appDelegate.notificationHandler.post(
-          name: .fetchControllerSortChanged,
-          object: nil,
-          userInfo: nil
-        )
+  private func reloadContent() {
+    if let parentFolderId {
+      guard let folder = folderStore.folder(byId: parentFolderId) else {
+        navigationController?.popViewController(animated: true)
+        return
       }
-    )
-    let sortByLastTimePlayed = UIAction(
-      title: "Last time played",
-      image: sortType == .lastPlayed ? .check : nil,
-      handler: { _ in
-        self.change(sortType: .lastPlayed)
-        self.updateSearchResults(for: self.searchController)
-        self.appDelegate.notificationHandler.post(
-          name: .fetchControllerSortChanged,
-          object: nil,
-          userInfo: nil
-        )
-      }
-    )
-    let sortByChangeDate = UIAction(
-      title: "Change date",
-      image: sortType == .lastChanged ? .check : nil,
-      handler: { _ in
-        self.change(sortType: .lastChanged)
-        self.updateSearchResults(for: self.searchController)
-        self.appDelegate.notificationHandler.post(
-          name: .fetchControllerSortChanged,
-          object: nil,
-          userInfo: nil
-        )
-      }
-    )
-    let sortByDuration = UIAction(
-      title: "Duration",
-      image: sortType == .duration ? .check : nil,
-      handler: { _ in
-        self.change(sortType: .duration)
-        self.updateSearchResults(for: self.searchController)
-        self.appDelegate.notificationHandler.post(
-          name: .fetchControllerSortChanged,
-          object: nil,
-          userInfo: nil
-        )
-      }
-    )
-    return UIMenu(
-      title: "Sort",
-      image: .sort,
-      options: [],
-      children: [sortByName, sortByLastTimePlayed, sortByChangeDate, sortByDuration]
-    )
-  }
-
-  private func dismiss() {
-    searchController.dismiss(animated: false, completion: nil)
-    dismiss(animated: true, completion: nil)
-  }
-
-  func createCell(
-    _ tableView: UITableView,
-    forRowAt indexPath: IndexPath,
-    playlist: Playlist
-  )
-    -> UITableViewCell {
-    let cell: PlaylistTableCell = dequeueCell(for: tableView, at: indexPath)
-    cell.display(playlist: playlist, rootView: nil)
-
-    if selectMode == .multi {
-      let isMarked = (selectedPlaylits[playlist] != nil)
-      let img = UIImageView(image: isMarked ? .checkmark : .circle)
-      img.tintColor = isMarked ? appDelegate.storage.settings.accounts
-        .getSetting(playlist.account?.info).read
-        .themePreference
-        .asColor : .secondaryLabelColor
-      cell.accessoryView = img
+      displayedFolders = folder.subfolders
+      displayedPlaylists = fetchPlaylists(ids: folder.playlistIds)
     } else {
-      cell.accessoryView = nil
+      displayedFolders = folderStore.folders
+      displayedPlaylists = fetchUnfiledPlaylists()
+    }
+    tableView.reloadData()
+    updateContentUnavailable()
+  }
+
+  private func fetchUnfiledPlaylists() -> [Playlist] {
+    let library = appDelegate.storage.main.library
+    let allPlaylists = library.getPlaylists(for: account)
+    let filedIds = folderStore.allFiledPlaylistIds
+    let isOffline = appDelegate.storage.settings.user.isOfflineMode
+    var playlists = allPlaylists
+      .filter { !$0.isSmartPlaylist && !filedIds.contains($0.id) }
+
+    if isOffline {
+      playlists = playlists.filter { $0.playables.contains { $0.isCached } }
     }
 
+    if !searchText.isEmpty {
+      playlists = playlists.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    return sortPlaylists(playlists)
+  }
+
+  private func fetchPlaylists(ids: [String]) -> [Playlist] {
+    guard !ids.isEmpty else { return [] }
+    let library = appDelegate.storage.main.library
+    let allPlaylists = library.getPlaylists(for: account)
+    let isOffline = appDelegate.storage.settings.user.isOfflineMode
+    var playlists = allPlaylists.filter { ids.contains($0.id) }
+
+    if isOffline {
+      playlists = playlists.filter { $0.playables.contains { $0.isCached } }
+    }
+
+    if !searchText.isEmpty {
+      playlists = playlists.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    return sortPlaylists(playlists)
+  }
+
+  private func sortPlaylists(_ playlists: [Playlist]) -> [Playlist] {
+    switch sortType {
+    case .name:
+      return playlists
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    case .lastPlayed:
+      return playlists
+        .sorted { ($0.lastTimePlayed ?? .distantPast) > ($1.lastTimePlayed ?? .distantPast) }
+    case .lastChanged:
+      return playlists.sorted { ($0.changeDate ?? .distantPast) > ($1.changeDate ?? .distantPast) }
+    case .duration:
+      return playlists.sorted { $0.duration > $1.duration }
+    }
+  }
+
+  private func updateContentUnavailable() {
+    if displayedFolders.isEmpty, displayedPlaylists.isEmpty {
+      if !searchText.isEmpty {
+        contentUnavailableConfiguration = UIContentUnavailableConfiguration.search()
+      } else {
+        var config = UIContentUnavailableConfiguration.empty()
+        config.image = .playlist
+        config.text = parentFolderId == nil ? "No Playlists" : "Empty Folder"
+        contentUnavailableConfiguration = config
+      }
+    } else {
+      contentUnavailableConfiguration = nil
+    }
+  }
+
+  // MARK: - UITableViewDataSource
+
+  override func numberOfSections(in tableView: UITableView) -> Int {
+    Section.allCases.count
+  }
+
+  override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    switch Section(rawValue: section) {
+    case .folders: return displayedFolders.count
+    case .playlists: return displayedPlaylists.count
+    case .none: return 0
+    }
+  }
+
+  override func tableView(
+    _ tableView: UITableView,
+    titleForHeaderInSection section: Int
+  )
+    -> String? {
+    switch Section(rawValue: section) {
+    case .folders: return displayedFolders.isEmpty ? nil : "Folders"
+    case .playlists:
+      if displayedPlaylists.isEmpty { return nil }
+      return parentFolderId == nil ? "Playlists" : nil
+    case .none: return nil
+    }
+  }
+
+  override func tableView(
+    _ tableView: UITableView,
+    cellForRowAt indexPath: IndexPath
+  )
+    -> UITableViewCell {
+    switch Section(rawValue: indexPath.section) {
+    case .folders:
+      return folderCell(for: indexPath)
+    case .playlists:
+      return playlistCell(for: indexPath)
+    case .none:
+      return UITableViewCell()
+    }
+  }
+
+  private func folderCell(for indexPath: IndexPath) -> UITableViewCell {
+    let folder = displayedFolders[indexPath.row]
+    let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "FolderCell")
+    cell.imageView?.image = UIImage(systemName: "folder.fill")?.withRenderingMode(.alwaysTemplate)
+    cell.imageView?.tintColor = ThemeStore.shared.dynamicTint ?? .systemBlue
+    cell.textLabel?.text = folder.name
+    cell.textLabel?.textColor = ThemeStore.shared.dynamicText ?? .label
+    let playlistCount = folder.allPlaylistIdsRecursive.count
+    let subfolderCount = folder.subfolders.count
+    var details = [String]()
+    if playlistCount > 0 {
+      details.append("\(playlistCount) playlist\(playlistCount == 1 ? "" : "s")")
+    }
+    if subfolderCount > 0 {
+      details.append("\(subfolderCount) subfolder\(subfolderCount == 1 ? "" : "s")")
+    }
+    cell.detailTextLabel?.text = details.isEmpty ? "Empty" : details.joined(separator: ", ")
+    cell.detailTextLabel?.textColor = ThemeStore.shared.dynamicText?
+      .withAlphaComponent(0.6) ?? .secondaryLabel
+    cell.accessoryType = .disclosureIndicator
+    cell.tintColor = ThemeStore.shared.dynamicTint ?? .systemBlue
+    cell.backgroundColor = ThemeStore.shared.dynamicBackground ?? .secondarySystemGroupedBackground
     return cell
   }
 
-  override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-    tableView.deselectRow(at: indexPath, animated: false)
-    guard let diffableDataSource else { return }
-    let objectID = diffableDataSource.itemIdentifier(for: indexPath)
-    guard let objectID,
-          let object = try? appDelegate.storage.main.context
-          .existingObject(with: objectID),
-          let playlistMO = object as? PlaylistMO
-    else {
-      return
-    }
-
-    let playlist = Playlist(
-      library: appDelegate.storage.main.library,
-      managedObject: playlistMO
+  private func playlistCell(for indexPath: IndexPath) -> UITableViewCell {
+    let playlist = displayedPlaylists[indexPath.row]
+    let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "PlaylistCell")
+    cell.textLabel?.text = playlist.name
+    cell.textLabel?.textColor = ThemeStore.shared.dynamicText ?? .label
+    let infoText = playlist.info(
+      for: playlist.account?.apiType.asServerApiType,
+      details: DetailInfoType(type: .short, settings: appDelegate.storage.settings)
     )
+    cell.detailTextLabel?.text = infoText
+    cell.detailTextLabel?.textColor = ThemeStore.shared.dynamicText?.withAlphaComponent(0.6)
+      ?? .secondaryLabel
+    cell.accessoryType = .none
+    cell.tintColor = ThemeStore.shared.dynamicTint ?? .systemBlue
+    cell.backgroundColor = ThemeStore.shared.dynamicBackground ?? .secondarySystemGroupedBackground
+    return cell
+  }
 
-    func handleSuccessfullSelection(playables: [AbstractPlayable]) {
-      let songs = playables.filterSongs()
-      if !songs.isEmpty {
-        selectedPlaylits[playlist] = songs
-      } else {
-        selectedPlaylits.removeValue(forKey: playlist)
-      }
+  // MARK: - UITableViewDelegate
 
-      var snap = diffableDataSource.snapshot()
-      snap.reconfigureItems([playlist.objectID])
-      diffableDataSource.apply(snap)
-
-      if selectMode == .single {
-        addSongsToSelectedPlaylists()
-        dismiss()
-      } else {
-        refreshAddButton()
-      }
-    }
-
-    if selectedPlaylits[playlist] != nil {
-      selectedPlaylits.removeValue(forKey: playlist)
-      var snap = diffableDataSource.snapshot()
-      snap.reconfigureItems([playlist.objectID])
-      diffableDataSource.apply(snap)
-    } else {
-      let itemsNotContained = playlist.notContaines(playables: itemsToAdd)
-      if itemsNotContained.count != itemsToAdd.count {
-        let alert = UIAlertController(
-          title: nil,
-          message: "Some Songs are already in this Playlist.",
-          preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "Add Duplicates", style: .default, handler: { _ in
-          handleSuccessfullSelection(playables: self.itemsToAdd)
-        }))
-        alert.addAction(UIAlertAction(title: "Skip Duplicates", style: .default, handler: { _ in
-          handleSuccessfullSelection(playables: Array(itemsNotContained))
-        }))
-        alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: { _ in
-          // do nothing
-        }))
-        present(alert, animated: true, completion: nil)
-      } else {
-        handleSuccessfullSelection(playables: itemsToAdd)
-      }
+  override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    tableView.deselectRow(at: indexPath, animated: true)
+    switch Section(rawValue: indexPath.section) {
+    case .folders:
+      let folder = displayedFolders[indexPath.row]
+      let folderPickerVC = PlaylistSelectorVC(
+        account: account,
+        itemsToAdd: itemsToAdd,
+        parentFolderId: folder.id
+      )
+      navigationController?.pushViewController(folderPickerVC, animated: true)
+    case .playlists:
+      let playlist = displayedPlaylists[indexPath.row]
+      addSongsToPlaylist(playlist, at: indexPath)
+    case .none:
+      break
     }
   }
 
-  override func updateSearchResults(for searchController: UISearchController) {
-    let searchText = searchController.searchBar.text ?? ""
-    fetchedResultsController.search(searchText: searchText)
-    tableView.reloadData()
+  /// Single-tap add: adds the pending song(s) to the tapped playlist and shows
+  /// an inline confirmation. When some songs are already present the user is
+  /// asked how to handle the duplicates. The modal stays open in every case.
+  private func addSongsToPlaylist(_ playlist: Playlist, at indexPath: IndexPath) {
+    let itemsNotContained = playlist.notContaines(playables: itemsToAdd)
+    if itemsNotContained.count != itemsToAdd.count {
+      let alert = UIAlertController(
+        title: nil,
+        message: "Some Songs are already in this Playlist.",
+        preferredStyle: .alert
+      )
+      alert.addAction(UIAlertAction(title: "Add Duplicates", style: .default) { [weak self] _ in
+        self?.addPendingSongs(
+          to: playlist,
+          playables: self?.itemsToAdd ?? [],
+          showConfirmationAt: indexPath
+        )
+      })
+      alert.addAction(UIAlertAction(title: "Skip Duplicates", style: .default) { [weak self] _ in
+        self?.addPendingSongs(
+          to: playlist,
+          playables: Array(itemsNotContained),
+          showConfirmationAt: indexPath
+        )
+      })
+      alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+      present(alert, animated: true)
+    } else {
+      addPendingSongs(to: playlist, playables: itemsToAdd, showConfirmationAt: indexPath)
+    }
+  }
+}
+
+// MARK: UISearchResultsUpdating
+
+extension PlaylistSelectorVC: UISearchResultsUpdating {
+  func updateSearchResults(for searchController: UISearchController) {
+    searchText = searchController.searchBar.text ?? ""
+    reloadContent()
   }
 }
