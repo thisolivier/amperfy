@@ -37,6 +37,19 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 76,
+      date: "2026-07-14",
+      title: "Build 76 — New app icon",
+      whatsNew: [
+        "New app icon — a bold Bauhaus-style speaker design. You'll see it on your home screen after this build installs.",
+        "Add-to-Playlist search now also finds playlists tucked inside folders, matching how search already works on the main Playlists screen — so a quick search reaches every playlist, wherever it lives.",
+      ],
+      testingFocus: [
+        "After installing, check the home-screen icon is the new speaker artwork (not the old one).",
+        "Open Add-to-Playlist for a song, type the name of a playlist that lives inside a folder, and confirm it now appears in the results.",
+      ]
+    ),
+    ReleaseNote(
       id: 75,
       date: "2026-07-14",
       title: "Build 75 — Playlist folders in Add-to-Playlist, plus Create Playlist",
@@ -104,25 +117,6 @@ enum ReleaseNotes {
         "Add a city you already follow (any casing) — expect 'Already following <city>'.",
         "With VoiceOver on, swipe through song rows — each should announce downloaded / favorite / downloading state, not just the title.",
         "Confirm song rows still look and lay out correctly (artwork, the two round trailing buttons, duration, the left-of-artwork downloaded dot).",
-      ]
-    ),
-    ReleaseNote(
-      id: 71,
-      date: "2026-07-11",
-      title: "Build 71 — Triage your Recently Added tracks",
-      whatsNew: [
-        "Recently Added Tracks now has a filter: tap the options button (top right) and turn on 'Hide tracks already in playlists' to see only the tracks you still need to file. It's a triage inbox — once a track is in a playlist, it drops off the list.",
-        "New bulk-select: on Recently Added Tracks, tap the options button and choose 'Select Tracks', tick as many as you like, then 'Add to Playlist…' to file them all at once. With the filter on, the tracks you just added disappear from the list right away — inbox zero.",
-        "The filter is off by default and remembers your choice. Smart playlists don't count (a track only in a smart playlist still shows), and playlists from other accounts are ignored.",
-      ],
-      testingFocus: [
-        "Open Recently Added Tracks, tap the options button, and toggle 'Hide tracks already in playlists'. Add one of the listed tracks to a playlist, come back — it should disappear when the filter is on, reappear when off.",
-        "Tap options → 'Select Tracks', tick several tracks (the count updates), tap 'Add to Playlist…', pick a playlist. All ticked tracks should be added; check the playlist to confirm.",
-        "With the filter ON, bulk-add some tracks, then reopen the list — the added tracks should be gone (they're now filed).",
-        "Remove a track from its only playlist and reopen the list with the filter on — the track should come back.",
-        "With the filter on and every recent single already filed, the list should show a 'Nothing left to file' message, not a blank screen.",
-        "Confirm the Home tab's Recently Added preview row is unchanged (it stays unfiltered).",
-        "Toggle the filter, force-quit and relaunch — your choice should stick.",
       ]
     ),
   ]
