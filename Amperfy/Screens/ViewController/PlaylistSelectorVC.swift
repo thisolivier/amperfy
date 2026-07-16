@@ -271,7 +271,36 @@ class PlaylistSelectorVC: PlaylistFolderBrowsingTableViewController {
   /// Single-tap add: adds the pending song(s) to the tapped playlist and shows
   /// an inline confirmation. When some songs are already present the user is
   /// asked how to handle the duplicates. The modal stays open in every case.
+  ///
+  /// The duplicate check compares against the playlist's *local* items
+  /// (`notContaines` uses Core Data object identity), but the picker only syncs
+  /// the playlist list *without* songs — so a tapped playlist's items are
+  /// usually not loaded, which made the check silently under-detect and append
+  /// exact duplicates. When online we first sync just this playlist's songs, so
+  /// the containment check runs against authoritative items; offline (or on a
+  /// sync failure) we fall back to the best-effort local check.
   private func addSongsToPlaylist(_ playlist: Playlist, at indexPath: IndexPath) {
+    guard appDelegate.storage.settings.user.isOnlineMode else {
+      resolveDuplicatesAndAdd(to: playlist, at: indexPath)
+      return
+    }
+    Task { @MainActor in
+      do {
+        try await self.appDelegate.getMeta(self.account.info).librarySyncer
+          .syncDown(playlist: playlist)
+      } catch {
+        // A sync failure must not block the add; fall through to the
+        // best-effort local check.
+        self.appDelegate.eventLogger.report(topic: "Playlist Add Songs", error: error)
+      }
+      self.resolveDuplicatesAndAdd(to: playlist, at: indexPath)
+    }
+  }
+
+  /// Runs the duplicate check against `playlist`'s currently-known items and
+  /// either adds the pending song(s) directly or asks the user how to handle
+  /// songs that are already present.
+  private func resolveDuplicatesAndAdd(to playlist: Playlist, at indexPath: IndexPath) {
     let itemsNotContained = playlist.notContaines(playables: itemsToAdd)
     if itemsNotContained.count != itemsToAdd.count {
       let alert = UIAlertController(
