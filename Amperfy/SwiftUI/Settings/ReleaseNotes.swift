@@ -37,6 +37,19 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 77,
+      date: "2026-07-16",
+      title: "Build 77 — Create-Playlist-in-folder fix",
+      whatsNew: [
+        "Fixed a bug when you created a brand-new playlist from Add-to-Playlist while inside a folder: the playlist could go missing from that folder, a duplicate empty copy could appear, and your songs could end up split across the copies.",
+        "Now creating a playlist this way makes exactly one playlist, files it into the folder you're in, and keeps every song you add to it — including tracks you add later.",
+      ],
+      testingFocus: [
+        "Open Add-to-Playlist for a song, go into a folder, tap + to create a new playlist, and name it. Confirm exactly one playlist is created and it appears inside that folder.",
+        "Later, add a second song to that same playlist. Confirm there's still just one playlist, it's still in the folder, and it holds both songs.",
+      ]
+    ),
+    ReleaseNote(
       id: 76,
       date: "2026-07-14",
       title: "Build 76 — New app icon",
