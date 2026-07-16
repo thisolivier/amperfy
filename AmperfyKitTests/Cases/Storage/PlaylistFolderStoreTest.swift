@@ -293,4 +293,28 @@ class PlaylistFolderStoreTest: XCTestCase {
     store.addPlaylists(["deep"], to: leaf.id)
     XCTAssertTrue(store.allFiledPlaylistIds.contains("deep"))
   }
+
+  // MARK: - 15. Regression: filing a not-yet-synced playlist (empty server id)
+
+  //             must be ignored, never stored. Reproduces the add-to-playlist
+  //             folder bug where PlaylistSelectorVC filed a freshly created
+  //             playlist while its id was still "" — so the real playlist was
+  //             never actually in the folder, and a stray "" polluted the
+  //             filed set. The store must drop empty ids so callers are forced
+  //             to file only after the server id is assigned.
+
+  func testFilingByEmptyPlaylistIdIsIgnored() {
+    let folder = store.createFolder(name: "Chill", parent: nil)
+
+    // Simulate filing a playlist that has not yet received its server id.
+    store.addPlaylists([""], to: folder.id)
+
+    XCTAssertFalse(store.allFiledPlaylistIds.contains(""))
+    XCTAssertEqual(store.folder(byId: folder.id)?.playlistIds, [])
+
+    // A mixed batch drops only the empty id and keeps the real one.
+    store.addPlaylists(["", "pl-server-123"], to: folder.id)
+    XCTAssertEqual(store.folder(byId: folder.id)?.playlistIds, ["pl-server-123"])
+    XCTAssertFalse(store.allFiledPlaylistIds.contains(""))
+  }
 }

@@ -182,28 +182,50 @@ class PlaylistSelectorVC: PlaylistFolderBrowsingTableViewController {
 
   /// Creates a playlist, adds the pending song(s) to it, files it into the
   /// current folder when the picker is folder-scoped, and keeps the modal open.
+  ///
+  /// Ordering is load-bearing: a freshly created playlist has an empty server
+  /// id until its create request round-trips. Filing it into a folder or firing
+  /// a second concurrent upload while the id is still empty caused three bugs —
+  /// the playlist fell out of its folder (server never recorded the membership),
+  /// a duplicate server playlist was created (two upload paths each ran
+  /// `createPlaylistRemote`), and that duplicate held none of the songs. So we
+  /// create-and-name the playlist on the server first (single awaited path that
+  /// assigns the real id onto this same object), then push the songs, then file
+  /// it into the folder using the now-assigned id.
   private func createPlaylistAndAddPendingSongs(named name: String) {
     let library = appDelegate.storage.main.library
     let playlist = library.createPlaylist(account: account)
     playlist.name = name
     appDelegate.storage.main.saveContext()
 
-    if let parentFolderId {
-      folderStore.addPlaylists([playlist.id], to: parentFolderId)
+    let songs = itemsToAdd.filterSongs()
+    playlist.append(playables: songs)
+
+    guard appDelegate.storage.settings.user.isOnlineMode else {
+      // Offline: no server id will be assigned, and folders are server-backed,
+      // so we cannot reliably file until the playlist syncs. Reflect the local
+      // add now; the folder filing happens when it is next created online.
+      reloadContent()
+      return
     }
 
-    addPendingSongs(to: playlist, playables: itemsToAdd, showConfirmationAt: nil)
-
-    if appDelegate.storage.settings.user.isOnlineMode {
-      Task { @MainActor in do {
-        try await self.appDelegate.getMeta(self.account.info).librarySyncer
-          .syncUpload(playlistToUpdateName: playlist)
+    Task { @MainActor in
+      do {
+        let syncer = self.appDelegate.getMeta(self.account.info).librarySyncer
+        // Creates the playlist on the server and reconciles the assigned id
+        // onto this same object (via `validatePlaylistId`) before anything is
+        // keyed on the id.
+        try await syncer.syncUpload(playlistToUpdateName: playlist)
+        try await syncer.syncUpload(playlistToAddSongs: playlist, songs: songs)
+        // The playlist now carries its real server id — safe to file it.
+        if let parentFolderId = self.parentFolderId {
+          self.folderStore.addPlaylists([playlist.id], to: parentFolderId)
+        }
       } catch {
         self.appDelegate.eventLogger.report(topic: "Playlist Create", error: error)
-      }}
+      }
+      self.reloadContent()
     }
-
-    reloadContent()
   }
 
   // MARK: - Adding songs

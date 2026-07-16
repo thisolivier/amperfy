@@ -254,15 +254,23 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   // MARK: - Membership
 
   public func addPlaylists(_ playlistIds: [String], to folderId: UUID) {
+    // A not-yet-synced playlist has an empty server id until its create request
+    // round-trips. Filing by "" would both pollute the filed set and file
+    // nothing on the server (so the membership is lost on the next folder
+    // reconciliation). Callers must file only after the id is assigned; drop
+    // empty ids defensively so a mistimed call can never corrupt membership.
+    let validIds = playlistIds.filter { !$0.isEmpty }
+    guard !validIds.isEmpty else { return }
+
     guard let context = managedObjectContext else {
-      legacyAddPlaylists(playlistIds, to: folderId)
+      legacyAddPlaylists(validIds, to: folderId)
       return
     }
 
     guard let folderMO = findFolderMO(by: folderId, in: context) else { return }
     let serverId = folderMO.id
 
-    for playlistId in playlistIds {
+    for playlistId in validIds {
       if let playlistMO = fetchPlaylistMO(by: playlistId, in: context) {
         folderMO.addToPlaylists(playlistMO)
       }
@@ -271,7 +279,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
 
     if let api = navidromeApi {
       Task {
-        for playlistId in playlistIds {
+        for playlistId in validIds {
           try? await api.addPlaylistToFolder(folderId: serverId, playlistId: playlistId)
         }
       }
