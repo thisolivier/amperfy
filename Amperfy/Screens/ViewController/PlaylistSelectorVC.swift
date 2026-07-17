@@ -164,19 +164,28 @@ class PlaylistSelectorVC: PlaylistFolderBrowsingTableViewController {
 
   private func promptCreatePlaylist() {
     let alert = UIAlertController(title: "New Playlist", message: nil, preferredStyle: .alert)
-    alert.addTextField { textField in
-      textField.placeholder = "Playlist name"
-      textField.autocapitalizationType = .words
-    }
-    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-    alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak self] _ in
+    let createAction = UIAlertAction(title: "Create", style: .default) { [weak self, weak alert] _ in
       guard let self,
-            let name = alert.textFields?.first?.text?
+            let name = alert?.textFields?.first?.text?
             .trimmingCharacters(in: .whitespacesAndNewlines),
             !name.isEmpty
       else { return }
       createPlaylistAndAddPendingSongs(named: name)
-    })
+    }
+    // Keep Create disabled until a non-whitespace name is entered, so tapping it
+    // can't be a silent no-op.
+    createAction.isEnabled = false
+    alert.addTextField { textField in
+      textField.placeholder = "Playlist name"
+      textField.autocapitalizationType = .words
+      textField.addAction(UIAction { [weak createAction, weak textField] _ in
+        let trimmed = textField?.text?
+          .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        createAction?.isEnabled = !trimmed.isEmpty
+      }, for: .editingChanged)
+    }
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(createAction)
     present(alert, animated: true)
   }
 

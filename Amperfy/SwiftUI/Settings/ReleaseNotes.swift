@@ -37,6 +37,19 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 78,
+      date: "2026-07-16",
+      title: "Build 78 — No more silent duplicate adds",
+      whatsNew: [
+        "Fixed: adding a song that's already in a playlist no longer silently creates a hidden second copy. You now get the 'already in this playlist' prompt (or nothing happens) — the same handling you already got when adding several songs at once.",
+        "The Create button in the New Playlist dialog now stays disabled until you type a name, so it can't be tapped to no effect.",
+      ],
+      testingFocus: [
+        "Add a song to a playlist, then add that same song to the same playlist again. Confirm you're warned it's already there — no silent duplicate appears.",
+        "Open Add-to-Playlist and tap +. Confirm Create is greyed out until you enter a name.",
+      ]
+    ),
+    ReleaseNote(
       id: 77,
       date: "2026-07-16",
       title: "Build 77 — Create-Playlist-in-folder fix",
