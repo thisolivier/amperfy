@@ -37,6 +37,18 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 80,
+      date: "2026-07-17",
+      title: "Build 80 — Rename playlists",
+      whatsNew: [
+        "You can now rename a playlist right from the main Playlists screen: long-press it and choose Rename. The new name saves immediately and syncs to your other devices.",
+      ],
+      testingFocus: [
+        "Long-press a playlist on the Playlists screen, choose Rename, type a new name, and confirm it updates — and that it stays renamed after you reopen the app.",
+        "Try renaming a playlist that lives inside a folder; confirm it keeps its new name and stays in the folder.",
+      ]
+    ),
+    ReleaseNote(
       id: 79,
       date: "2026-07-17",
       title: "Build 79 — Deleting a playlist now sticks",

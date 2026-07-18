@@ -557,18 +557,13 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
   }
 
   private func promptRenamePlaylist(_ playlist: Playlist) {
+    let currentName = playlist.name
     let alert = UIAlertController(title: "Rename Playlist", message: nil, preferredStyle: .alert)
-    alert.addTextField { textField in
-      textField.text = playlist.name
-      textField.autocapitalizationType = .words
-      textField.clearButtonMode = .whileEditing
-    }
-    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-    alert.addAction(UIAlertAction(title: "Rename", style: .default) { [weak self] _ in
+    let renameAction = UIAlertAction(title: "Rename", style: .default) { [weak self, weak alert] _ in
       guard let self,
-            let newName = alert.textFields?.first?.text?
+            let newName = alert?.textFields?.first?.text?
             .trimmingCharacters(in: .whitespacesAndNewlines),
-            !newName.isEmpty, newName != playlist.name,
+            !newName.isEmpty, newName != currentName,
             let account = playlist.account
       else { return }
       Task { @MainActor in
@@ -579,7 +574,22 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
         }
         self.reloadContent()
       }
-    })
+    }
+    // Keep Rename disabled until the name is non-empty and actually changed —
+    // matches the New-Playlist dialog's Create button, and a same-name rename is
+    // a no-op anyway.
+    renameAction.isEnabled = false
+    alert.addTextField { textField in
+      textField.text = currentName
+      textField.autocapitalizationType = .words
+      textField.clearButtonMode = .whileEditing
+      textField.addAction(UIAction { [weak renameAction, weak textField] _ in
+        let trimmed = textField?.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        renameAction?.isEnabled = !trimmed.isEmpty && trimmed != currentName
+      }, for: .editingChanged)
+    }
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(renameAction)
     present(alert, animated: true)
   }
 
