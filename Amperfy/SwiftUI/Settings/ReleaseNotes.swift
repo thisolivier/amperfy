@@ -37,6 +37,19 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 79,
+      date: "2026-07-17",
+      title: "Build 79 — Deleting a playlist now sticks",
+      whatsNew: [
+        "Fixed: deleting a playlist now actually removes it. Before, swiping a playlist and tapping Delete looked like it worked but the playlist came back on the next sync — because the deletion was never sent to the server.",
+        "You can delete a playlist by swiping left on it, or by long-pressing it and choosing Delete Playlist. Either way you'll be asked to confirm, and the deletion now syncs across your devices.",
+      ],
+      testingFocus: [
+        "Swipe left on a playlist and tap Delete, confirm the alert, and check it's gone — then reopen the app and confirm it hasn't come back.",
+        "Long-press a playlist and choose Delete Playlist; confirm it's removed. Also try Cancel on the confirmation and check the playlist is left untouched.",
+      ]
+    ),
+    ReleaseNote(
       id: 78,
       date: "2026-07-16",
       title: "Build 78 — No more silent duplicate adds",

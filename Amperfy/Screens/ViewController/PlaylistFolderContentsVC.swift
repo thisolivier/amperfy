@@ -321,11 +321,17 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     commit editingStyle: UITableViewCell.EditingStyle,
     forRowAt indexPath: IndexPath
   ) {
-    guard editingStyle == .delete,
-          Section(rawValue: indexPath.section) == .folders,
-          let folder = displayedFolders[safe: indexPath.row]
-    else { return }
-    handleFolderDelete(folder)
+    guard editingStyle == .delete else { return }
+    switch Section(rawValue: indexPath.section) {
+    case .folders:
+      guard let folder = displayedFolders[safe: indexPath.row] else { return }
+      handleFolderDelete(folder)
+    case .playlists:
+      guard let playlist = displayedPlaylists[safe: indexPath.row] else { return }
+      confirmDeletePlaylist(playlist)
+    case .none:
+      break
+    }
   }
 
   override func tableView(
@@ -333,15 +339,31 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
   )
     -> UISwipeActionsConfiguration? {
-    guard Section(rawValue: indexPath.section) == .folders,
-          let folder = displayedFolders[safe: indexPath.row]
-    else { return nil }
-    let deleteAction = UIContextualAction(
-      style: .destructive,
-      title: "Delete"
-    ) { [weak self] _, _, completion in
-      self?.handleFolderDelete(folder)
-      completion(true)
+    let deleteAction: UIContextualAction
+    switch Section(rawValue: indexPath.section) {
+    case .folders:
+      guard let folder = displayedFolders[safe: indexPath.row] else { return nil }
+      deleteAction = UIContextualAction(
+        style: .destructive,
+        title: "Delete"
+      ) { [weak self] _, _, completion in
+        self?.handleFolderDelete(folder)
+        completion(true)
+      }
+    case .playlists:
+      guard let playlist = displayedPlaylists[safe: indexPath.row] else { return nil }
+      // completion(false): leave the row in place until the user confirms;
+      // `deletePlaylist` calls `reloadContent()` to remove it on success, so a
+      // cancelled confirmation doesn't animate away a row that still exists.
+      deleteAction = UIContextualAction(
+        style: .destructive,
+        title: "Delete"
+      ) { [weak self] _, _, completion in
+        self?.confirmDeletePlaylist(playlist)
+        completion(false)
+      }
+    case .none:
+      return nil
     }
     deleteAction.image = UIImage(systemName: "trash")
     return UISwipeActionsConfiguration(actions: [deleteAction])
@@ -443,6 +465,14 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
         })
       }
 
+      actions.append(UIAction(
+        title: "Delete Playlist",
+        image: UIImage(systemName: "trash"),
+        attributes: .destructive
+      ) { [weak self] _ in
+        self?.confirmDeletePlaylist(playlist)
+      })
+
       return UIMenu(children: actions)
     }
   }
@@ -517,6 +547,40 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
       self?.folderStore.renameFolder(id: folder.id, to: name)
     })
     present(alert, animated: true)
+  }
+
+  private func confirmDeletePlaylist(_ playlist: Playlist) {
+    let alert = UIAlertController(
+      title: "Delete Playlist",
+      message: "Delete \u{201C}\(playlist.name)\u{201D}? This removes it from all your synced devices.",
+      preferredStyle: .alert
+    )
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(UIAlertAction(title: "Delete Playlist", style: .destructive) { [weak self] _ in
+      self?.deletePlaylist(playlist)
+    })
+    present(alert, animated: true)
+  }
+
+  /// Deletes a playlist locally, persists, then tells the server. The server
+  /// upload is essential: without it the next `syncDownPlaylistsWithoutSongs()`
+  /// re-creates the playlist, so the deletion would not stick.
+  private func deletePlaylist(_ playlist: Playlist) {
+    let playlistId = playlist.id
+    let account = playlist.account
+    appDelegate.storage.main.library.deletePlaylist(playlist)
+    appDelegate.storage.main.saveContext()
+    reloadContent()
+
+    guard let account else { return }
+    Task { @MainActor in
+      do {
+        try await self.appDelegate.getMeta(account.info).librarySyncer
+          .syncUpload(playlistIdToDelete: playlistId)
+      } catch {
+        self.appDelegate.eventLogger.report(topic: "Playlist Upload Deletion", error: error)
+      }
+    }
   }
 
   private func confirmDeleteFolder(_ folder: PlaylistFolder) {
