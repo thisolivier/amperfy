@@ -424,6 +424,13 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
       guard let self else { return UIMenu(children: []) }
       var actions = [UIMenuElement]()
 
+      actions.append(UIAction(
+        title: "Rename",
+        image: UIImage(systemName: "pencil")
+      ) { [weak self] _ in
+        self?.promptRenamePlaylist(playlist)
+      })
+
       if let currentFolderId = parentFolderId {
         actions.append(UIAction(
           title: "Move to Folder\u{2026}",
@@ -545,6 +552,33 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     alert.addAction(UIAlertAction(title: "Rename", style: .default) { [weak self] _ in
       guard let name = alert.textFields?.first?.text, !name.isEmpty else { return }
       self?.folderStore.renameFolder(id: folder.id, to: name)
+    })
+    present(alert, animated: true)
+  }
+
+  private func promptRenamePlaylist(_ playlist: Playlist) {
+    let alert = UIAlertController(title: "Rename Playlist", message: nil, preferredStyle: .alert)
+    alert.addTextField { textField in
+      textField.text = playlist.name
+      textField.autocapitalizationType = .words
+      textField.clearButtonMode = .whileEditing
+    }
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(UIAlertAction(title: "Rename", style: .default) { [weak self] _ in
+      guard let self,
+            let newName = alert.textFields?.first?.text?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !newName.isEmpty, newName != playlist.name,
+            let account = playlist.account
+      else { return }
+      Task { @MainActor in
+        do {
+          try await self.appDelegate.getMeta(account.info).renamePlaylist(playlist, to: newName)
+        } catch {
+          self.appDelegate.eventLogger.report(topic: "Playlist Update Name", error: error)
+        }
+        self.reloadContent()
+      }
     })
     present(alert, animated: true)
   }

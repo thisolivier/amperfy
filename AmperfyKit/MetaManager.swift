@@ -103,6 +103,19 @@ public class MetaManager {
     return delegate
   }()
 
+  /// Renames a playlist: applies the new name locally (persisted immediately by
+  /// the `Playlist.name` setter) and pushes it to the server. The server upload
+  /// no-ops when offline, so the local rename still applies and reconciles on the
+  /// next sync. Mirrors the folder-rename API (`PlaylistFolderStore.renameFolder`).
+  /// No-ops when the trimmed name is empty or unchanged.
+  @MainActor
+  public func renamePlaylist(_ playlist: Playlist, to newName: String) async throws {
+    let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedName.isEmpty, trimmedName != playlist.name else { return }
+    playlist.name = trimmedName
+    try await librarySyncer.syncUpload(playlistToUpdateName: playlist)
+  }
+
   init(
     storage: PersistentStorage,
     account: Account,
