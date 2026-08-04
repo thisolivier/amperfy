@@ -284,16 +284,20 @@ extension PlaylistFolderContentsVC {
 
   @objc
   func removeSelectionFromFolder() {
-    guard let currentFolderId = parentFolderId else { return }
-    let playlistIds = selectedPlaylistIds
-    guard !playlistIds.isEmpty else {
+    let removablePlaylistIds = folderStore.placedPlaylistIds(
+      selectedPlaylistIds,
+      inFolder: parentFolderId
+    )
+    guard !removablePlaylistIds.isEmpty else {
       presentSelectionNotice(
-        title: "Playlists Only",
-        message: "Use Move to take a folder out of this one."
+        title: selectedPlaylistIds.isEmpty ? "Playlists Only" : "Nothing to Remove",
+        message: selectedPlaylistIds.isEmpty
+          ? "Use Move to take a folder out of this one."
+          : "Those playlists aren't filed in a folder."
       )
       return
     }
-    folderStore.removePlaylists(playlistIds, from: currentFolderId)
+    folderStore.removePlaylists(removablePlaylistIds, fromFolder: parentFolderId)
     setEditing(false, animated: true)
   }
 
@@ -340,56 +344,113 @@ extension PlaylistFolderContentsVC {
     present(alert, animated: true)
   }
 
+  /// The organize-context delete gesture: folders are deleted, playlists are
+  /// unfiled from the folder being browsed.
+  ///
+  /// Deleting a playlist from the library is deliberately not reachable here.
+  /// Removing one from a folder is an organizing act; destroying it on every
+  /// device is not, and during a rebuild — hundreds of selections, a delete key
+  /// within reach — the two must not sit behind the same gesture.
   @objc
   func deleteSelection() {
-    let rowsToDelete = selectedRows
-    guard !rowsToDelete.isEmpty else { return }
-    if rowsToDelete.count == 1 {
-      // One item gets its own tailored confirmation, including the folder's
-      // flatten-on-delete explanation.
-      switch rowsToDelete[0] {
-      case let .folder(folder): handleFolderDelete(folder)
-      case let .playlist(playlist): confirmDeletePlaylist(playlist)
-      }
+    let selectedFolders = selectedRows.compactMap(\.asFolder)
+    // Only playlists actually filed here can be removed from here. At the root a
+    // playlist with no placement is already at the top level, so it is left out
+    // rather than counted into a promise nothing would honour.
+    let removablePlaylistIds = folderStore.placedPlaylistIds(
+      selectedPlaylistIds,
+      inFolder: parentFolderId
+    )
+
+    guard !selectedFolders.isEmpty || !removablePlaylistIds.isEmpty else {
+      guard !selectedPlaylistIds.isEmpty else { return }
+      presentSelectionNotice(
+        title: "Nothing to Remove",
+        message: selectedPlaylistIds.count == 1
+          ? "That playlist isn't filed in a folder."
+          : "Those playlists aren't filed in a folder."
+      )
       return
     }
 
-    let folderCount = rowsToDelete.compactMap(\.asFolder).count
-    let playlistCount = rowsToDelete.count - folderCount
+    // A lone folder keeps its own tailored confirmation, which explains where
+    // its contents go.
+    if selectedFolders.count == 1, removablePlaylistIds.isEmpty {
+      handleFolderDelete(selectedFolders[0])
+      return
+    }
+
+    let folderIds = selectedFolders.map(\.id)
+    let folderCount = folderIds.count
+    let playlistCount = removablePlaylistIds.count
     let alert = UIAlertController(
-      title: "Delete \(rowsToDelete.count) Items",
-      message: bulkDeleteMessage(folderCount: folderCount, playlistCount: playlistCount),
+      title: organizeDeleteTitle(folderCount: folderCount, playlistCount: playlistCount),
+      message: organizeDeleteMessage(folderCount: folderCount, playlistCount: playlistCount),
       preferredStyle: .alert
     )
     alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-    alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+    alert.addAction(UIAlertAction(
+      title: organizeDeleteConfirmTitle(
+        folderCount: folderCount, playlistCount: playlistCount
+      ),
+      style: .destructive
+    ) { [weak self] _ in
       guard let self else { return }
-      folderStore.performBatchedUpdates {
-        for folder in rowsToDelete.compactMap(\.asFolder) {
-          folderStore.deleteFolder(id: folder.id)
-        }
-      }
-      for playlist in rowsToDelete.compactMap(\.asPlaylist) {
-        deletePlaylist(playlist)
-      }
+      folderStore.deleteFolders(
+        folderIds,
+        andRemovePlaylists: removablePlaylistIds,
+        fromFolder: parentFolderId
+      )
       setEditing(false, animated: true)
     })
     present(alert, animated: true)
   }
 
-  private func bulkDeleteMessage(folderCount: Int, playlistCount: Int) -> String {
-    var fragments = [String]()
-    if folderCount > 0 {
-      fragments.append(
-        "\(folderCount) folder\(folderCount == 1 ? "" : "s") — their contents move up one level"
-      )
+  /// Where playlists are being removed *from*, named the way the user sees it.
+  /// "This folder" is wrong at the root, which is not a folder.
+  var organizeScopeDescription: String {
+    guard let parentFolderId,
+          let folder = folderStore.folder(byId: parentFolderId)
+    else { return "the top level" }
+    return "\u{201C}\(folder.name)\u{201D}"
+  }
+
+  private func organizeDeleteTitle(folderCount: Int, playlistCount: Int) -> String {
+    let folderFragment = folderCount == 1 ? "1 Folder" : "\(folderCount) Folders"
+    let playlistFragment = playlistCount == 1 ? "1 Playlist" : "\(playlistCount) Playlists"
+    switch (folderCount, playlistCount) {
+    case (0, _): return "Remove \(playlistFragment)"
+    case (_, 0): return "Delete \(folderFragment)"
+    default: return "Delete \(folderFragment), Remove \(playlistFragment)"
     }
-    if playlistCount > 0 {
-      fragments.append(
-        "\(playlistCount) playlist\(playlistCount == 1 ? "" : "s") — deleted from all your devices"
-      )
+  }
+
+  private func organizeDeleteMessage(folderCount: Int, playlistCount: Int) -> String {
+    let folderFragment = folderCount == 1 ? "1 folder" : "\(folderCount) folders"
+    let playlistFragment = playlistCount == 1 ? "1 playlist" : "\(playlistCount) playlists"
+    let staysFragment = playlistCount == 1 ? "playlist stays" : "playlists stay"
+    let scope = organizeScopeDescription
+
+    switch (folderCount, playlistCount) {
+    case (0, _):
+      return "Remove \(playlistFragment) from \(scope)? The \(staysFragment) in your library."
+    case (_, 0):
+      return "Delete \(folderFragment)? Their contents move up one level."
+    default:
+      return """
+      Delete \(folderFragment) and remove \(playlistFragment) from \(scope)? \
+      Deleted folders release their contents up one level, and the removed \
+      \(staysFragment) in your library.
+      """
     }
-    return fragments.joined(separator: ".\n") + "."
+  }
+
+  private func organizeDeleteConfirmTitle(folderCount: Int, playlistCount: Int) -> String {
+    switch (folderCount, playlistCount) {
+    case (0, _): return "Remove"
+    case (_, 0): return "Delete"
+    default: return "Delete and Remove"
+    }
   }
 
   private func presentSelectionNotice(title: String, message: String) {

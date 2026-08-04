@@ -154,6 +154,94 @@ extension PlaylistFolderStore {
     addPlaylists(playlistIds, to: folderId)
   }
 
+  // MARK: - Removing from a folder
+
+  /// Which of `playlistIds` actually hold a placement in `folderId` — the ones a
+  /// "remove from this folder" would change.
+  ///
+  /// The distinction matters at the root, where a playlist with no placement at
+  /// all is *already* at the top level: removing it is a no-op, and counting it
+  /// in a confirmation would promise the user something would happen to it.
+  public func placedPlaylistIds(
+    _ playlistIds: [String],
+    inFolder folderId: String?
+  )
+    -> [String] {
+    guard let context = managedObjectContext,
+          let serverFolderId = resolveServerFolderId(folderId, in: context)
+    else { return [] }
+    return playlistIds.filter {
+      fetchPlacement(playlistId: $0, folderId: serverFolderId, in: context) != nil
+    }
+  }
+
+  /// Unfile playlists from one folder, where `nil` is the root.
+  ///
+  /// The root-capable form: at the root this drops an *explicit* root placement,
+  /// returning the playlist to the implicit, unordered root. A playlist with no
+  /// placement there is untouched.
+  public func removePlaylists(_ playlistIds: [String], fromFolder folderId: String?) {
+    guard !playlistIds.isEmpty else { return }
+    guard let context = managedObjectContext else {
+      if let folderId { legacyRemovePlaylists(playlistIds, from: folderId) }
+      return
+    }
+    guard let serverFolderId = resolveServerFolderId(folderId, in: context) else { return }
+
+    var removedPlaylistIds = [String]()
+    for playlistId in playlistIds {
+      guard let placementMO = fetchPlacement(
+        playlistId: playlistId, folderId: serverFolderId, in: context
+      ) else { continue }
+      context.delete(placementMO)
+      removedPlaylistIds.append(playlistId)
+    }
+    guard !removedPlaylistIds.isEmpty else { return }
+    try? context.save()
+
+    // A pending folder's placements were never sent, so there is nothing to
+    // retract; the root is addressed by its literal spelling on write paths.
+    if let api = navidromeApi, !PlaylistFolder.isTemporaryId(serverFolderId) {
+      let requestFolderId = serverFolderId.isEmpty
+        ? PlaylistFolderRootId.literal : serverFolderId
+      let playlistIdsToRetract = removedPlaylistIds
+      Task {
+        for playlistId in playlistIdsToRetract {
+          try? await api.removePlaylistPlacement(
+            folderId: requestFolderId, playlistId: playlistId
+          )
+        }
+      }
+    }
+
+    notifyChange()
+    exportCurrentTree()
+  }
+
+  // MARK: - The organize-context delete gesture
+
+  /// What pressing delete on a mixed selection in the folder browser means:
+  /// folders are deleted (releasing their contents up a level), playlists are
+  /// unfiled from the folder being browsed.
+  ///
+  /// Playlists are never deleted from the library here. Removing a playlist from
+  /// a folder is an organizing act and belongs in this flow; destroying it
+  /// everywhere, on every device, is not, and a rebuild session is exactly the
+  /// wrong time to have that a keystroke away.
+  public func deleteFolders(
+    _ folderIds: [String],
+    andRemovePlaylists playlistIds: [String],
+    fromFolder parentFolderId: String?
+  ) {
+    guard !folderIds.isEmpty || !playlistIds.isEmpty else { return }
+    performBatchedUpdates {
+      for folderId in folderIds {
+        deleteFolder(id: folderId)
+      }
+      removePlaylists(playlistIds, fromFolder: parentFolderId)
+    }
+  }
+
   // MARK: - New folder from a selection
 
   /// Create a folder at `parentFolderId` and move the given selection into it.

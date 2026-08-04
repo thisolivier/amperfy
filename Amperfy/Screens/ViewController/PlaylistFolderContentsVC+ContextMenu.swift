@@ -77,18 +77,14 @@ extension PlaylistFolderContentsVC {
       self?.newFolderFromSelection()
     })
 
-    if parentFolderId != nil {
-      actions.append(UIAction(
-        title: "Remove from This Folder",
-        image: UIImage(systemName: "folder.badge.minus"),
-        attributes: .destructive
-      ) { [weak self] _ in
-        self?.removeSelectionFromFolder()
-      })
-    }
-
+    // No separate "Remove from This Folder" entry: for a playlists-only
+    // selection the action below *is* that, and naming the same operation twice
+    // in one menu invites the reading that they differ.
+    //
+    // Named for what it does, not for the key that reaches it: folders go,
+    // playlists come out of this folder and stay in the library.
     actions.append(UIAction(
-      title: "Delete \(selectedCount) Items",
+      title: bulkDeleteActionTitle(),
       image: UIImage(systemName: "trash"),
       attributes: .destructive
     ) { [weak self] _ in
@@ -96,6 +92,23 @@ extension PlaylistFolderContentsVC {
     })
 
     return actions
+  }
+
+  /// Title for the bulk delete entry, which reads differently depending on what
+  /// is actually in the selection.
+  private func bulkDeleteActionTitle() -> String {
+    let folderCount = selectedRows.compactMap(\.asFolder).count
+    let playlistCount = selectedRows.count - folderCount
+    switch (folderCount, playlistCount) {
+    case (0, _):
+      return playlistCount == 1
+        ? "Remove from This Folder"
+        : "Remove \(playlistCount) Playlists from This Folder"
+    case (_, 0):
+      return folderCount == 1 ? "Delete Folder" : "Delete \(folderCount) Folders"
+    default:
+      return "Delete \(folderCount) Folders, Remove \(playlistCount) Playlists"
+    }
   }
 
   // MARK: - Single-row menu

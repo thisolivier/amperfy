@@ -167,16 +167,19 @@ class PlaylistFolderCreationTest: XCTestCase {
     store.configureForTesting(
       context: testContext,
       account: account.managedObject,
-      folderCreateRequester: { [createRequestLog] name, requestedParentId, requestedSortOrder in
+      folderCreateRequester: {
+        [createRequestLog, createdFolderLog] name, requestedParentId, requestedSortOrder in
         createRequestLog!.record(
           name: name, parentId: requestedParentId, sortOrder: requestedSortOrder
         )
-        return NavidromeOrganizationFolder(
+        let createdFolder = NavidromeOrganizationFolder(
           id: serverId,
           name: name,
           parentId: parentId ?? requestedParentId ?? "",
           sortOrder: sortOrder ?? requestedSortOrder
         )
+        createdFolderLog!.record(createdFolder)
+        return createdFolder
       },
       placementUpsertRequester: { [placementUpsertLog] folderId, playlistId, sortOrder in
         placementUpsertLog!.record(
@@ -316,9 +319,13 @@ class PlaylistFolderCreationTest: XCTestCase {
     let temporaryId = createdFolder.id
     await waitForAdoption(of: serverId)
 
-    XCTAssertNil(store.folder(byId: temporaryId), "the temporary id must stop resolving")
     XCTAssertEqual(store.folder(byId: serverId)?.name, "Rock")
     XCTAssertEqual(store.folders.map(\.id), [serverId])
+    // The temporary id keeps *resolving*, through the alias map, even though it
+    // is no longer the folder's identity — anything still holding it (a pushed
+    // screen, a drag in progress, a half-finished action) means this folder.
+    XCTAssertEqual(store.resolveFolderId(temporaryId), serverId)
+    XCTAssertEqual(store.folder(byId: temporaryId)?.name, "Rock")
   }
 
   func testTheCreateRequestCarriesTheNameAndTheAppendedSortOrder() async {
@@ -399,7 +406,7 @@ class PlaylistFolderCreationTest: XCTestCase {
     XCTAssertEqual(export.placements.map(\.folderId), [serverId])
   }
 
-  func testAdoptionDoesNotNotifyObservers() async {
+  func testAdoptionNotifiesObservers() async {
     let serverId = PlaylistFolderNanoidFixture.make()
     configureStoreWithSuccessfulCreate(serverId: serverId)
 
@@ -414,10 +421,79 @@ class PlaylistFolderCreationTest: XCTestCase {
     store.createFolder(name: "Rock", parent: nil)
     await waitForAdoption(of: serverId)
 
-    // Pinned, not endorsed: only the synchronous create notifies. The adoption
-    // changes the folder's id without telling anyone, so a screen scoped to the
-    // temporary id keeps a dead id until something else triggers a reload.
-    XCTAssertEqual(notificationCount, 1)
+    // The synchronous create, then the adoption. Adoption rewrites a folder's
+    // identity, which is as much a change as a rename; leaving it unannounced
+    // was what let a screen sit on a dead id until some unrelated reload
+    // knocked it over.
+    XCTAssertEqual(notificationCount, 2)
+  }
+
+  func testAdoptionPostsTheOldAndNewIdsForScopedScreensToRebindWith() async {
+    let serverId = PlaylistFolderNanoidFixture.make()
+    configureStoreWithSuccessfulCreate(serverId: serverId)
+
+    var observedAdoptions = [PlaylistFolderAdoption]()
+    let observer = NotificationCenter.default.addObserver(
+      forName: PlaylistFolderStore.didAdoptFolderIdNotification,
+      object: store,
+      queue: nil
+    ) { notification in
+      if let adoption = PlaylistFolderAdoption.fromNotification(notification) {
+        observedAdoptions.append(adoption)
+      }
+    }
+    defer { NotificationCenter.default.removeObserver(observer) }
+
+    let createdFolder = store.createFolder(name: "Rock", parent: nil)
+    await waitForAdoption(of: serverId)
+
+    XCTAssertEqual(observedAdoptions, [PlaylistFolderAdoption(
+      temporaryFolderId: createdFolder.id,
+      serverFolderId: serverId
+    )])
+  }
+
+  // MARK: - Stale ids after adoption
+
+  func testASubfolderCreatedAgainstAnAdoptedAwayParentIdLandsUnderTheRealParent() async {
+    let parentServerId = PlaylistFolderNanoidFixture.make()
+    configureStoreWithSuccessfulCreate(serverId: parentServerId)
+    let pendingParent = store.createFolder(name: "Parent", parent: nil)
+    await waitForAdoption(of: parentServerId)
+
+    // A screen that was showing the parent before its create landed still holds
+    // the old id. Creating a subfolder from there used to write a parentId no
+    // folder had, so the child's own create 404'd forever and it stayed pending.
+    let childServerId = PlaylistFolderNanoidFixture.make()
+    configureStoreWithSuccessfulCreate(serverId: childServerId)
+    store.createFolder(name: "Child", parent: pendingParent.id)
+    await waitForAdoption(of: childServerId)
+
+    XCTAssertEqual(store.folder(byId: parentServerId)?.subfolders.map(\.id), [childServerId])
+    // And the POST named the real parent, so the server agrees.
+    XCTAssertEqual(
+      createRequestLog.recordedRequests.last { $0.name == "Child" }?.parentId,
+      parentServerId
+    )
+  }
+
+  func testAPlaylistFiledAgainstAnAdoptedAwayFolderIdSurvivesTheNextSync() async throws {
+    seedPlaylist(id: "pl-1", name: "Playlist 1")
+    let serverId = PlaylistFolderNanoidFixture.make()
+    configureStoreWithSuccessfulCreate(serverId: serverId)
+    let pendingFolder = store.createFolder(name: "Rock", parent: nil)
+    await waitForAdoption(of: serverId)
+
+    // Filing against the stale id used to write a placement into a folder that
+    // did not exist, which the next reconcile dropped without a word.
+    store.addPlaylists(["pl-1"], to: pendingFolder.id)
+    try? await Task.sleep(nanoseconds: 100_000_000)
+
+    configureStoreForSync(assigningServerIdsByFolderName: [:])
+    try await store.syncFromServer()
+
+    XCTAssertEqual(store.folder(byId: serverId)?.playlistIds, ["pl-1"])
+    XCTAssertTrue(store.allFiledPlaylistIds.contains("pl-1"))
   }
 
   // MARK: - Offline
@@ -504,9 +580,11 @@ class PlaylistFolderCreationTest: XCTestCase {
     configureStoreForSync(succeedingCreate: serverId)
     try await store.syncFromServer()
 
-    XCTAssertNil(store.folder(byId: createdFolder.id))
+    XCTAssertTrue(store.folders.contains { $0.id == serverId })
     XCTAssertEqual(store.folder(byId: serverId)?.name, "Rock")
     XCTAssertEqual(store.folder(byId: serverId)?.playlistIds, ["pl-1"])
+    // Aliased, so a screen opened on the pending folder still points at it.
+    XCTAssertEqual(store.resolveFolderId(createdFolder.id), serverId)
   }
 
   func testPlacementsHeldWhilePendingArePushedOnceTheFolderAdopts() async throws {

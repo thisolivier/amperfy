@@ -203,40 +203,71 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
   )
     -> UISwipeActionsConfiguration? {
     guard let row = row(at: indexPath) else { return nil }
-    let deleteAction: UIContextualAction
     switch row {
     case let .folder(folder):
-      deleteAction = UIContextualAction(
+      let deleteAction = UIContextualAction(
         style: .destructive,
         title: "Delete"
       ) { [weak self] _, _, completion in
         self?.handleFolderDelete(folder)
         completion(true)
       }
+      deleteAction.image = UIImage(systemName: "trash")
+      return UISwipeActionsConfiguration(actions: [deleteAction])
+
     case let .playlist(playlist):
-      // completion(false): leave the row in place until the user confirms;
-      // `deletePlaylist` calls `reloadContent()` to remove it on success, so a
-      // cancelled confirmation doesn't animate away a row that still exists.
-      deleteAction = UIContextualAction(
-        style: .destructive,
-        title: "Delete"
-      ) { [weak self] _, _, completion in
-        self?.confirmDeletePlaylist(playlist)
-        completion(false)
+      // Unfile, never delete. A swipe is the easiest gesture on the screen to
+      // make by accident, and it used to destroy a playlist on every synced
+      // device. Library deletion now lives only in the row's own context menu,
+      // where it has to be read and chosen.
+      guard !folderStore.placedPlaylistIds([playlist.id], inFolder: parentFolderId).isEmpty
+      else {
+        // Nothing to unfile: the playlist is already at the top level.
+        return nil
       }
+      let removeAction = UIContextualAction(
+        style: .destructive,
+        title: "Remove"
+      ) { [weak self] _, _, completion in
+        guard let self else { return completion(false) }
+        folderStore.removePlaylists([playlist.id], fromFolder: parentFolderId)
+        completion(true)
+      }
+      removeAction.image = UIImage(systemName: "folder.badge.minus")
+      return UISwipeActionsConfiguration(actions: [removeAction])
     }
-    deleteAction.image = UIImage(systemName: "trash")
-    return UISwipeActionsConfiguration(actions: [deleteAction])
   }
 
-  /// Delete whatever sits at `rowIndex`, routing folders and playlists to their
-  /// own confirmation flows.
+  /// The organize-context delete for a single row: folders are deleted,
+  /// playlists are unfiled from the folder being browsed. Never a library
+  /// deletion — see `deleteSelection()`.
   func deleteRow(at rowIndex: Int) {
     switch row(at: rowIndex) {
-    case let .folder(folder): handleFolderDelete(folder)
-    case let .playlist(playlist): confirmDeletePlaylist(playlist)
-    case .none: break
+    case let .folder(folder):
+      handleFolderDelete(folder)
+    case let .playlist(playlist):
+      confirmRemoveFromFolder(playlist)
+    case .none:
+      break
     }
+  }
+
+  /// Confirm unfiling one playlist from the folder being browsed.
+  private func confirmRemoveFromFolder(_ playlist: Playlist) {
+    guard !folderStore.placedPlaylistIds([playlist.id], inFolder: parentFolderId).isEmpty
+    else { return }
+    let alert = UIAlertController(
+      title: "Remove from Folder",
+      message: "Remove \u{201C}\(playlist.name)\u{201D} from \(organizeScopeDescription)? "
+        + "The playlist stays in your library.",
+      preferredStyle: .alert
+    )
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(UIAlertAction(title: "Remove", style: .destructive) { [weak self] _ in
+      guard let self else { return }
+      folderStore.removePlaylists([playlist.id], fromFolder: parentFolderId)
+    })
+    present(alert, animated: true)
   }
 
   /// Entry point shared by swipe, edit-mode commit, the context menu and the

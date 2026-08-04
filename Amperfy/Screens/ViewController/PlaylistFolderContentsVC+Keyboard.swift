@@ -105,7 +105,7 @@ extension PlaylistFolderContentsVC {
       // The delete key is not a menu command, so it is wired here rather than
       // relying on the Edit menu's Delete item alone.
       UIKeyCommand(
-        title: "Delete",
+        title: "Delete Folder / Remove from Folder",
         action: #selector(delete(_:)),
         input: "\u{8}"
       ),
@@ -131,6 +131,9 @@ extension PlaylistFolderContentsVC {
 
   /// Delete (⌫ / Edit ▸ Delete). Acts on the selection when there is one, and
   /// otherwise on the focused row.
+  ///
+  /// Kind-aware, and never a library deletion: folders are deleted, playlists
+  /// are unfiled from the folder being browsed.
   override func delete(_ sender: Any?) {
     if !selectionModel.isEmpty {
       deleteSelection()
