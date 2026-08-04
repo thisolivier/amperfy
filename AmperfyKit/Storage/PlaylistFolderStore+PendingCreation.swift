@@ -217,7 +217,25 @@ extension PlaylistFolderStore {
     // Carries placements and child folders made against the temporary id across.
     repointFolderReferences(from: temporaryFolderId, to: response.id, in: context)
     try? context.save()
+
+    // Recorded before anything is announced, so an observer reacting to the
+    // notifications below already resolves the old id to the new one.
+    recordFolderIdAdoption(temporaryFolderId: temporaryFolderId, serverFolderId: response.id)
     exportCurrentTree()
+
+    let adoption = PlaylistFolderAdoption(
+      temporaryFolderId: temporaryFolderId,
+      serverFolderId: response.id
+    )
+    NotificationCenter.default.post(
+      name: PlaylistFolderStore.didAdoptFolderIdNotification,
+      object: self,
+      userInfo: adoption.asNotificationUserInfo
+    )
+    // And the general change too. Adoption rewrites a folder's identity, which
+    // is as much a change as a rename; leaving it unannounced was what let a
+    // screen sit on a dead id until some unrelated reload knocked it over.
+    notifyChange()
 
     return fetchPlacements(folderId: response.id, in: context)
       .compactMap { placementMO in

@@ -80,7 +80,13 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
   // MARK: - Properties
 
   let account: Account
-  let parentFolderId: String?
+  /// The folder being browsed, or `nil` for the root.
+  ///
+  /// Not a `let`: a folder created moments ago is browsed under a temporary id,
+  /// and when its create lands the id changes underneath this screen. The
+  /// binding below follows it. See `startObservingFolderChanges()`.
+  var parentFolderId: String? { folderScopeBinding.scopedFolderId }
+  private var folderScopeBinding: PlaylistFolderScopeBinding
   let folderStore = PlaylistFolderStore.shared
 
   var displayedFolders: [PlaylistFolder] = []
@@ -88,6 +94,7 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
   /// The rendered list: subfolders and playlists interleaved in sibling order.
   var displayedRows: [PlaylistFolderBrowseRow] = []
   private var folderObserver: (any NSObjectProtocol)?
+  private var folderAdoptionObserver: (any NSObjectProtocol)?
 
   var displayedRowIdentities: [PlaylistFolderBrowseRowIdentity] {
     displayedRows.map(\.identity)
@@ -129,7 +136,7 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
 
   init(account: Account, parentFolderId: String?) {
     self.account = account
-    self.parentFolderId = parentFolderId
+    self.folderScopeBinding = PlaylistFolderScopeBinding(scopedFolderId: parentFolderId)
     super.init(style: .grouped)
   }
 
@@ -148,13 +155,36 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
     ) { [weak self] _ in
       self?.reloadContent()
     }
+
+    // Adoption is announced separately from the general change because it needs
+    // handling *before* the reload: this screen may be scoped to the id that
+    // just died, and reloading first would find no such folder and pop the user
+    // out of a folder they are working in.
+    folderAdoptionObserver = NotificationCenter.default.addObserver(
+      forName: PlaylistFolderStore.didAdoptFolderIdNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] notification in
+      guard let self,
+            let adoption = PlaylistFolderAdoption.fromNotification(notification)
+      else { return }
+      // Only the screen scoped to the adopting folder rebinds; the rest are
+      // already reloading from the change notification.
+      guard folderScopeBinding.apply(adoption) else { return }
+      reloadContent()
+    }
   }
 
   override func viewDidDisappear(_ animated: Bool) {
     super.viewDidDisappear(animated)
-    if isMovingFromParent, let folderObserver {
+    guard isMovingFromParent else { return }
+    if let folderObserver {
       NotificationCenter.default.removeObserver(folderObserver)
       self.folderObserver = nil
+    }
+    if let folderAdoptionObserver {
+      NotificationCenter.default.removeObserver(folderAdoptionObserver)
+      self.folderAdoptionObserver = nil
     }
   }
 
