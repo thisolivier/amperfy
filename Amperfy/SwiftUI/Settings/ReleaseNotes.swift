@@ -37,6 +37,25 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 81,
+      date: "2026-08-04",
+      title: "Build 81 — Bulk playlist organization",
+      whatsNew: [
+        "Folders and playlists now appear together in a single list, in the order you arranged them, instead of being split into separate sections.",
+        "You can select several items at once and act on them together. On Mac, ⌘-click to pick out individual rows and ⇧-click to select a range.",
+        "Drag items onto a folder to file them away, or drop them between rows to reorder. Holding a drag over a folder opens it so you can file things deeper in.",
+        "Bulk actions are available from the toolbar or by right-clicking: Move to Folder, Add to Folder, Remove from This Folder, and New Folder from Selection.",
+        "Keyboard shortcuts work throughout: arrow keys to move around, ⌘A to select all, ⌘N for a new folder, ⌘M to move, return to rename, and ⌫ to delete. Mac also gets a new Organize menu.",
+        "Your folder organization now syncs with the server and keeps the manual order you set, and every change is backed up to a JSON file you can see in the Files app.",
+        "Fixed: folder changes could silently fail depending on how the server formatted folder IDs, and folders you created while offline could go missing. Both now work correctly.",
+      ],
+      testingFocus: [
+        "Select several playlists and folders at once, then use Move to Folder from the toolbar. Confirm they all land where you expect and are still there after you reopen the app.",
+        "Drag a playlist onto a folder, then drag rows around to reorder them. Reopen the app and confirm your order was kept.",
+        "Create a folder while offline, then reconnect and confirm it survives and shows up on your other devices.",
+      ]
+    ),
+    ReleaseNote(
       id: 80,
       date: "2026-07-17",
       title: "Build 80 — Rename playlists",
