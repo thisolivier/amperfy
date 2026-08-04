@@ -32,6 +32,20 @@ import os.log
 public typealias PlaylistFolderOrganizationFetcher =
   @Sendable () async throws -> NavidromeFolderOrganizationResponse
 
+// MARK: - PlaylistFolderCreateRequester
+
+/// Issues `POST /api/playlist/folder`.
+///
+/// Injectable for the same reason the probe and the delete are, and with more at
+/// stake: a folder is created optimistically and then *adopts the id the server
+/// assigns it*, carrying across anything filed into it in the meantime. That
+/// adoption is the flow a folder-tree rebuild leans on hardest — dozens of
+/// creates in one sitting, each racing whatever the user does next — and it
+/// cannot be exercised at all without a seam here.
+public typealias PlaylistFolderCreateRequester =
+  @Sendable (_ name: String, _ parentId: String?, _ sortOrder: Int?) async throws
+    -> NavidromeOrganizationFolder
+
 // MARK: - PlaylistFolderDeleteRequester
 
 /// Issues `DELETE /api/playlist/folder/{id}`.
@@ -131,6 +145,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   var navidromeApi: NavidromeServerApi?
   var accountMO: AccountMO?
   var folderOrganizationFetcher: PlaylistFolderOrganizationFetcher?
+  var folderCreateRequester: PlaylistFolderCreateRequester?
   var folderDeleteRequester: PlaylistFolderDeleteRequester?
   var treeExporter: PlaylistFolderTreeExporter
 
@@ -166,12 +181,17 @@ public final class PlaylistFolderStore: @unchecked Sendable {
         try await api.fetchFolderOrganization()
       }
       folderOrganizationFetcher = fetcher
+      let createRequester: PlaylistFolderCreateRequester = { name, parentId, sortOrder in
+        try await api.createFolder(name: name, parentId: parentId, sortOrder: sortOrder)
+      }
+      folderCreateRequester = createRequester
       let deleteRequester: PlaylistFolderDeleteRequester = { folderId in
         try await api.deleteFolder(id: folderId)
       }
       folderDeleteRequester = deleteRequester
     } else {
       folderOrganizationFetcher = nil
+      folderCreateRequester = nil
       folderDeleteRequester = nil
     }
     hasLoggedServerLacksFolderApi = false
@@ -184,6 +204,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     context: NSManagedObjectContext,
     account: AccountMO?,
     organizationFetcher: PlaylistFolderOrganizationFetcher? = nil,
+    folderCreateRequester: PlaylistFolderCreateRequester? = nil,
     folderDeleteRequester: PlaylistFolderDeleteRequester? = nil,
     treeExporter: PlaylistFolderTreeExporter? = nil
   ) {
@@ -191,6 +212,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     navidromeApi = nil
     accountMO = account
     folderOrganizationFetcher = organizationFetcher
+    self.folderCreateRequester = folderCreateRequester
     self.folderDeleteRequester = folderDeleteRequester
     hasLoggedServerLacksFolderApi = false
     if let treeExporter {
@@ -301,13 +323,13 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     try? context.save()
 
     // Fire-and-forget server creation
-    if let api = navidromeApi {
+    if let folderCreateRequester {
       nonisolated(unsafe) let unsafeFolderMO = folderMO
       nonisolated(unsafe) let unsafeContext = context
       Task {
         do {
-          let serverResponse = try await api.createFolder(
-            name: name, parentId: parentServerId, sortOrder: appendSortOrder
+          let serverResponse = try await folderCreateRequester(
+            name, parentServerId, appendSortOrder
           )
           // Adopt the server-assigned id, carrying any placements or child
           // folders made against the optimistic local id across to it.
