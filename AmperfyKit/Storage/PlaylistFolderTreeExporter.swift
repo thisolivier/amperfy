@@ -104,7 +104,10 @@ public struct PlaylistFolderTreeExport: Codable, Sendable, Equatable {
 /// Two generations are kept: the current file and one `.previous` copy, so a
 /// mutation made against already-damaged state does not destroy the last good
 /// snapshot in the same breath.
-public final class PlaylistFolderTreeExporter: @unchecked Sendable {
+/// Not `final`: the batching guarantee — one export per user action, however
+/// many items that action touches — is only observable by counting writes, so
+/// tests substitute a counting subclass.
+public class PlaylistFolderTreeExporter: @unchecked Sendable {
   public static let exportDirectoryName = "PlaylistFolders"
   public static let currentFileName = "playlist-folders.json"
   public static let previousFileName = "playlist-folders.previous.json"
