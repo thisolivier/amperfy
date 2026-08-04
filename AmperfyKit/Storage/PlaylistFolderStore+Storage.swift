@@ -69,7 +69,11 @@ extension PlaylistFolderStore {
       .map(\.id)
 
     return PlaylistFolder(
-      id: UUID(uuidString: folderMO.id) ?? UUID(),
+      // The server id verbatim. This used to be `UUID(uuidString:) ?? UUID()`,
+      // which minted a *fresh random id* for every folder the real server had
+      // ever created — Navidrome's ids are nanoids, so the parse always failed —
+      // and every id the UI then handed back matched nothing.
+      id: folderMO.id,
       name: folderMO.name,
       playlistIds: orderedPlaylistIds,
       subfolders: sortFoldersAsSiblings(subfolders),
@@ -88,7 +92,7 @@ extension PlaylistFolderStore {
           folder: folder,
           sibling: PlaylistFolderSibling(
             kind: .folder,
-            id: folder.id.uuidString,
+            id: folder.id,
             name: folder.name,
             sortOrder: folder.sortOrder
           )
@@ -142,7 +146,7 @@ extension PlaylistFolderStore {
   ) {
     switch assignment.kind {
     case .folder:
-      fetchFolderMOAllowingCaseDifference(assignment.id, in: context)?
+      fetchFolderMO(byServerId: assignment.id, in: context)?
         .sortOrderValue = assignment.sortOrder
     case .playlist:
       fetchPlacement(
@@ -153,40 +157,15 @@ extension PlaylistFolderStore {
 
   // MARK: - Folder fetches
 
-  /// Resolve the folder behind a UI-level `UUID`.
+  /// Resolve a folder by its id.
   ///
-  /// The UI carries folder identity as a `UUID` (see `PlaylistFolder.id`), which
-  /// is parsed back out of the stored server id string. That round trip is not
-  /// case-preserving: `UUID.uuidString` is always upper case, while a server is
-  /// free to hand back a lower-case UUID — and Core Data's `==` on strings is
-  /// case sensitive, so the exact-match lookup would silently miss and every
-  /// move, rename and delete against that folder would become a no-op.
-  ///
-  /// Exact match is still tried first so nothing changes for upper-case ids; the
-  /// case-insensitive retry is safe because the value is known to be a parsed
-  /// UUID, where case carries no meaning.
-  func findFolderMO(by uuid: UUID, in context: NSManagedObjectContext) -> PlaylistFolderMO? {
-    fetchFolderMOAllowingCaseDifference(uuid.uuidString, in: context)
-  }
-
-  /// Exact lookup first, then a case-insensitive retry. See ``findFolderMO(by:in:)``
-  /// for why the retry is needed and why it is safe.
-  func fetchFolderMOAllowingCaseDifference(
-    _ folderId: String,
-    in context: NSManagedObjectContext
-  )
-    -> PlaylistFolderMO? {
-    if let exactMatch = fetchFolderMO(byServerId: folderId, in: context) {
-      return exactMatch
-    }
-    let fetchRequest = PlaylistFolderMO.fetchRequest()
-    fetchRequest.predicate = NSPredicate(format: "id ==[c] %@", folderId)
-    fetchRequest.fetchLimit = 1
-    return (try? context.fetch(fetchRequest))?.first
-  }
-
+  /// Exact, case-sensitive string match, and it must stay that way: folder ids
+  /// are Navidrome nanoids over `[0-9A-Za-z]`, so two ids differing only in case
+  /// are two different folders and a case-insensitive lookup could return the
+  /// wrong one. An empty id is the root, which is not a folder row.
   func fetchFolderMO(byServerId serverId: String, in context: NSManagedObjectContext)
     -> PlaylistFolderMO? {
+    guard !serverId.isEmpty else { return nil }
     let fetchRequest = PlaylistFolderMO.fetchRequest()
     fetchRequest.predicate = NSPredicate(format: "id == %@", serverId)
     fetchRequest.fetchLimit = 1

@@ -200,30 +200,30 @@ public class NoOpFolderProvider: FolderProvider {
   public var folders: [PlaylistFolder] { [] }
   public var allFiledPlaylistIds: Set<String> { [] }
 
-  public func createFolder(name: String, parent: UUID?) -> PlaylistFolder {
+  public func createFolder(name: String, parent: String?) -> PlaylistFolder {
     fatalError("Read-only mode does not support folder creation")
   }
 
-  public func renameFolder(id: UUID, to name: String) {}
-  public func deleteFolder(id: UUID) {}
-  public func moveFolder(id: UUID, toParent newParentFolderId: UUID?) {}
-  public func addPlaylists(_ playlistIds: [String], to folderId: UUID) {}
-  public func removePlaylists(_ playlistIds: [String], from folderId: UUID) {}
+  public func renameFolder(id: String, to name: String) {}
+  public func deleteFolder(id: String) {}
+  public func moveFolder(id: String, toParent newParentFolderId: String?) {}
+  public func addPlaylists(_ playlistIds: [String], to folderId: String) {}
+  public func removePlaylists(_ playlistIds: [String], from folderId: String) {}
   public func movePlaylist(
     _ playlistId: String,
-    from sourceFolderId: UUID,
-    to destFolderId: UUID
+    from sourceFolderId: String,
+    to destFolderId: String
   ) {}
   public func unfilePlaylist(_ playlistId: String) {}
   public func moveSibling(
     kind: PlaylistFolderSiblingKind,
     id siblingId: String,
-    inFolder parentFolderId: UUID?,
+    inFolder parentFolderId: String?,
     toIndex targetIndex: Int
   ) {}
-  public func folder(byId id: UUID) -> PlaylistFolder? { nil }
-  public func orderedSiblings(inFolder parentFolderId: UUID?) -> [PlaylistFolderSibling] { [] }
-  public func playlistSortOrders(inFolder parentFolderId: UUID?) -> [String: Int] { [:] }
+  public func folder(byId id: String) -> PlaylistFolder? { nil }
+  public func orderedSiblings(inFolder parentFolderId: String?) -> [PlaylistFolderSibling] { [] }
+  public func playlistSortOrders(inFolder parentFolderId: String?) -> [String: Int] { [:] }
   public func syncFromServer() async throws {}
   public func syncMemberships(playlistId: String, folderIds: [String]) {}
 }

@@ -46,9 +46,11 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
     library = coreDataHelper.createSeededStorage()
     account = library.getAccount(info: TestAccountInfo.create1())
     exportDirectoryURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("PlaylistFolderPlacementSyncTest-\(UUID().uuidString)")
+      .appendingPathComponent(
+        "PlaylistFolderPlacementSyncTest-\(PlaylistFolderNanoidFixture.make())"
+      )
     store = PlaylistFolderStore(
-      defaults: UserDefaults(suiteName: "\(UUID().uuidString)")!,
+      defaults: UserDefaults(suiteName: "\(PlaylistFolderNanoidFixture.make())")!,
       treeExporter: PlaylistFolderTreeExporter(exportDirectoryURL: exportDirectoryURL)
     )
   }
@@ -571,8 +573,8 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
   /// would duplicate its work, and the non-atomic window between them was the
   /// reason the behaviour moved server-side at all.
   func testFolderDeleteIssuesOnlyADeleteThenARefetch() async throws {
-    let parentServerId = UUID().uuidString
-    let rockServerId = UUID().uuidString
+    let parentServerId = PlaylistFolderNanoidFixture.make()
+    let rockServerId = PlaylistFolderNanoidFixture.make()
     seedLocalFolder(serverId: parentServerId, name: "Parent")
     seedLocalFolder(serverId: rockServerId, name: "Rock", parentId: parentServerId)
     seedLocalPlaylist(id: "pl-1", name: "Riffs")
@@ -600,7 +602,7 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
         serverCallLog.record("deleteFolder:\(folderId)")
       }
     )
-    let rockFolderId = try XCTUnwrap(UUID(uuidString: rockServerId))
+    let rockFolderId = rockServerId
     store.addPlaylists(["pl-1"], to: rockFolderId)
 
     let convergenceExpectation = expectationForDeleteConvergence()
@@ -623,8 +625,8 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
   /// for the outcome rather than computing one.
   func testFolderDeleteConvergesOnServerPromotionEvenWhenPlacementCountDrops()
     async throws {
-    let parentServerId = UUID().uuidString
-    let rockServerId = UUID().uuidString
+    let parentServerId = PlaylistFolderNanoidFixture.make()
+    let rockServerId = PlaylistFolderNanoidFixture.make()
     seedLocalFolder(serverId: parentServerId, name: "Parent")
     seedLocalFolder(serverId: rockServerId, name: "Rock", parentId: parentServerId)
     seedLocalPlaylist(id: "pl-1", name: "Riffs")
@@ -648,8 +650,8 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
       },
       folderDeleteRequester: { _ in }
     )
-    let parentFolderId = try XCTUnwrap(UUID(uuidString: parentServerId))
-    let rockFolderId = try XCTUnwrap(UUID(uuidString: rockServerId))
+    let parentFolderId = parentServerId
+    let rockFolderId = rockServerId
     store.addPlaylists(["pl-1"], to: parentFolderId)
     store.addPlaylists(["pl-1"], to: rockFolderId)
     XCTAssertEqual(storedPlacementEdges().count, 2)
@@ -669,14 +671,18 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
   /// The two deterministic parts of a delete are still applied immediately, so
   /// the UI does not wait on a round trip to stop showing a deleted folder.
   func testFolderDeleteAppliesTheDeterministicPartsLocallyStraightAway() async throws {
-    let parentServerId = UUID().uuidString
-    let rockServerId = UUID().uuidString
+    let parentServerId = PlaylistFolderNanoidFixture.make()
+    let rockServerId = PlaylistFolderNanoidFixture.make()
     seedLocalFolder(serverId: parentServerId, name: "Parent")
     seedLocalFolder(serverId: rockServerId, name: "Rock", parentId: parentServerId)
-    seedLocalFolder(serverId: UUID().uuidString, name: "Metal", parentId: rockServerId)
+    seedLocalFolder(
+      serverId: PlaylistFolderNanoidFixture.make(),
+      name: "Metal",
+      parentId: rockServerId
+    )
     store.configureForTesting(context: testContext, account: account.managedObject)
 
-    store.deleteFolder(id: try XCTUnwrap(UUID(uuidString: rockServerId)))
+    store.deleteFolder(id: rockServerId)
 
     XCTAssertEqual(storedFolderNames, ["Metal", "Parent"])
     let parentFolder = try XCTUnwrap(store.folders.first { $0.name == "Parent" })
@@ -785,7 +791,7 @@ extension PlaylistFolderStore {
     context: NSManagedObjectContext,
     account: Account,
     name: String,
-    parent: UUID? = nil
+    parent: String? = nil
   )
     -> PlaylistFolder {
     configureForTesting(context: context, account: account.managedObject)

@@ -43,7 +43,7 @@ class PlaylistSelectorVC: PlaylistFolderBrowsingTableViewController {
 
   // MARK: - Init
 
-  init(account: Account, itemsToAdd: [Song], parentFolderId: UUID? = nil) {
+  init(account: Account, itemsToAdd: [Song], parentFolderId: String? = nil) {
     self.itemsToAdd = itemsToAdd
     super.init(account: account, parentFolderId: parentFolderId)
   }
@@ -131,7 +131,7 @@ class PlaylistSelectorVC: PlaylistFolderBrowsingTableViewController {
 
   // MARK: - Browsing hooks
 
-  override func makeChildBrowser(parentFolderId: UUID) -> UITableViewController {
+  override func makeChildBrowser(parentFolderId: String) -> UITableViewController {
     PlaylistSelectorVC(account: account, itemsToAdd: itemsToAdd, parentFolderId: parentFolderId)
   }
 

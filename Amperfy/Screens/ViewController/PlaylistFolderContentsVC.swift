@@ -45,7 +45,7 @@ import UIKit
 class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
   // MARK: - Init
 
-  override init(account: Account, parentFolderId: UUID? = nil) {
+  override init(account: Account, parentFolderId: String? = nil) {
     super.init(account: account, parentFolderId: parentFolderId)
   }
 
@@ -163,7 +163,7 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
 
   // MARK: - Browsing hooks
 
-  override func makeChildBrowser(parentFolderId: UUID) -> UITableViewController {
+  override func makeChildBrowser(parentFolderId: String) -> UITableViewController {
     PlaylistFolderContentsVC(account: account, parentFolderId: parentFolderId)
   }
 
@@ -452,8 +452,8 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
   func presentFolderPicker(
     title: String,
     includesRootDestination: Bool,
-    excludingFolderIds excludedFolderIds: Set<UUID> = [],
-    onDestinationChosen: @escaping (UUID?) -> ()
+    excludingFolderIds excludedFolderIds: Set<String> = [],
+    onDestinationChosen: @escaping (String?) -> ()
   ) {
     let pickerVC = PlaylistFolderPickerVC(
       promptTitle: title,

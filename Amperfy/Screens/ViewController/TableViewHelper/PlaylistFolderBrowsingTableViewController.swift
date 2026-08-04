@@ -52,10 +52,9 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
 
     var identity: PlaylistFolderBrowseRowIdentity {
       switch self {
-      // Folder identity is the `UUID`'s string form throughout the UI layer, so
-      // it round-trips back to a `UUID` for the store without ever needing the
-      // stored server id, whose case may differ.
-      case let .folder(folder): return .folder(folder.id.uuidString)
+      // The server's folder id verbatim — opaque and case sensitive, never
+      // parsed into anything.
+      case let .folder(folder): return .folder(folder.id)
       case let .playlist(playlist): return .playlist(playlist.id)
       }
     }
@@ -81,7 +80,7 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
   // MARK: - Properties
 
   let account: Account
-  let parentFolderId: UUID?
+  let parentFolderId: String?
   let folderStore = PlaylistFolderStore.shared
 
   var displayedFolders: [PlaylistFolder] = []
@@ -128,7 +127,7 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
 
   // MARK: - Init
 
-  init(account: Account, parentFolderId: UUID?) {
+  init(account: Account, parentFolderId: String?) {
     self.account = account
     self.parentFolderId = parentFolderId
     super.init(style: .grouped)
@@ -195,7 +194,7 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
     let folderSiblings = displayedFolders.map {
       PlaylistFolderSibling(
         kind: .folder,
-        id: $0.id.uuidString,
+        id: $0.id,
         name: $0.name,
         sortOrder: $0.sortOrder
       )
@@ -211,7 +210,7 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
     }
 
     let foldersById = Dictionary(
-      displayedFolders.map { ($0.id.uuidString, $0) },
+      displayedFolders.map { ($0.id, $0) },
       uniquingKeysWith: { first, _ in first }
     )
     let playlistsById = Dictionary(
@@ -392,7 +391,7 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
   // MARK: - Overridable hooks
 
   /// Returns the correct subclass instance to push when a folder row is tapped.
-  func makeChildBrowser(parentFolderId: UUID) -> UITableViewController {
+  func makeChildBrowser(parentFolderId: String) -> UITableViewController {
     fatalError("Subclasses must override makeChildBrowser(parentFolderId:)")
   }
 

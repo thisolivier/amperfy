@@ -37,7 +37,7 @@ extension PlaylistFolderContentsVC {
     selectionModel.orderedSelectedRowIndices.compactMap { row(at: $0) }
   }
 
-  var selectedFolderIds: [UUID] {
+  var selectedFolderIds: [String] {
     selectedRows.compactMap { $0.asFolder?.id }
   }
 
@@ -47,15 +47,15 @@ extension PlaylistFolderContentsVC {
 
   /// Every folder in the selection plus everything beneath it — the set that
   /// must not be offered as a move destination.
-  var selectedFolderSubtreeIds: Set<UUID> {
-    var result = Set<UUID>()
+  var selectedFolderSubtreeIds: Set<String> {
+    var result = Set<String>()
     for folder in selectedRows.compactMap(\.asFolder) {
       collectFolderSubtreeIds(folder, into: &result)
     }
     return result
   }
 
-  private func collectFolderSubtreeIds(_ folder: PlaylistFolder, into result: inout Set<UUID>) {
+  private func collectFolderSubtreeIds(_ folder: PlaylistFolder, into result: inout Set<String>) {
     result.insert(folder.id)
     for subfolder in folder.subfolders {
       collectFolderSubtreeIds(subfolder, into: &result)

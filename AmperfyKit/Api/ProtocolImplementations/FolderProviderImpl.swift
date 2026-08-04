@@ -28,34 +28,34 @@ public class FolderProviderImpl: FolderProvider {
     folderStore.allFiledPlaylistIds
   }
 
-  public func createFolder(name: String, parent: UUID?) -> PlaylistFolder {
+  public func createFolder(name: String, parent: String?) -> PlaylistFolder {
     folderStore.createFolder(name: name, parent: parent)
   }
 
-  public func renameFolder(id: UUID, to name: String) {
+  public func renameFolder(id: String, to name: String) {
     folderStore.renameFolder(id: id, to: name)
   }
 
-  public func deleteFolder(id: UUID) {
+  public func deleteFolder(id: String) {
     folderStore.deleteFolder(id: id)
   }
 
-  public func moveFolder(id: UUID, toParent newParentFolderId: UUID?) {
+  public func moveFolder(id: String, toParent newParentFolderId: String?) {
     folderStore.moveFolder(id: id, toParent: newParentFolderId)
   }
 
-  public func addPlaylists(_ playlistIds: [String], to folderId: UUID) {
+  public func addPlaylists(_ playlistIds: [String], to folderId: String) {
     folderStore.addPlaylists(playlistIds, to: folderId)
   }
 
-  public func removePlaylists(_ playlistIds: [String], from folderId: UUID) {
+  public func removePlaylists(_ playlistIds: [String], from folderId: String) {
     folderStore.removePlaylists(playlistIds, from: folderId)
   }
 
   public func movePlaylist(
     _ playlistId: String,
-    from sourceFolderId: UUID,
-    to destFolderId: UUID
+    from sourceFolderId: String,
+    to destFolderId: String
   ) {
     folderStore.movePlaylist(playlistId, from: sourceFolderId, to: destFolderId)
   }
@@ -67,7 +67,7 @@ public class FolderProviderImpl: FolderProvider {
   public func moveSibling(
     kind: PlaylistFolderSiblingKind,
     id siblingId: String,
-    inFolder parentFolderId: UUID?,
+    inFolder parentFolderId: String?,
     toIndex targetIndex: Int
   ) {
     folderStore.moveSibling(
@@ -75,15 +75,15 @@ public class FolderProviderImpl: FolderProvider {
     )
   }
 
-  public func folder(byId id: UUID) -> PlaylistFolder? {
+  public func folder(byId id: String) -> PlaylistFolder? {
     folderStore.folder(byId: id)
   }
 
-  public func orderedSiblings(inFolder parentFolderId: UUID?) -> [PlaylistFolderSibling] {
+  public func orderedSiblings(inFolder parentFolderId: String?) -> [PlaylistFolderSibling] {
     folderStore.orderedSiblings(inFolder: parentFolderId)
   }
 
-  public func playlistSortOrders(inFolder parentFolderId: UUID?) -> [String: Int] {
+  public func playlistSortOrders(inFolder parentFolderId: String?) -> [String: Int] {
     folderStore.playlistSortOrders(inFolder: parentFolderId)
   }
 

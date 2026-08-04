@@ -46,7 +46,14 @@ public typealias PlaylistFolderDeleteRequester =
 // MARK: - PlaylistFolder
 
 public struct PlaylistFolder: Codable, Identifiable, Equatable {
-  public let id: UUID
+  /// The server's folder id, verbatim.
+  ///
+  /// Opaque and **case sensitive**: Navidrome mints these with `id.NewRandom()`,
+  /// a 22-character nanoid over `[0-9A-Za-z]`. They are not UUIDs, they are not
+  /// parseable as UUIDs, and two ids differing only in case are two different
+  /// folders. Nothing may normalize, re-case, or round-trip this string through
+  /// another type.
+  public let id: String
   public var name: String
   /// Playlist ids placed directly in this folder, already in sibling order.
   public var playlistIds: [String]
@@ -57,7 +64,7 @@ public struct PlaylistFolder: Codable, Identifiable, Equatable {
   public var sortOrder: Int?
 
   public init(
-    id: UUID = UUID(),
+    id: String = PlaylistFolder.makeTemporaryId(),
     name: String,
     playlistIds: [String] = [],
     subfolders: [PlaylistFolder] = [],
@@ -78,6 +85,18 @@ public struct PlaylistFolder: Codable, Identifiable, Equatable {
     }
     return result
   }
+
+  /// A local id for a folder that does not have a server id yet.
+  ///
+  /// A folder is created optimistically so the UI can respond at once, which
+  /// means something has to identify it during the round trip. This id is
+  /// replaced by the server's own the moment the POST returns — see
+  /// `repointFolderReferences(from:to:in:)`, which carries any placements or
+  /// child folders made against it across to the real id.
+  ///
+  /// A UUID string cannot collide with a 22-character nanoid, so a temporary id
+  /// is never mistaken for a server one.
+  public static func makeTemporaryId() -> String { UUID().uuidString }
 }
 
 // MARK: - PlaylistFolderStore
@@ -252,17 +271,18 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   // MARK: - CRUD: Folders
 
   @discardableResult
-  public func createFolder(name: String, parent: UUID?) -> PlaylistFolder {
+  public func createFolder(name: String, parent: String?) -> PlaylistFolder {
     guard let context = managedObjectContext else {
       return legacyCreateFolder(name: name, parent: parent)
     }
 
     let newFolder = PlaylistFolder(name: name)
 
-    // Resolve parent server ID from UUID if provided
+    // Resolve the parent, if one was named. An unknown parent leaves the new
+    // folder at the root rather than failing — the same shape as before.
     var parentServerId: String?
-    if let parentUUID = parent,
-       let parentMO = findFolderMO(by: parentUUID, in: context) {
+    if let parent,
+       let parentMO = fetchFolderMO(byServerId: parent, in: context) {
       parentServerId = parentMO.id
     }
 
@@ -273,7 +293,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
 
     // Create in CoreData immediately (optimistic)
     let folderMO = PlaylistFolderMO(context: context)
-    folderMO.id = newFolder.id.uuidString
+    folderMO.id = newFolder.id
     folderMO.name = name
     folderMO.parentId = parentServerId
     folderMO.sortOrderValue = appendSortOrder
@@ -318,13 +338,13 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     return newFolder
   }
 
-  public func renameFolder(id: UUID, to name: String) {
+  public func renameFolder(id: String, to name: String) {
     guard let context = managedObjectContext else {
       legacyRenameFolder(id: id, to: name)
       return
     }
 
-    guard let folderMO = findFolderMO(by: id, in: context) else { return }
+    guard let folderMO = fetchFolderMO(byServerId: id, in: context) else { return }
     let serverId = folderMO.id
     folderMO.name = name
     try? context.save()
@@ -345,13 +365,14 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   /// The server answers 400 if the move would create a cycle; the same check
   /// runs locally first so an illegal move is refused outright rather than
   /// applied optimistically and then bounced.
-  public func moveFolder(id: UUID, toParent newParentFolderId: UUID?) {
+  public func moveFolder(id: String, toParent newParentFolderId: String?) {
     guard let context = managedObjectContext else { return }
-    guard let folderMO = findFolderMO(by: id, in: context) else { return }
+    guard let folderMO = fetchFolderMO(byServerId: id, in: context) else { return }
 
     var newParentServerId: String?
     if let newParentFolderId {
-      guard let newParentMO = findFolderMO(by: newParentFolderId, in: context) else { return }
+      guard let newParentMO = fetchFolderMO(byServerId: newParentFolderId, in: context)
+      else { return }
       newParentServerId = newParentMO.id
     }
 
@@ -412,13 +433,13 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   /// the root for the moment before the refetch files them into the parent.
   /// Nothing is destroyed by that transient state, and if the delete fails the
   /// refetch puts the folder straight back.
-  public func deleteFolder(id: UUID) {
+  public func deleteFolder(id: String) {
     guard let context = managedObjectContext else {
       legacyDeleteFolder(id: id)
       return
     }
 
-    guard let folderMO = findFolderMO(by: id, in: context) else { return }
+    guard let folderMO = fetchFolderMO(byServerId: id, in: context) else { return }
     let serverId = folderMO.id
     let parentId = folderMO.parentId
 
@@ -450,7 +471,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
 
   // MARK: - Placements
 
-  public func addPlaylists(_ playlistIds: [String], to folderId: UUID) {
+  public func addPlaylists(_ playlistIds: [String], to folderId: String) {
     // A not-yet-synced playlist has an empty server id until its create request
     // round-trips. Filing by "" would both pollute the filed set and file
     // nothing on the server (so the membership is lost on the next folder
@@ -464,7 +485,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
       return
     }
 
-    guard let folderMO = findFolderMO(by: folderId, in: context) else { return }
+    guard let folderMO = fetchFolderMO(byServerId: folderId, in: context) else { return }
     let serverId = folderMO.id
 
     var appendedSortOrders = [(playlistId: String, sortOrder: Int)]()
@@ -499,13 +520,13 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     exportCurrentTree()
   }
 
-  public func removePlaylists(_ playlistIds: [String], from folderId: UUID) {
+  public func removePlaylists(_ playlistIds: [String], from folderId: String) {
     guard let context = managedObjectContext else {
       legacyRemovePlaylists(playlistIds, from: folderId)
       return
     }
 
-    guard let folderMO = findFolderMO(by: folderId, in: context) else { return }
+    guard let folderMO = fetchFolderMO(byServerId: folderId, in: context) else { return }
     let serverId = folderMO.id
 
     for playlistId in playlistIds {
@@ -535,7 +556,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   /// complete resulting placement set in one call and no intermediate state is
   /// ever visible to another client.
   public func movePlaylist(
-    _ playlistId: String, from sourceFolderId: UUID, to destFolderId: UUID
+    _ playlistId: String, from sourceFolderId: String, to destFolderId: String
   ) {
     guard let context = managedObjectContext else {
       legacyRemovePlaylists([playlistId], from: sourceFolderId)
@@ -543,8 +564,8 @@ public final class PlaylistFolderStore: @unchecked Sendable {
       return
     }
 
-    guard let sourceFolderMO = findFolderMO(by: sourceFolderId, in: context),
-          let destinationFolderMO = findFolderMO(by: destFolderId, in: context),
+    guard let sourceFolderMO = fetchFolderMO(byServerId: sourceFolderId, in: context),
+          let destinationFolderMO = fetchFolderMO(byServerId: destFolderId, in: context),
           let playlistMO = fetchPlaylistMO(by: playlistId, in: context) else { return }
 
     if let sourcePlacementMO = fetchPlacement(
@@ -589,29 +610,28 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   public func moveSibling(
     kind: PlaylistFolderSiblingKind,
     id siblingId: String,
-    inFolder parentFolderId: UUID?,
+    inFolder parentFolderId: String?,
     toIndex targetIndex: Int
   ) {
     guard let context = managedObjectContext else { return }
 
     var parentServerId = PlaylistFolderRootId.canonical
     if let parentFolderId {
-      guard let parentFolderMO = findFolderMO(by: parentFolderId, in: context) else { return }
+      guard let parentFolderMO = fetchFolderMO(byServerId: parentFolderId, in: context)
+      else { return }
       parentServerId = parentFolderMO.id
     }
 
-    // A folder id arriving from the UI has been through `UUID`, so its case may
-    // not match what is stored. Resolve it to the canonical server id before it
-    // is compared against siblings or sent to the server.
-    var canonicalSiblingId = siblingId
+    // Folder ids are opaque and case sensitive, so the id the UI holds is the
+    // stored id exactly — nothing to normalize. Only its existence is worth
+    // checking, so an id for a folder that has since been deleted does not
+    // renumber the siblings around a gap that will never be filled.
     if kind == .folder {
-      guard let folderMO = fetchFolderMOAllowingCaseDifference(siblingId, in: context)
-      else { return }
-      canonicalSiblingId = folderMO.id
+      guard fetchFolderMO(byServerId: siblingId, in: context) != nil else { return }
     }
 
     let allSiblings = siblings(inFolderId: parentServerId, in: context)
-    let otherSiblings = allSiblings.filter { !($0.kind == kind && $0.id == canonicalSiblingId) }
+    let otherSiblings = allSiblings.filter { !($0.kind == kind && $0.id == siblingId) }
     let sortOrderPlan = PlaylistFolderOrdering.insertionPlan(
       into: otherSiblings,
       targetIndex: targetIndex
@@ -621,12 +641,12 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     switch sortOrderPlan {
     case let .assign(sortOrder):
       sortOrderUpdates = [PlaylistFolderSortOrderAssignment(
-        kind: kind, id: canonicalSiblingId, sortOrder: sortOrder
+        kind: kind, id: siblingId, sortOrder: sortOrder
       )]
     case let .renumberSiblings(assignments, insertedSortOrder):
       sortOrderUpdates = assignments
       sortOrderUpdates.append(PlaylistFolderSortOrderAssignment(
-        kind: kind, id: canonicalSiblingId, sortOrder: insertedSortOrder
+        kind: kind, id: siblingId, sortOrder: insertedSortOrder
       ))
     }
 
@@ -663,17 +683,18 @@ public final class PlaylistFolderStore: @unchecked Sendable {
 
   // MARK: - Query
 
-  public func folder(byId id: UUID) -> PlaylistFolder? {
+  public func folder(byId id: String) -> PlaylistFolder? {
     Self.findFolder(id: id, in: folders)
   }
 
   /// The complete ordering space of one parent — subfolders and placed
   /// playlists interleaved, in display order.
-  public func orderedSiblings(inFolder parentFolderId: UUID?) -> [PlaylistFolderSibling] {
+  public func orderedSiblings(inFolder parentFolderId: String?) -> [PlaylistFolderSibling] {
     guard let context = managedObjectContext else { return [] }
     var parentServerId = PlaylistFolderRootId.canonical
     if let parentFolderId {
-      guard let parentFolderMO = findFolderMO(by: parentFolderId, in: context) else { return [] }
+      guard let parentFolderMO = fetchFolderMO(byServerId: parentFolderId, in: context)
+      else { return [] }
       parentServerId = parentFolderMO.id
     }
     return PlaylistFolderOrdering.sorted(siblings(inFolderId: parentServerId, in: context))
@@ -685,11 +706,12 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   /// Exposed so a view can apply its own filtering — offline, search, smart
   /// playlists — and still order whatever survives with the sibling comparator.
   /// Playlists absent from the result have no placement, so they sort last.
-  public func playlistSortOrders(inFolder parentFolderId: UUID?) -> [String: Int] {
+  public func playlistSortOrders(inFolder parentFolderId: String?) -> [String: Int] {
     guard let context = managedObjectContext else { return [:] }
     var parentServerId = PlaylistFolderRootId.canonical
     if let parentFolderId {
-      guard let parentFolderMO = findFolderMO(by: parentFolderId, in: context) else { return [:] }
+      guard let parentFolderMO = fetchFolderMO(byServerId: parentFolderId, in: context)
+      else { return [:] }
       parentServerId = parentFolderMO.id
     }
     var sortOrders = [String: Int]()
@@ -801,7 +823,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
 
   // MARK: - Static Helpers
 
-  static func findFolder(id: UUID, in folders: [PlaylistFolder]) -> PlaylistFolder? {
+  static func findFolder(id: String, in folders: [PlaylistFolder]) -> PlaylistFolder? {
     for folder in folders {
       if folder.id == id { return folder }
       if let found = findFolder(id: id, in: folder.subfolders) { return found }

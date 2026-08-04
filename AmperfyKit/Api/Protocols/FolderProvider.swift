@@ -14,23 +14,23 @@ public protocol FolderProvider {
   )
   var folders: [PlaylistFolder] { get }
   var allFiledPlaylistIds: Set<String> { get }
-  func createFolder(name: String, parent: UUID?) -> PlaylistFolder
-  func renameFolder(id: UUID, to name: String)
-  func deleteFolder(id: UUID)
-  func moveFolder(id: UUID, toParent newParentFolderId: UUID?)
-  func addPlaylists(_ playlistIds: [String], to folderId: UUID)
-  func removePlaylists(_ playlistIds: [String], from folderId: UUID)
-  func movePlaylist(_ playlistId: String, from sourceFolderId: UUID, to destFolderId: UUID)
+  func createFolder(name: String, parent: String?) -> PlaylistFolder
+  func renameFolder(id: String, to name: String)
+  func deleteFolder(id: String)
+  func moveFolder(id: String, toParent newParentFolderId: String?)
+  func addPlaylists(_ playlistIds: [String], to folderId: String)
+  func removePlaylists(_ playlistIds: [String], from folderId: String)
+  func movePlaylist(_ playlistId: String, from sourceFolderId: String, to destFolderId: String)
   func unfilePlaylist(_ playlistId: String)
   func moveSibling(
     kind: PlaylistFolderSiblingKind,
     id siblingId: String,
-    inFolder parentFolderId: UUID?,
+    inFolder parentFolderId: String?,
     toIndex targetIndex: Int
   )
-  func folder(byId id: UUID) -> PlaylistFolder?
-  func orderedSiblings(inFolder parentFolderId: UUID?) -> [PlaylistFolderSibling]
-  func playlistSortOrders(inFolder parentFolderId: UUID?) -> [String: Int]
+  func folder(byId id: String) -> PlaylistFolder?
+  func orderedSiblings(inFolder parentFolderId: String?) -> [PlaylistFolderSibling]
+  func playlistSortOrders(inFolder parentFolderId: String?) -> [String: Int]
   func syncFromServer() async throws
   func syncMemberships(playlistId: String, folderIds: [String])
 }

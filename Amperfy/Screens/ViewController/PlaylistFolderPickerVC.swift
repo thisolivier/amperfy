@@ -43,7 +43,7 @@ class PlaylistFolderPickerVC: UITableViewController {
     let depth: Int
 
     var name: String { folder?.name ?? "Playlists (Top Level)" }
-    var folderId: UUID? { folder?.id }
+    var folderId: String? { folder?.id }
   }
 
   // MARK: - Properties
@@ -53,8 +53,8 @@ class PlaylistFolderPickerVC: UITableViewController {
   private let includesRootDestination: Bool
   /// Folders that must not be offered — the folders being moved, and everything
   /// beneath them, since either would be a cycle.
-  private let excludedFolderIds: Set<UUID>
-  private let onDestinationChosen: (UUID?) -> ()
+  private let excludedFolderIds: Set<String>
+  private let onDestinationChosen: (String?) -> ()
 
   private var allDestinations: [DestinationEntry] = []
   private var displayedDestinations: [DestinationEntry] = []
@@ -73,8 +73,8 @@ class PlaylistFolderPickerVC: UITableViewController {
   init(
     promptTitle: String,
     includesRootDestination: Bool,
-    excludedFolderIds: Set<UUID> = [],
-    onDestinationChosen: @escaping (UUID?) -> ()
+    excludedFolderIds: Set<String> = [],
+    onDestinationChosen: @escaping (String?) -> ()
   ) {
     self.promptTitle = promptTitle
     self.includesRootDestination = includesRootDestination
@@ -177,7 +177,7 @@ class PlaylistFolderPickerVC: UITableViewController {
     present(alert, animated: true)
   }
 
-  private func choose(folderId: UUID?) {
+  private func choose(folderId: String?) {
     let completion = onDestinationChosen
     dismiss(animated: true) { completion(folderId) }
   }

@@ -230,16 +230,14 @@ extension PlaylistFolderContentsVC: UITableViewDragDelegate, UITableViewDropDele
     draggedIdentities: [PlaylistFolderBrowseRowIdentity]
   ) {
     let partitioned = PlaylistFolderDropTargetResolver.partition(draggedIdentities)
-    let draggedFolderIds = partitioned.folderIds.compactMap { UUID(uuidString: $0) }
 
     switch dropTarget {
     case let .intoFolder(folderId):
-      guard let destinationFolderId = UUID(uuidString: folderId) else { return }
       folderStore.moveSiblings(
-        folderIds: draggedFolderIds,
+        folderIds: partitioned.folderIds,
         playlistIds: partitioned.playlistIds,
         from: parentFolderId,
-        to: destinationFolderId
+        to: folderId
       )
 
     case let .reorder(targetIndex):
@@ -249,7 +247,7 @@ extension PlaylistFolderContentsVC: UITableViewDragDelegate, UITableViewDropDele
       // Everything already at this level: a no-op the store will discard,
       // which is the honest outcome of dropping rows back where they came from.
       folderStore.moveSiblings(
-        folderIds: draggedFolderIds,
+        folderIds: partitioned.folderIds,
         playlistIds: partitioned.playlistIds,
         from: parentFolderId,
         to: parentFolderId

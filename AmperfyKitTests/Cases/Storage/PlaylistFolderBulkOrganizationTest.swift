@@ -82,7 +82,7 @@ class PlaylistFolderBulkOrganizationTest: XCTestCase {
     return playlist
   }
 
-  private func playlistIds(inFolder folderId: UUID) -> [String] {
+  private func playlistIds(inFolder folderId: String) -> [String] {
     store.folder(byId: folderId)?.playlistIds ?? []
   }
 

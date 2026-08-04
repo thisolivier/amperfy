@@ -108,7 +108,7 @@ extension PlaylistFolderContentsVC {
   }
 
   private func folderMenuActions(for folder: PlaylistFolder) -> [UIMenuElement] {
-    var subtreeIds = Set<UUID>()
+    var subtreeIds = Set<String>()
     collectSubtreeIds(folder, into: &subtreeIds)
     // `PlaylistFolder` is not Sendable, and the picker's completion escapes;
     // the id is all the move needs, and it is.
@@ -141,7 +141,7 @@ extension PlaylistFolderContentsVC {
     ]
   }
 
-  private func collectSubtreeIds(_ folder: PlaylistFolder, into result: inout Set<UUID>) {
+  private func collectSubtreeIds(_ folder: PlaylistFolder, into result: inout Set<String>) {
     result.insert(folder.id)
     for subfolder in folder.subfolders {
       collectSubtreeIds(subfolder, into: &result)

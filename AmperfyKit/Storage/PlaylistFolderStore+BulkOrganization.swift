@@ -37,12 +37,12 @@ extension PlaylistFolderStore {
   /// the root. Returns `nil` when a folder id does not resolve, which the caller
   /// must treat as "abort", not as "root".
   func resolveServerFolderId(
-    _ folderId: UUID?,
+    _ folderId: String?,
     in context: NSManagedObjectContext
   )
     -> String? {
     guard let folderId else { return PlaylistFolderRootId.canonical }
-    return findFolderMO(by: folderId, in: context)?.id
+    return fetchFolderMO(byServerId: folderId, in: context)?.id
   }
 
   // MARK: - Moving playlists
@@ -62,8 +62,8 @@ extension PlaylistFolderStore {
   /// Unfiling entirely stays ``unfilePlaylist(_:)``.
   public func movePlaylists(
     _ playlistIds: [String],
-    from sourceFolderId: UUID?,
-    to destinationFolderId: UUID?
+    from sourceFolderId: String?,
+    to destinationFolderId: String?
   ) {
     let validPlaylistIds = playlistIds.filter { !$0.isEmpty }
     guard !validPlaylistIds.isEmpty else { return }
@@ -111,7 +111,7 @@ extension PlaylistFolderStore {
   /// Re-parent several folders at once. Cycles are refused per folder by
   /// ``moveFolder(id:toParent:)``, so a selection that mixes a legal move with
   /// an illegal one applies the legal part rather than failing wholesale.
-  public func moveFolders(_ folderIds: [UUID], toParent newParentFolderId: UUID?) {
+  public func moveFolders(_ folderIds: [String], toParent newParentFolderId: String?) {
     guard !folderIds.isEmpty else { return }
     performBatchedUpdates {
       for folderId in folderIds where folderId != newParentFolderId {
@@ -126,10 +126,10 @@ extension PlaylistFolderStore {
   /// what a drag of several rows onto a folder row, or "Move to Folder…" over a
   /// mixed selection, does.
   public func moveSiblings(
-    folderIds: [UUID],
+    folderIds: [String],
     playlistIds: [String],
-    from sourceFolderId: UUID?,
-    to destinationFolderId: UUID?
+    from sourceFolderId: String?,
+    to destinationFolderId: String?
   ) {
     guard !folderIds.isEmpty || !playlistIds.isEmpty else { return }
     performBatchedUpdates {
@@ -149,7 +149,7 @@ extension PlaylistFolderStore {
   /// share a selection; they are skipped here deliberately.
   public func addPlaylistsToAdditionalFolder(
     _ playlistIds: [String],
-    folderId: UUID
+    folderId: String
   ) {
     addPlaylists(playlistIds, to: folderId)
   }
@@ -162,8 +162,8 @@ extension PlaylistFolderStore {
   @discardableResult
   public func createFolder(
     named name: String,
-    in parentFolderId: UUID?,
-    movingFolders folderIds: [UUID],
+    in parentFolderId: String?,
+    movingFolders folderIds: [String],
     playlists playlistIds: [String]
   )
     -> PlaylistFolder? {

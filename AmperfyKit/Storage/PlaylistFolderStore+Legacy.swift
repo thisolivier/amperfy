@@ -47,7 +47,7 @@ extension PlaylistFolderStore {
     NotificationCenter.default.post(name: Self.didChangeNotification, object: self)
   }
 
-  private func legacyMutateFolder(id: UUID, mutation: (inout PlaylistFolder) -> ()) {
+  private func legacyMutateFolder(id: String, mutation: (inout PlaylistFolder) -> ()) {
     var currentFolders = loadFromUserDefaults()
     currentFolders = Self.applyingMutation(id: id, to: currentFolders, mutation: mutation)
     legacyFoldersCache = currentFolders
@@ -57,7 +57,7 @@ extension PlaylistFolderStore {
   // MARK: - Mutations
 
   @discardableResult
-  func legacyCreateFolder(name: String, parent: UUID?) -> PlaylistFolder {
+  func legacyCreateFolder(name: String, parent: String?) -> PlaylistFolder {
     let newFolder = PlaylistFolder(name: name)
     if let parentId = parent {
       legacyMutateFolder(id: parentId) { parentFolder in
@@ -72,19 +72,19 @@ extension PlaylistFolderStore {
     return newFolder
   }
 
-  func legacyRenameFolder(id: UUID, to name: String) {
+  func legacyRenameFolder(id: String, to name: String) {
     legacyMutateFolder(id: id) { folder in
       folder.name = name
     }
   }
 
-  func legacyDeleteFolder(id: UUID) {
+  func legacyDeleteFolder(id: String) {
     let currentFolders = loadFromUserDefaults()
     legacyFoldersCache = Self.flatteningFolder(id: id, from: currentFolders)
     legacyPersist()
   }
 
-  func legacyAddPlaylists(_ playlistIds: [String], to folderId: UUID) {
+  func legacyAddPlaylists(_ playlistIds: [String], to folderId: String) {
     legacyMutateFolder(id: folderId) { folder in
       for playlistId in playlistIds where !folder.playlistIds.contains(playlistId) {
         folder.playlistIds.append(playlistId)
@@ -92,7 +92,7 @@ extension PlaylistFolderStore {
     }
   }
 
-  func legacyRemovePlaylists(_ playlistIds: [String], from folderId: UUID) {
+  func legacyRemovePlaylists(_ playlistIds: [String], from folderId: String) {
     legacyMutateFolder(id: folderId) { folder in
       folder.playlistIds.removeAll { playlistIds.contains($0) }
     }
@@ -101,7 +101,7 @@ extension PlaylistFolderStore {
   // MARK: - Tree splicing
 
   static func applyingMutation(
-    id: UUID,
+    id: String,
     to folders: [PlaylistFolder],
     mutation: (inout PlaylistFolder) -> ()
   )
@@ -125,7 +125,7 @@ extension PlaylistFolderStore {
   /// replace it in-place with its direct `subfolders` (its direct `playlistIds`
   /// are attached to the containing folder by ``spliceDirectChild(id:into:)``).
   static func flatteningFolder(
-    id: UUID,
+    id: String,
     from folders: [PlaylistFolder]
   )
     -> [PlaylistFolder] {
@@ -151,7 +151,7 @@ extension PlaylistFolderStore {
   /// `playlistIds` into `parent.playlistIds` and its `subfolders` into
   /// `parent.subfolders` at the deletion site.
   private static func spliceDirectChild(
-    id: UUID,
+    id: String,
     into parent: PlaylistFolder
   )
     -> PlaylistFolder {

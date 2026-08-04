@@ -641,6 +641,8 @@
 		A5F3050000000000000050A0 /* PlaylistFolderTreeExporterTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F3060000000000000050A0 /* PlaylistFolderTreeExporterTest.swift */; };
 		A5F3030000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F3040000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift */; };
 		A5F3010000000000000050A0 /* PlaylistFolderOrderingTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F3020000000000000050A0 /* PlaylistFolderOrderingTest.swift */; };
+		B7D3000000000000000000CA /* PlaylistFolderIdentityTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D3000000000000000000C9 /* PlaylistFolderIdentityTest.swift */; };
+		B7D300000000000000000066 /* PlaylistFolderNanoidFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D300000000000000000065 /* PlaylistFolderNanoidFixture.swift */; };
 		B7D30000000000000000001A /* PlaylistFolderDropTargetResolverTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D300000000000000000019 /* PlaylistFolderDropTargetResolverTest.swift */; };
 		B7D300000000000000000018 /* PlaylistFolderSelectionModelTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D300000000000000000017 /* PlaylistFolderSelectionModelTest.swift */; };
 		B7D300000000000000000016 /* PlaylistFolderBrowseListTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D300000000000000000015 /* PlaylistFolderBrowseListTest.swift */; };
@@ -1449,6 +1451,8 @@
 		A5F3060000000000000050A0 /* PlaylistFolderTreeExporterTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderTreeExporterTest.swift; sourceTree = "<group>"; };
 		A5F3040000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderPlacementSyncTest.swift; sourceTree = "<group>"; };
 		A5F3020000000000000050A0 /* PlaylistFolderOrderingTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderOrderingTest.swift; sourceTree = "<group>"; };
+		B7D3000000000000000000C9 /* PlaylistFolderIdentityTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderIdentityTest.swift; sourceTree = "<group>"; };
+		B7D300000000000000000065 /* PlaylistFolderNanoidFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderNanoidFixture.swift; sourceTree = "<group>"; };
 		B7D300000000000000000019 /* PlaylistFolderDropTargetResolverTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderDropTargetResolverTest.swift; sourceTree = "<group>"; };
 		B7D300000000000000000017 /* PlaylistFolderSelectionModelTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderSelectionModelTest.swift; sourceTree = "<group>"; };
 		B7D300000000000000000015 /* PlaylistFolderBrowseListTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderBrowseListTest.swift; sourceTree = "<group>"; };
@@ -2034,6 +2038,8 @@
 				A5F3060000000000000050A0 /* PlaylistFolderTreeExporterTest.swift */,
 				A5F3040000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift */,
 				A5F3020000000000000050A0 /* PlaylistFolderOrderingTest.swift */,
+				B7D3000000000000000000C9 /* PlaylistFolderIdentityTest.swift */,
+				B7D300000000000000000065 /* PlaylistFolderNanoidFixture.swift */,
 				B7D300000000000000000019 /* PlaylistFolderDropTargetResolverTest.swift */,
 				B7D300000000000000000017 /* PlaylistFolderSelectionModelTest.swift */,
 				B7D300000000000000000015 /* PlaylistFolderBrowseListTest.swift */,
@@ -3716,6 +3722,8 @@
 				A5F3050000000000000050A0 /* PlaylistFolderTreeExporterTest.swift in Sources */,
 				A5F3030000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift in Sources */,
 				A5F3010000000000000050A0 /* PlaylistFolderOrderingTest.swift in Sources */,
+				B7D3000000000000000000CA /* PlaylistFolderIdentityTest.swift in Sources */,
+				B7D300000000000000000066 /* PlaylistFolderNanoidFixture.swift in Sources */,
 				B7D30000000000000000001A /* PlaylistFolderDropTargetResolverTest.swift in Sources */,
 				B7D300000000000000000018 /* PlaylistFolderSelectionModelTest.swift in Sources */,
 				B7D300000000000000000016 /* PlaylistFolderBrowseListTest.swift in Sources */,
