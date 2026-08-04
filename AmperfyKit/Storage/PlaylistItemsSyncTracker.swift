@@ -107,6 +107,23 @@ public final class PlaylistItemsSyncTracker: @unchecked Sendable {
     syncedIds = current
   }
 
+  /// Wipes ALL synced flags and recorded baselines.
+  ///
+  /// This MUST be called whenever the local library store is wiped and refilled
+  /// — most importantly a forced resync (`SyncVC` deletes every `PlaylistItemMO`
+  /// via `cleanStorageOfObsoleteAccountEntries`, and the initial sync then
+  /// repopulates only playlist *metadata*, not items). The tracker is
+  /// UserDefaults-backed, so without this it survives the Core Data wipe and
+  /// keeps reporting every playlist as "items synced" while Core Data holds zero
+  /// items. That stale confidence is what makes "Show in Playlists" answer a
+  /// definitive (and wrong) "not in any playlists" after a resync — and it also
+  /// starves `PlaylistSyncWorker`, whose unsynced-set is empty, so the items are
+  /// never re-fetched. Clearing here keeps the tracker honest against the store.
+  public func clear() {
+    defaults.removeObject(forKey: defaultsKey)
+    defaults.removeObject(forKey: lastSyncedRemoteCountKey)
+  }
+
   /// Returns `true` when the server-advertised song count has CHANGED since we
   /// last synced this playlist's items — i.e. it was edited on the server, so
   /// the local items are stale and must be re-fetched.

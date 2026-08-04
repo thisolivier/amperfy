@@ -68,6 +68,47 @@ class PlaylistItemsSyncTrackerTest: XCTestCase {
     XCTAssertFalse(tracker.isSynced("pl-never-synced"))
   }
 
+  // MARK: - clear() — the resync-wipe fix
+
+  /// A forced resync deletes every local PlaylistItemMO but leaves the
+  /// UserDefaults-backed tracker intact. `clear()` must wipe the tracker so it
+  /// stops claiming playlists are synced when Core Data holds zero items.
+  func testClearRemovesAllSyncedFlags() {
+    tracker.markSynced("pl-1", remoteSongCount: 3)
+    tracker.markSynced("pl-2", remoteSongCount: 7)
+    XCTAssertTrue(tracker.isSynced("pl-1"))
+    XCTAssertTrue(tracker.isSynced("pl-2"))
+
+    tracker.clear()
+
+    XCTAssertFalse(
+      tracker.isSynced("pl-1"),
+      "After clear() no playlist may report as items-synced"
+    )
+    XCTAssertFalse(tracker.isSynced("pl-2"))
+    XCTAssertTrue(tracker.syncedIds.isEmpty, "clear() must empty the synced set")
+  }
+
+  /// After `clear()` the recorded baselines are gone too, so a freshly re-marked
+  /// playlist starts from a clean baseline and does not spuriously invalidate.
+  func testClearAlsoDropsRemoteCountBaselines() {
+    tracker.markSynced("pl-1", remoteSongCount: 5)
+    tracker.clear()
+    // No baseline after clear → no phantom edit even with a different count.
+    XCTAssertFalse(
+      tracker.hasRemoteEdit(playlistId: "pl-1", remoteSongCount: 99),
+      "clear() must drop baselines so a re-synced playlist starts clean"
+    )
+    // Re-mark and confirm a clean, non-oscillating baseline.
+    tracker.markSynced("pl-1", remoteSongCount: 99)
+    XCTAssertFalse(tracker.hasRemoteEdit(playlistId: "pl-1", remoteSongCount: 99))
+  }
+
+  func testClearOnEmptyTrackerIsSafe() {
+    tracker.clear()
+    XCTAssertTrue(tracker.syncedIds.isEmpty)
+  }
+
   // MARK: - Remote-edit detection (change vs last-synced remote count)
 
   func testRemoteEditDetectedWhenServerCountChangedSinceLastSync() {

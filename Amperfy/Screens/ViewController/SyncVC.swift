@@ -59,6 +59,13 @@ class SyncVC: UIViewController {
         self.appDelegate.storage.settings.app.isLibrarySynced = false
       }
       self.appDelegate.storage.main.library.cleanStorageOfObsoleteAccountEntries(account: account)
+      // The store wipe above deleted every PlaylistItemMO. The playlist-items
+      // sync tracker is UserDefaults-backed and would otherwise survive that
+      // wipe, still claiming every playlist's items are synced — which makes
+      // "Show in Playlists" report a confident (wrong) empty and starves the
+      // background PlaylistSyncWorker. Clear it so it matches the empty store;
+      // the post-sync worker then re-fetches all playlists' contents.
+      PlaylistItemsSyncTracker.shared.clear()
 
       do {
         try await self.appDelegate.getMeta(account.info).librarySyncer

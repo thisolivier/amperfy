@@ -176,6 +176,62 @@ class PlaylistMembershipQueryTest: XCTestCase {
     )
   }
 
+  /// Regression for the 2026-08-02 mistaken-deletion incident: after a FORCED
+  /// full resync, `cleanStorageOfObsoleteAccountEntries` deletes every local
+  /// PlaylistItemMO, but the UserDefaults-backed tracker survives and keeps
+  /// reporting every playlist as items-synced. The membership lookup then reads
+  /// zero items AND the completeness guard (`no unsynced playlists`) reports the
+  /// answer as COMPLETE — a confident, wrong "not in any playlists". The fix is
+  /// `tracker.clear()` on the wipe, which restores the honest "still syncing"
+  /// signal until the background worker re-fetches contents.
+  func testResyncWipeWithoutClearGivesFalseConfidentEmpty() {
+    let song = makeSong(id: "pmq-song-deleted")
+    // Server truth: the song is in this playlist. Locally, its items are empty
+    // (just wiped by the resync). Metadata (name + remote count) survives.
+    let playlist = makePlaylist(id: "pmq-pl-era04", name: "Era 04) Dragon Blood")
+    playlist.remoteSongCount = 17
+    library.saveContext()
+
+    let defaults = makeIsolatedDefaults()
+    let tracker = PlaylistItemsSyncTracker(defaults: defaults)
+    // Pre-resync state: EVERY non-smart playlist was marked synced (a completed
+    // pre-resync sync). These flags survive the Core Data wipe because they live
+    // in UserDefaults. Marking them all is what makes the completeness guard see
+    // "nothing unsynced" and assert a confident empty.
+    for existing in library.getPlaylists(for: account) where !existing.isSmartPlaylist {
+      tracker.markSynced(existing.id, remoteSongCount: existing.remoteSongCount)
+    }
+
+    // Membership lookup after the wipe: empty items → no match (the bug).
+    let results = PlaylistMembershipQuery.playlistsContaining(
+      songId: "pmq-song-deleted",
+      in: testContext
+    )
+    XCTAssertTrue(results.isEmpty, "Wiped items make the reverse lookup miss the song")
+
+    // The completeness guard as EntityPreviewVC computes it: is any non-smart
+    // playlist unsynced? With the STALE tracker it answers NO — so the UI would
+    // assert a definitive (wrong) empty. This is the false-confidence bug.
+    let hasUnsyncedBeforeClear = library
+      .getPlaylists(for: account)
+      .contains { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
+    XCTAssertFalse(
+      hasUnsyncedBeforeClear,
+      "Reproduces the bug: the stale tracker makes the empty answer look complete"
+    )
+
+    // The fix: clearing the tracker on the resync wipe restores the honest
+    // incomplete signal, so the UI shows 'still syncing' instead of a false empty.
+    tracker.clear()
+    let hasUnsyncedAfterClear = library
+      .getPlaylists(for: account)
+      .contains { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
+    XCTAssertTrue(
+      hasUnsyncedAfterClear,
+      "After clear() the still-unsynced playlist is visible, so the empty answer is correctly incomplete"
+    )
+  }
+
   private func makeIsolatedDefaults() -> UserDefaults {
     let suite = "PlaylistMembershipQueryTest.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suite)!
