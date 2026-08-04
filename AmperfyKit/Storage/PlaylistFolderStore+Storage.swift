@@ -142,7 +142,7 @@ extension PlaylistFolderStore {
   ) {
     switch assignment.kind {
     case .folder:
-      fetchFolderMO(byServerId: assignment.id, in: context)?
+      fetchFolderMOAllowingCaseDifference(assignment.id, in: context)?
         .sortOrderValue = assignment.sortOrder
     case .playlist:
       fetchPlacement(
@@ -153,8 +153,36 @@ extension PlaylistFolderStore {
 
   // MARK: - Folder fetches
 
+  /// Resolve the folder behind a UI-level `UUID`.
+  ///
+  /// The UI carries folder identity as a `UUID` (see `PlaylistFolder.id`), which
+  /// is parsed back out of the stored server id string. That round trip is not
+  /// case-preserving: `UUID.uuidString` is always upper case, while a server is
+  /// free to hand back a lower-case UUID — and Core Data's `==` on strings is
+  /// case sensitive, so the exact-match lookup would silently miss and every
+  /// move, rename and delete against that folder would become a no-op.
+  ///
+  /// Exact match is still tried first so nothing changes for upper-case ids; the
+  /// case-insensitive retry is safe because the value is known to be a parsed
+  /// UUID, where case carries no meaning.
   func findFolderMO(by uuid: UUID, in context: NSManagedObjectContext) -> PlaylistFolderMO? {
-    fetchFolderMO(byServerId: uuid.uuidString, in: context)
+    fetchFolderMOAllowingCaseDifference(uuid.uuidString, in: context)
+  }
+
+  /// Exact lookup first, then a case-insensitive retry. See ``findFolderMO(by:in:)``
+  /// for why the retry is needed and why it is safe.
+  func fetchFolderMOAllowingCaseDifference(
+    _ folderId: String,
+    in context: NSManagedObjectContext
+  )
+    -> PlaylistFolderMO? {
+    if let exactMatch = fetchFolderMO(byServerId: folderId, in: context) {
+      return exactMatch
+    }
+    let fetchRequest = PlaylistFolderMO.fetchRequest()
+    fetchRequest.predicate = NSPredicate(format: "id ==[c] %@", folderId)
+    fetchRequest.fetchLimit = 1
+    return (try? context.fetch(fetchRequest))?.first
   }
 
   func fetchFolderMO(byServerId serverId: String, in context: NSManagedObjectContext)

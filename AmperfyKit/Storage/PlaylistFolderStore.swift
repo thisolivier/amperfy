@@ -123,6 +123,15 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   /// not spam the log on every library refresh.
   var hasLoggedServerLacksFolderApi = false
 
+  /// How many nested ``performBatchedUpdates(_:)`` calls are in flight. While
+  /// this is above zero, change notifications and tree exports are held back and
+  /// coalesced — see `PlaylistFolderStore+Batching.swift`.
+  var batchedUpdateDepth = 0
+  /// Whether anything inside the running batch asked to notify.
+  var hasDeferredChangeNotification = false
+  /// Whether anything inside the running batch asked to export.
+  var hasDeferredTreeExport = false
+
   /// Configure with CoreData context and API client.
   /// Called once during app startup after storage is initialized.
   public func configure(
@@ -591,8 +600,18 @@ public final class PlaylistFolderStore: @unchecked Sendable {
       parentServerId = parentFolderMO.id
     }
 
+    // A folder id arriving from the UI has been through `UUID`, so its case may
+    // not match what is stored. Resolve it to the canonical server id before it
+    // is compared against siblings or sent to the server.
+    var canonicalSiblingId = siblingId
+    if kind == .folder {
+      guard let folderMO = fetchFolderMOAllowingCaseDifference(siblingId, in: context)
+      else { return }
+      canonicalSiblingId = folderMO.id
+    }
+
     let allSiblings = siblings(inFolderId: parentServerId, in: context)
-    let otherSiblings = allSiblings.filter { !($0.kind == kind && $0.id == siblingId) }
+    let otherSiblings = allSiblings.filter { !($0.kind == kind && $0.id == canonicalSiblingId) }
     let sortOrderPlan = PlaylistFolderOrdering.insertionPlan(
       into: otherSiblings,
       targetIndex: targetIndex
@@ -602,12 +621,12 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     switch sortOrderPlan {
     case let .assign(sortOrder):
       sortOrderUpdates = [PlaylistFolderSortOrderAssignment(
-        kind: kind, id: siblingId, sortOrder: sortOrder
+        kind: kind, id: canonicalSiblingId, sortOrder: sortOrder
       )]
     case let .renumberSiblings(assignments, insertedSortOrder):
       sortOrderUpdates = assignments
       sortOrderUpdates.append(PlaylistFolderSortOrderAssignment(
-        kind: kind, id: siblingId, sortOrder: insertedSortOrder
+        kind: kind, id: canonicalSiblingId, sortOrder: insertedSortOrder
       ))
     }
 
@@ -720,6 +739,14 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   /// propagated — the snapshot is a safety net, so it must never be able to fail
   /// the operation it exists to protect.
   func exportCurrentTree() {
+    guard batchedUpdateDepth == 0 else {
+      // A bulk organization pass is running. Exporting once per item would write
+      // the snapshot dozens of times for one user action, each write rolling the
+      // previous generation — which would destroy the last pre-operation copy
+      // the safety net exists to keep. One export at the end of the batch.
+      hasDeferredTreeExport = true
+      return
+    }
     guard let context = managedObjectContext else { return }
     treeExporter.writeIgnoringFailure(buildExport(from: context))
   }
@@ -762,6 +789,13 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   // MARK: - Notification
 
   func notifyChange() {
+    guard batchedUpdateDepth == 0 else {
+      // Every observer of this notification reloads a whole table. Posting it
+      // per item during a bulk move would rebuild the list under the user's
+      // pointer mid-drag.
+      hasDeferredChangeNotification = true
+      return
+    }
     NotificationCenter.default.post(name: Self.didChangeNotification, object: self)
   }
 
