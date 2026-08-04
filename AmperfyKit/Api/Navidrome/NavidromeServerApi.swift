@@ -276,6 +276,21 @@ public final class NavidromeServerApi: Sendable {
     return try await request([NavidromeFolderResponse].self, url: url)
   }
 
+  /// Probes whether this server owns playlist-folder data by fetching the v2
+  /// organization envelope from `GET /api/playlist/folder`.
+  ///
+  /// Only a decodable envelope counts as proof. Stock Navidrome answers 404
+  /// (`NavidromeApiError.notFound`) and the never-deployed v1 fork answered
+  /// with a bare JSON array (`NavidromeApiError.decodingError`) — both are
+  /// thrown here rather than silently treated as "the server has no folders",
+  /// which is what made the destructive sync path reachable by accident.
+  public func fetchFolderOrganization() async throws
+    -> NavidromeFolderOrganizationResponse {
+    let url = "\(baseUrl)/api/playlist/folder"
+    logger.info("Probing playlist folder organization (v2 envelope)")
+    return try await request(NavidromeFolderOrganizationResponse.self, url: url)
+  }
+
   public func getFolder(id: String) async throws -> NavidromeFolderDetailResponse {
     let url = "\(baseUrl)/api/playlist/folder/\(id)"
     logger.info("Getting playlist folder: \(id, privacy: .public)")

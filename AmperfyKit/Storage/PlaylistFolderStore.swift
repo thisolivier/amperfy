@@ -21,6 +21,16 @@
 
 import CoreData
 import Foundation
+import os.log
+
+// MARK: - PlaylistFolderOrganizationFetcher
+
+/// Fetches the server's v2 playlist-folder organization envelope.
+///
+/// Injectable so the capability probe can be exercised without a live
+/// Navidrome instance.
+public typealias PlaylistFolderOrganizationFetcher =
+  @Sendable () async throws -> NavidromeFolderOrganizationResponse
 
 // MARK: - PlaylistFolder
 
@@ -66,6 +76,15 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   private var managedObjectContext: NSManagedObjectContext?
   private var navidromeApi: NavidromeServerApi?
   private var accountMO: AccountMO?
+  private var folderOrganizationFetcher: PlaylistFolderOrganizationFetcher?
+
+  private let logger = Logger(
+    subsystem: "dev.thisolivier.amperfy",
+    category: "PlaylistFolderSync"
+  )
+  /// Guards the "server has no folder API" warning so a per-sync condition does
+  /// not spam the log on every library refresh.
+  private var hasLoggedServerLacksFolderApi = false
 
   /// Configure with CoreData context and API client.
   /// Called once during app startup after storage is initialized.
@@ -77,6 +96,29 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     managedObjectContext = context
     self.navidromeApi = navidromeApi
     accountMO = account
+    if let api = navidromeApi {
+      let fetcher: PlaylistFolderOrganizationFetcher = {
+        try await api.fetchFolderOrganization()
+      }
+      folderOrganizationFetcher = fetcher
+    } else {
+      folderOrganizationFetcher = nil
+    }
+    hasLoggedServerLacksFolderApi = false
+  }
+
+  /// Test seam: configure the destructive sync path without a live Navidrome
+  /// client, supplying the capability probe directly.
+  func configureForTesting(
+    context: NSManagedObjectContext,
+    account: AccountMO?,
+    organizationFetcher: @escaping PlaylistFolderOrganizationFetcher
+  ) {
+    managedObjectContext = context
+    navidromeApi = nil
+    accountMO = account
+    folderOrganizationFetcher = organizationFetcher
+    hasLoggedServerLacksFolderApi = false
   }
 
   /// Whether the store has been configured with CoreData.
@@ -331,18 +373,76 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   // MARK: - Sync (called during library sync)
 
   /// Sync folders from server to CoreData. Called during library sync flow.
-  /// Fetches all folders, upserts metadata, then fetches each folder's details
-  /// to reconcile playlist memberships.
+  ///
+  /// Destructive reconciliation — deleting local folders or memberships because
+  /// the server did not mention them — runs **only** behind a capability probe.
+  /// The server must answer `GET /api/playlist/folder` with a v2 organization
+  /// envelope (`folderApiVersion >= 2`). A 404, any other failure, or a 200 that
+  /// is not an envelope all mean "this server does not own folder data", and
+  /// local state is left completely untouched.
+  ///
+  /// Background: this fork shipped against a Navidrome folder API that was never
+  /// deployed. Every folder call 404'd, protected only by `try?` swallowing the
+  /// error. On 2026-08-02 a resync against a corrupted server took the "success"
+  /// branch and delete-if-absent reconciliation wiped the entire folder tree.
   public func syncFromServer() async throws {
-    guard let api = navidromeApi, let context = managedObjectContext else { return }
+    guard let context = managedObjectContext,
+          let organizationFetcher = folderOrganizationFetcher else { return }
 
-    let serverFolders = try await api.listFolders()
+    let probeOutcome: Result<NavidromeFolderOrganizationResponse, Error>
+    do {
+      probeOutcome = .success(try await organizationFetcher())
+    } catch {
+      probeOutcome = .failure(error)
+    }
 
-    // Fetch details for each folder to get playlist memberships
+    let localFolderCount = await MainActor.run {
+      ((try? context.fetch(PlaylistFolderMO.fetchRequest())) ?? []).count
+    }
+
+    let syncDecision = PlaylistFolderSyncCapability.evaluate(
+      probeOutcome: probeOutcome,
+      localFolderCount: localFolderCount
+    )
+
+    switch syncDecision {
+    case let .skipServerLacksFolderApi(reason):
+      logServerLacksFolderApiOnce(reason: reason)
+
+    case let .skipEmptyServerOrganizationWouldWipeLocalFolders(localFolderCount):
+      logger.warning(
+        """
+        Playlist folder sync skipped: server confirmed folder support but \
+        reported an empty organization while \(localFolderCount, privacy: .public) \
+        local folder(s) exist. Refusing to mass-delete; local folders kept.
+        """
+      )
+
+    case let .reconcile(organization):
+      await reconcile(organization: organization, in: context)
+      notifyChange()
+    }
+  }
+
+  /// Apply a capability-confirmed server organization to Core Data.
+  ///
+  /// Only reached once ``PlaylistFolderSyncCapability`` has authorized
+  /// destructive reconciliation.
+  private func reconcile(
+    organization: NavidromeFolderOrganizationResponse,
+    in context: NSManagedObjectContext
+  ) async {
+    let serverFolders = organization.folders
+
+    // Playlist memberships still come from the per-folder detail endpoint; v2
+    // `placements` consumption is a follow-up change. A folder whose detail
+    // fetch fails is simply skipped below — never emptied.
     var folderDetails: [NavidromeFolderDetailResponse] = []
-    for serverFolder in serverFolders {
-      if let detail = try? await api.getFolder(id: serverFolder.id) {
-        folderDetails.append(detail)
+    if let api = navidromeApi {
+      for serverFolder in serverFolders {
+        if let detail = try? await api.getFolder(id: serverFolder.id) {
+          folderDetails.append(detail)
+        }
       }
     }
 
@@ -357,12 +457,12 @@ public final class PlaylistFolderStore: @unchecked Sendable {
         serverIds.insert(serverFolder.id)
         if let existing = existingById[serverFolder.id] {
           existing.name = serverFolder.name
-          existing.parentId = serverFolder.parentId
+          existing.parentId = serverFolder.normalizedParentId
         } else {
           let newMO = PlaylistFolderMO(context: context)
           newMO.id = serverFolder.id
           newMO.name = serverFolder.name
-          newMO.parentId = serverFolder.parentId
+          newMO.parentId = serverFolder.normalizedParentId
           newMO.account = self.accountMO
         }
       }
@@ -397,8 +497,20 @@ public final class PlaylistFolderStore: @unchecked Sendable {
 
       try? context.save()
     }
+  }
 
-    notifyChange()
+  private func logServerLacksFolderApiOnce(
+    reason: PlaylistFolderServerUnsupportedReason
+  ) {
+    guard !hasLoggedServerLacksFolderApi else { return }
+    hasLoggedServerLacksFolderApi = true
+    logger.warning(
+      """
+      Playlist folder sync skipped: server did not confirm folder API v2 \
+      support (\(reason.logDescription, privacy: .public)). Local folders and \
+      memberships left untouched.
+      """
+    )
   }
 
   /// Sync folder memberships from playlist folderIds field.
