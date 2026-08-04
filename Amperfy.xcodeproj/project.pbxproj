@@ -627,6 +627,7 @@
 		A5F2110000000000000050A0 /* PlaylistFolderStore+Legacy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F2120000000000000050A0 /* PlaylistFolderStore+Legacy.swift */; };
 		A5F2090000000000000050A0 /* PlaylistFolderStore+Sync.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F2100000000000000050A0 /* PlaylistFolderStore+Sync.swift */; };
 		A5F2070000000000000050A0 /* PlaylistFolderStore+Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F2080000000000000050A0 /* PlaylistFolderStore+Storage.swift */; };
+		B7D300000000000000000192 /* PlaylistFolderStore+PendingCreation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D300000000000000000191 /* PlaylistFolderStore+PendingCreation.swift */; };
 		B7D30000000000000000000A /* PlaylistFolderStore+BulkOrganization.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D300000000000000000009 /* PlaylistFolderStore+BulkOrganization.swift */; };
 		B7D300000000000000000008 /* PlaylistFolderStore+Batching.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D300000000000000000007 /* PlaylistFolderStore+Batching.swift */; };
 		A5F2050000000000000050A0 /* PlaylistFolderTreeExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F2060000000000000050A0 /* PlaylistFolderTreeExporter.swift */; };
@@ -1438,6 +1439,7 @@
 		A5F2120000000000000050A0 /* PlaylistFolderStore+Legacy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderStore+Legacy.swift"; sourceTree = "<group>"; };
 		A5F2100000000000000050A0 /* PlaylistFolderStore+Sync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderStore+Sync.swift"; sourceTree = "<group>"; };
 		A5F2080000000000000050A0 /* PlaylistFolderStore+Storage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderStore+Storage.swift"; sourceTree = "<group>"; };
+		B7D300000000000000000191 /* PlaylistFolderStore+PendingCreation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderStore+PendingCreation.swift"; sourceTree = "<group>"; };
 		B7D300000000000000000009 /* PlaylistFolderStore+BulkOrganization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderStore+BulkOrganization.swift"; sourceTree = "<group>"; };
 		B7D300000000000000000007 /* PlaylistFolderStore+Batching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderStore+Batching.swift"; sourceTree = "<group>"; };
 		A5F2060000000000000050A0 /* PlaylistFolderTreeExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderTreeExporter.swift; sourceTree = "<group>"; };
@@ -2191,6 +2193,7 @@
 				A5F2120000000000000050A0 /* PlaylistFolderStore+Legacy.swift */,
 				A5F2100000000000000050A0 /* PlaylistFolderStore+Sync.swift */,
 				A5F2080000000000000050A0 /* PlaylistFolderStore+Storage.swift */,
+				B7D300000000000000000191 /* PlaylistFolderStore+PendingCreation.swift */,
 				B7D300000000000000000009 /* PlaylistFolderStore+BulkOrganization.swift */,
 				B7D300000000000000000007 /* PlaylistFolderStore+Batching.swift */,
 				A5F2060000000000000050A0 /* PlaylistFolderTreeExporter.swift */,
@@ -3480,6 +3483,7 @@
 				A5F2110000000000000050A0 /* PlaylistFolderStore+Legacy.swift in Sources */,
 				A5F2090000000000000050A0 /* PlaylistFolderStore+Sync.swift in Sources */,
 				A5F2070000000000000050A0 /* PlaylistFolderStore+Storage.swift in Sources */,
+				B7D300000000000000000192 /* PlaylistFolderStore+PendingCreation.swift in Sources */,
 				B7D30000000000000000000A /* PlaylistFolderStore+BulkOrganization.swift in Sources */,
 				B7D300000000000000000008 /* PlaylistFolderStore+Batching.swift in Sources */,
 				A5F2050000000000000050A0 /* PlaylistFolderTreeExporter.swift in Sources */,

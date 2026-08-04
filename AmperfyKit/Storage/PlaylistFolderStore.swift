@@ -46,6 +46,18 @@ public typealias PlaylistFolderCreateRequester =
   @Sendable (_ name: String, _ parentId: String?, _ sortOrder: Int?) async throws
     -> NavidromeOrganizationFolder
 
+// MARK: - PlaylistFolderPlacementUpsertRequester
+
+/// Issues `PUT /api/playlist/folder/{id}/playlist/{playlistId}`.
+///
+/// Injectable because placements filed into a folder while its create was still
+/// pending never reached the server — the folder had no server id to file them
+/// against — so they have to be replayed at adoption, and that replay is the
+/// difference between a rebuilt tree surviving the next sync and being stripped
+/// back to whatever the server happened to know.
+public typealias PlaylistFolderPlacementUpsertRequester =
+  @Sendable (_ folderId: String, _ playlistId: String, _ sortOrder: Int?) async throws -> ()
+
 // MARK: - PlaylistFolderDeleteRequester
 
 /// Issues `DELETE /api/playlist/folder/{id}`.
@@ -100,17 +112,35 @@ public struct PlaylistFolder: Codable, Identifiable, Equatable {
     return result
   }
 
+  /// Marks an id as local-only. Chosen so it can never collide with a server id:
+  /// Navidrome nanoids are 22 characters of `[0-9A-Za-z]`, with no punctuation.
+  public static let temporaryIdPrefix = "pending-local:"
+
   /// A local id for a folder that does not have a server id yet.
   ///
   /// A folder is created optimistically so the UI can respond at once, which
   /// means something has to identify it during the round trip. This id is
-  /// replaced by the server's own the moment the POST returns — see
-  /// `repointFolderReferences(from:to:in:)`, which carries any placements or
-  /// child folders made against it across to the real id.
+  /// replaced by the server's own once the POST returns — see
+  /// `adoptServerFolder(folderMO:response:in:)`.
   ///
-  /// A UUID string cannot collide with a 22-character nanoid, so a temporary id
-  /// is never mistaken for a server one.
-  public static func makeTemporaryId() -> String { UUID().uuidString }
+  /// The id is not merely a placeholder, it is a *record of pending work*. A
+  /// folder still carrying one is a create that has not landed yet, and that is
+  /// the whole pending-create queue: it is already durable, already ordered by
+  /// the folder tree, and already carries the name, parent and sortOrder the
+  /// retry needs. A second queue structure alongside it could only disagree
+  /// with it.
+  public static func makeTemporaryId() -> String {
+    "\(temporaryIdPrefix)\(UUID().uuidString)"
+  }
+
+  /// Whether `folderId` names a folder the server has never confirmed.
+  ///
+  /// Everything about such a folder is local-only until it adopts a real id:
+  /// renames, moves, deletes and placement writes all skip the network, because
+  /// every one of them would name an id the server has never issued.
+  public static func isTemporaryId(_ folderId: String) -> Bool {
+    folderId.hasPrefix(temporaryIdPrefix)
+  }
 }
 
 // MARK: - PlaylistFolderStore
@@ -146,6 +176,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   var accountMO: AccountMO?
   var folderOrganizationFetcher: PlaylistFolderOrganizationFetcher?
   var folderCreateRequester: PlaylistFolderCreateRequester?
+  var placementUpsertRequester: PlaylistFolderPlacementUpsertRequester?
   var folderDeleteRequester: PlaylistFolderDeleteRequester?
   var treeExporter: PlaylistFolderTreeExporter
 
@@ -185,6 +216,13 @@ public final class PlaylistFolderStore: @unchecked Sendable {
         try await api.createFolder(name: name, parentId: parentId, sortOrder: sortOrder)
       }
       folderCreateRequester = createRequester
+      let placementUpsertRequester: PlaylistFolderPlacementUpsertRequester =
+        { folderId, playlistId, sortOrder in
+          try await api.setPlaylistPlacement(
+            folderId: folderId, playlistId: playlistId, sortOrder: sortOrder
+          )
+        }
+      self.placementUpsertRequester = placementUpsertRequester
       let deleteRequester: PlaylistFolderDeleteRequester = { folderId in
         try await api.deleteFolder(id: folderId)
       }
@@ -192,6 +230,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     } else {
       folderOrganizationFetcher = nil
       folderCreateRequester = nil
+      placementUpsertRequester = nil
       folderDeleteRequester = nil
     }
     hasLoggedServerLacksFolderApi = false
@@ -205,6 +244,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     account: AccountMO?,
     organizationFetcher: PlaylistFolderOrganizationFetcher? = nil,
     folderCreateRequester: PlaylistFolderCreateRequester? = nil,
+    placementUpsertRequester: PlaylistFolderPlacementUpsertRequester? = nil,
     folderDeleteRequester: PlaylistFolderDeleteRequester? = nil,
     treeExporter: PlaylistFolderTreeExporter? = nil
   ) {
@@ -213,6 +253,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     accountMO = account
     folderOrganizationFetcher = organizationFetcher
     self.folderCreateRequester = folderCreateRequester
+    self.placementUpsertRequester = placementUpsertRequester
     self.folderDeleteRequester = folderDeleteRequester
     hasLoggedServerLacksFolderApi = false
     if let treeExporter {
@@ -331,26 +372,16 @@ public final class PlaylistFolderStore: @unchecked Sendable {
           let serverResponse = try await folderCreateRequester(
             name, parentServerId, appendSortOrder
           )
-          // Adopt the server-assigned id, carrying any placements or child
-          // folders made against the optimistic local id across to it.
-          await MainActor.run {
-            let optimisticFolderId = unsafeFolderMO.id
-            unsafeFolderMO.id = serverResponse.id
-            unsafeFolderMO.parentId = serverResponse.normalizedParentId
-            if let serverSortOrder = serverResponse.sortOrder {
-              unsafeFolderMO.sortOrderValue = serverSortOrder
-            }
-            self.repointFolderReferences(
-              from: optimisticFolderId,
-              to: serverResponse.id,
-              in: unsafeContext
+          let placementsToPush = await MainActor.run {
+            self.adoptServerFolder(
+              folderMO: unsafeFolderMO, response: serverResponse, in: unsafeContext
             )
-            try? unsafeContext.save()
-            self.exportCurrentTree()
           }
+          await self.pushPlacements(placementsToPush, toFolderId: serverResponse.id)
         } catch {
-          // Server creation failed — the optimistic local entry remains.
-          // It will be reconciled on next sync.
+          // The folder keeps its temporary id and stays on this device. That is
+          // not a dead end: it *is* the pending-create queue, and the next sync
+          // re-attempts the POST. See `retryPendingFolderCreations(in:)`.
         }
       }
     }
@@ -371,7 +402,10 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     folderMO.name = name
     try? context.save()
 
-    if let api = navidromeApi {
+    // A pending folder is local-only: the server has never issued this id, so
+    // the rename would 404. The create that eventually lands carries the current
+    // name anyway.
+    if let api = navidromeApi, !PlaylistFolder.isTemporaryId(serverId) {
       Task {
         try? await api.updateFolder(id: serverId, name: name)
       }
@@ -416,7 +450,11 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     folderMO.sortOrderValue = appendSortOrder
     try? context.save()
 
-    if let api = navidromeApi {
+    // Skipped for a pending folder, and equally for a move *into* one: the
+    // create POST will carry whichever parent the folder has when it lands.
+    if let api = navidromeApi,
+       !PlaylistFolder.isTemporaryId(serverId),
+       !PlaylistFolder.isTemporaryId(normalizedNewParentId) {
       let serverParentId = normalizedNewParentId.isEmpty
         ? PlaylistFolderRootId.literal : normalizedNewParentId
       Task {
@@ -477,7 +515,8 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     context.delete(folderMO)
     try? context.save()
 
-    if let folderDeleteRequester {
+    // Deleting a folder the server never heard of is nothing to report to it.
+    if let folderDeleteRequester, !PlaylistFolder.isTemporaryId(serverId) {
       Task {
         try? await folderDeleteRequester(serverId)
         // Converge on the server's promotion rather than guessing at it. This
@@ -525,14 +564,15 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     }
     try? context.save()
 
-    if let api = navidromeApi {
+    // Placements into a pending folder stay local. They are replayed the moment
+    // the folder adopts a real id — see `pushPlacements(ofFolderId:in:)` — which
+    // is the only point at which the server can accept them.
+    if let placementUpsertRequester, !PlaylistFolder.isTemporaryId(serverId) {
       let placementsToWrite = appendedSortOrders
       Task {
         for placement in placementsToWrite {
-          try? await api.setPlaylistPlacement(
-            folderId: serverId,
-            playlistId: placement.playlistId,
-            sortOrder: placement.sortOrder
+          try? await placementUpsertRequester(
+            serverId, placement.playlistId, placement.sortOrder
           )
         }
       }
@@ -559,7 +599,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     }
     try? context.save()
 
-    if let api = navidromeApi {
+    if let api = navidromeApi, !PlaylistFolder.isTemporaryId(serverId) {
       Task {
         for playlistId in playlistIds {
           try? await api.removePlaylistPlacement(folderId: serverId, playlistId: playlistId)
@@ -677,7 +717,9 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     }
     try? context.save()
 
-    if let api = navidromeApi {
+    // Ordering inside a pending folder is local until the folder exists on the
+    // server; the placement replay at adoption carries the sortOrders with it.
+    if let api = navidromeApi, !PlaylistFolder.isTemporaryId(parentServerId) {
       let serverUpdates = sortOrderUpdates
       let placementFolderId = parentServerId.isEmpty
         ? PlaylistFolderRootId.literal : parentServerId
@@ -685,6 +727,8 @@ public final class PlaylistFolderStore: @unchecked Sendable {
         for assignment in serverUpdates {
           switch assignment.kind {
           case .folder:
+            // A pending sibling has no server row to reorder yet.
+            guard !PlaylistFolder.isTemporaryId(assignment.id) else { continue }
             try? await api.updateFolder(
               id: assignment.id, sortOrder: .set(assignment.sortOrder)
             )

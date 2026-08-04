@@ -218,11 +218,21 @@ class PlaylistFolderIdentityTest: XCTestCase {
 
   func testALocallyCreatedFolderGetsATemporaryIdThatIsNotServerShaped() {
     let folder = store.createFolder(name: "Fresh", parent: nil)
+
+    // The two id spaces must never overlap: a temporary id is recognizable on
+    // sight, and its prefix contains punctuation a nanoid cannot.
+    XCTAssertTrue(PlaylistFolder.isTemporaryId(folder.id))
     XCTAssertNotEqual(folder.id.count, PlaylistFolderNanoidFixture.idLength)
-    // A UUID string cannot be mistaken for a nanoid, so the two id spaces never
-    // overlap while a create is in flight.
-    XCTAssertNotNil(UUID(uuidString: folder.id))
     XCTAssertEqual(store.folder(byId: folder.id)?.name, "Fresh")
+  }
+
+  func testAServerShapedIdIsNeverMistakenForATemporaryOne() {
+    for _ in 0 ..< 20 {
+      XCTAssertFalse(PlaylistFolder.isTemporaryId(PlaylistFolderNanoidFixture.make()))
+    }
+    // Nor is the root sentinel, nor a plain UUID string from anywhere else.
+    XCTAssertFalse(PlaylistFolder.isTemporaryId(""))
+    XCTAssertFalse(PlaylistFolder.isTemporaryId(UUID().uuidString))
   }
 
   func testTheServerIdReplacesTheTemporaryOneAndCarriesEverythingAcross() {

@@ -284,14 +284,21 @@ extension PlaylistFolderStore {
 
   /// Push a playlist's complete local placement set with the replace-all
   /// endpoint — the contract's move primitive.
+  /// Placements into folders the server has never issued an id for are left out:
+  /// naming a temporary id in a replace-all would at best 404 and at worst have
+  /// the server store an id that means nothing. Those placements are replayed
+  /// when their folder adopts a real id, in
+  /// ``pushPlacements(ofFolderId:in:)``.
   func pushReplaceAllPlacements(playlistId: String, in context: NSManagedObjectContext) {
     guard let api = navidromeApi else { return }
-    let placements = fetchPlacements(playlistId: playlistId, in: context).map {
-      NavidromePlacementWrite(
-        folderId: $0.folderId.isEmpty ? PlaylistFolderRootId.literal : $0.folderId,
-        sortOrder: $0.sortOrderValue
-      )
-    }
+    let placements = fetchPlacements(playlistId: playlistId, in: context)
+      .filter { !PlaylistFolder.isTemporaryId($0.folderId) }
+      .map {
+        NavidromePlacementWrite(
+          folderId: $0.folderId.isEmpty ? PlaylistFolderRootId.literal : $0.folderId,
+          sortOrder: $0.sortOrderValue
+        )
+      }
     Task {
       try? await api.replacePlaylistPlacements(
         playlistId: playlistId, placements: placements

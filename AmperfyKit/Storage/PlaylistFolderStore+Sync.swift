@@ -43,6 +43,12 @@ extension PlaylistFolderStore {
     guard let context = managedObjectContext,
           let organizationFetcher = folderOrganizationFetcher else { return }
 
+    // Push before pulling. Folders created while offline are still carrying
+    // temporary ids; re-POSTing them now means anything that lands is already in
+    // the envelope fetched below, so reconciliation sees one consistent tree
+    // rather than a folder it is about to consider unknown.
+    await retryPendingFolderCreations(in: context)
+
     let probeOutcome: Result<NavidromeFolderOrganizationResponse, Error>
     do {
       probeOutcome = .success(try await organizationFetcher())
@@ -126,8 +132,17 @@ extension PlaylistFolderStore {
 
     // Delete folders the server no longer has. Deleting a folder cascades to its
     // placements but — by the v52 delete rules — never reaches a playlist.
+    //
+    // A folder still carrying a temporary id is exempt, and the exemption is
+    // load-bearing. Such a folder is a create that has not landed yet: the
+    // server has never been told about it, so its absence from the envelope
+    // says nothing at all. Deleting it here would silently destroy a folder the
+    // user made and every playlist they filed into it, for the crime of having
+    // been created while the connection was down. It is local-first state
+    // awaiting push, not server state to be mirrored.
     for existingFolderMO in existingFolderMOs
-      where !serverFolderIds.contains(existingFolderMO.id) {
+      where !serverFolderIds.contains(existingFolderMO.id)
+      && !PlaylistFolder.isTemporaryId(existingFolderMO.id) {
       for placementMO in fetchPlacements(folderId: existingFolderMO.id, in: context) {
         context.delete(placementMO)
       }
@@ -189,8 +204,14 @@ extension PlaylistFolderStore {
     // Drop edges the server no longer has. A folder named by no placement is an
     // *empty folder*, not a missing one — it was reconciled above from
     // `folders` and survives untouched here.
+    //
+    // Placements into a pending folder are exempt for the same reason the folder
+    // itself is: they were never sent, so the server could not have mentioned
+    // them, and their absence is not evidence of anything. They go up when the
+    // folder adopts a real id.
     for (edgeKey, placementMO) in existingPlacementMOsByEdge
-      where !serverEdgeKeys.contains(edgeKey) {
+      where !serverEdgeKeys.contains(edgeKey)
+      && !PlaylistFolder.isTemporaryId(placementMO.folderId) {
       context.delete(placementMO)
     }
   }

@@ -60,6 +60,58 @@ private final class CreateRequestLog: @unchecked Sendable {
   }
 }
 
+// MARK: - PlacementUpsertLog
+
+/// Records the placement upserts issued to the server.
+private final class PlacementUpsertLog: @unchecked Sendable {
+  struct Upsert: Equatable {
+    let folderId: String
+    let playlistId: String
+    let sortOrder: Int?
+  }
+
+  private let lock = NSLock()
+  private var upserts = [Upsert]()
+
+  func record(folderId: String, playlistId: String, sortOrder: Int?) {
+    lock.lock()
+    defer { lock.unlock() }
+    upserts.append(Upsert(folderId: folderId, playlistId: playlistId, sortOrder: sortOrder))
+  }
+
+  var recordedUpserts: [Upsert] {
+    lock.lock()
+    defer { lock.unlock() }
+    return upserts
+  }
+}
+
+// MARK: - CreatedFolderLog
+
+/// The folders the stubbed server has accepted so far.
+///
+/// `syncFromServer` retries pending creates *before* fetching the organization,
+/// precisely so anything that lands is already in the envelope that follows. A
+/// stub returning a fixed envelope would contradict that — it would report a
+/// folder it had just issued an id for as unknown, and reconciliation would
+/// rightly delete it. So the stub accumulates, the way a server does.
+private final class CreatedFolderLog: @unchecked Sendable {
+  private let lock = NSLock()
+  private var folders = [NavidromeOrganizationFolder]()
+
+  func record(_ folder: NavidromeOrganizationFolder) {
+    lock.lock()
+    defer { lock.unlock() }
+    folders.append(folder)
+  }
+
+  var recordedFolders: [NavidromeOrganizationFolder] {
+    lock.lock()
+    defer { lock.unlock() }
+    return folders
+  }
+}
+
 // MARK: - PlaylistFolderCreationTest
 
 /// End-to-end coverage of creating a folder and adopting the id the server gives
@@ -80,6 +132,8 @@ class PlaylistFolderCreationTest: XCTestCase {
   private var exporter: SilentTreeExporter!
 
   private var createRequestLog: CreateRequestLog!
+  private var placementUpsertLog: PlacementUpsertLog!
+  private var createdFolderLog: CreatedFolderLog!
 
   override func setUp() async throws {
     coreDataHelper = CoreDataHelper()
@@ -94,6 +148,8 @@ class PlaylistFolderCreationTest: XCTestCase {
       treeExporter: exporter
     )
     createRequestLog = CreateRequestLog()
+    placementUpsertLog = PlacementUpsertLog()
+    createdFolderLog = CreatedFolderLog()
   }
 
   private var testContext: NSManagedObjectContext {
@@ -121,6 +177,11 @@ class PlaylistFolderCreationTest: XCTestCase {
           parentId: parentId ?? requestedParentId ?? "",
           sortOrder: sortOrder ?? requestedSortOrder
         )
+      },
+      placementUpsertRequester: { [placementUpsertLog] folderId, playlistId, sortOrder in
+        placementUpsertLog!.record(
+          folderId: folderId, playlistId: playlistId, sortOrder: sortOrder
+        )
       }
     )
   }
@@ -134,7 +195,75 @@ class PlaylistFolderCreationTest: XCTestCase {
       folderCreateRequester: { [createRequestLog] name, parentId, sortOrder in
         createRequestLog!.record(name: name, parentId: parentId, sortOrder: sortOrder)
         throw CreateFailure()
+      },
+      placementUpsertRequester: { [placementUpsertLog] folderId, playlistId, sortOrder in
+        placementUpsertLog!.record(
+          folderId: folderId, playlistId: playlistId, sortOrder: sortOrder
+        )
       }
+    )
+  }
+
+  /// Reconfigure for a sync pass: an organization fetcher answering with a real,
+  /// non-empty envelope that never mentions the pending folders, plus a create
+  /// requester for the retry.
+  ///
+  /// The envelope is deliberately non-empty — an empty one is refused outright
+  /// by `skipEmptyServerOrganizationWouldWipeLocalFolders`, which would mask
+  /// whether pending folders are actually exempt from deletion.
+  private func configureStoreForSync(
+    assigningServerIdsByFolderName serverIdsByFolderName: [String: String]
+  ) {
+    let existingServerFolder = NavidromeOrganizationFolder(
+      id: PlaylistFolderNanoidFixture.make(), name: "Existing", parentId: ""
+    )
+    store.configureForTesting(
+      context: testContext,
+      account: account.managedObject,
+      organizationFetcher: { [existingServerFolder, createdFolderLog, placementUpsertLog] in
+        NavidromeFolderOrganizationResponse(
+          folderApiVersion: 2,
+          // Everything the stub has issued an id for, plus one folder that was
+          // always there — the envelope must be non-empty, or
+          // `skipEmptyServerOrganizationWouldWipeLocalFolders` refuses it
+          // outright and would mask whether pending folders are really exempt.
+          folders: [existingServerFolder] + createdFolderLog!.recordedFolders,
+          // And everything it has been told about placements. A stub that
+          // reported none would have reconciliation strip placements the client
+          // had just successfully upserted, which is a fault in the stub rather
+          // than in the client.
+          placements: placementUpsertLog!.recordedUpserts.map {
+            NavidromeOrganizationPlacement(
+              playlistId: $0.playlistId, folderId: $0.folderId, sortOrder: $0.sortOrder
+            )
+          }
+        )
+      },
+      folderCreateRequester: { [
+        createRequestLog,
+        createdFolderLog,
+        serverIdsByFolderName
+      ] name, parentId, sortOrder in
+        createRequestLog!.record(name: name, parentId: parentId, sortOrder: sortOrder)
+        guard let assignedServerId = serverIdsByFolderName[name] else { throw CreateFailure() }
+        let createdFolder = NavidromeOrganizationFolder(
+          id: assignedServerId, name: name, parentId: parentId ?? "", sortOrder: sortOrder
+        )
+        createdFolderLog!.record(createdFolder)
+        return createdFolder
+      },
+      placementUpsertRequester: { [placementUpsertLog] folderId, playlistId, sortOrder in
+        placementUpsertLog!.record(
+          folderId: folderId, playlistId: playlistId, sortOrder: sortOrder
+        )
+      }
+    )
+  }
+
+  /// Convenience for the single-folder cases: `nil` means the retry keeps failing.
+  private func configureStoreForSync(succeedingCreate serverId: String?) {
+    configureStoreForSync(
+      assigningServerIdsByFolderName: serverId.map { ["Rock": $0] } ?? [:]
     )
   }
 
@@ -314,70 +443,156 @@ class PlaylistFolderCreationTest: XCTestCase {
 
     // The folder survives the failure and can still be organized into: the
     // optimistic entry is never rolled back.
+    XCTAssertTrue(PlaylistFolder.isTemporaryId(createdFolder.id))
     XCTAssertEqual(store.folder(byId: createdFolder.id)?.name, "Rock")
     XCTAssertEqual(store.folder(byId: createdFolder.id)?.playlistIds, ["pl-1"])
     XCTAssertEqual(createRequestLog.recordedRequests.count, 1)
   }
 
-  func testAFailedCreateIsNeverRetried() async {
-    configureStoreWithFailingCreate()
-
-    store.createFolder(name: "Rock", parent: nil)
-    await waitForCreateAttempt()
-
-    // Pinned, not endorsed: there is no retry and no pending-create queue, so the
-    // folder keeps a temporary id the server has never heard of, indefinitely.
-    XCTAssertEqual(createRequestLog.recordedRequests.count, 1)
-  }
-
-  /// **This test pins a defect, not a desired behaviour.**
-  ///
-  /// A folder whose create POST failed keeps its temporary id. Reconciliation
-  /// deletes every local folder absent from the server envelope, and the server
-  /// has never heard of this one — so the next successful sync deletes the
-  /// folder and cascades away every placement filed into it. The playlists
-  /// themselves survive (placements are edges, not membership), but the
-  /// organizing work is destroyed silently.
-  ///
-  /// The `skipEmptyServerOrganizationWouldWipeLocalFolders` guard does not help:
-  /// it only refuses a *wholly* empty envelope, and here the envelope has real
-  /// folders in it.
-  func testAFailedCreateFolderIsSilentlyDeletedByTheNextSuccessfulSync() async throws {
+  func testPlacementsIntoAPendingFolderAreNotSentToTheServer() async {
     seedPlaylist(id: "pl-1", name: "Playlist 1")
     configureStoreWithFailingCreate()
 
     let createdFolder = store.createFolder(name: "Rock", parent: nil)
     await waitForCreateAttempt()
     store.addPlaylists(["pl-1"], to: createdFolder.id)
-    XCTAssertEqual(store.folder(byId: createdFolder.id)?.playlistIds, ["pl-1"])
+    try? await Task.sleep(nanoseconds: 50_000_000)
 
-    // A sync where the server reports a real, non-empty organization that simply
-    // does not include the folder whose creation failed.
-    let existingServerFolderId = PlaylistFolderNanoidFixture.make()
-    store.configureForTesting(
-      context: testContext,
-      account: account.managedObject,
-      organizationFetcher: {
-        NavidromeFolderOrganizationResponse(
-          folderApiVersion: 2,
-          folders: [
-            NavidromeOrganizationFolder(
-              id: existingServerFolderId, name: "Existing", parentId: ""
-            ),
-          ],
-          placements: []
-        )
-      }
-    )
+    // The server has never issued this id, so a placement naming it could only
+    // 404. It is held locally and replayed at adoption instead.
+    XCTAssertTrue(placementUpsertLog.recordedUpserts.isEmpty)
+  }
+
+  // MARK: - Retry on the next sync
+
+  /// Was `testAFailedCreateFolderIsSilentlyDeletedByTheNextSuccessfulSync`,
+  /// which pinned the defect: reconciliation deleted every local folder absent
+  /// from the server envelope, and a folder whose create failed is necessarily
+  /// absent — so the folder and everything filed into it were destroyed.
+  ///
+  /// A pending folder is now exempt from that deletion, because its absence
+  /// from the envelope is not evidence of anything.
+  func testAFailedCreateSurvivesTheNextSyncWithItsPlacements() async throws {
+    seedPlaylist(id: "pl-1", name: "Playlist 1")
+    configureStoreWithFailingCreate()
+
+    let createdFolder = store.createFolder(name: "Rock", parent: nil)
+    await waitForCreateAttempt()
+    store.addPlaylists(["pl-1"], to: createdFolder.id)
+
+    // A sync whose create also fails, against a real, non-empty organization
+    // that does not include the pending folder.
+    configureStoreForSync(succeedingCreate: nil)
     try await store.syncFromServer()
 
-    XCTAssertNil(store.folder(byId: createdFolder.id), "the folder is gone")
-    XCTAssertFalse(
-      store.allFiledPlaylistIds.contains("pl-1"),
-      "and the placement filed into it went with it"
+    XCTAssertEqual(store.folder(byId: createdFolder.id)?.name, "Rock")
+    XCTAssertEqual(store.folder(byId: createdFolder.id)?.playlistIds, ["pl-1"])
+    XCTAssertTrue(store.allFiledPlaylistIds.contains("pl-1"))
+  }
+
+  /// Was `testAFailedCreateIsNeverRetried`. It is retried now — at the top of
+  /// every sync, before the organization is fetched.
+  func testAFailedCreateIsRetriedAndAdoptedOnTheNextSync() async throws {
+    seedPlaylist(id: "pl-1", name: "Playlist 1")
+    configureStoreWithFailingCreate()
+
+    let createdFolder = store.createFolder(name: "Rock", parent: nil)
+    await waitForCreateAttempt()
+    store.addPlaylists(["pl-1"], to: createdFolder.id)
+
+    let serverId = PlaylistFolderNanoidFixture.make()
+    configureStoreForSync(succeedingCreate: serverId)
+    try await store.syncFromServer()
+
+    XCTAssertNil(store.folder(byId: createdFolder.id))
+    XCTAssertEqual(store.folder(byId: serverId)?.name, "Rock")
+    XCTAssertEqual(store.folder(byId: serverId)?.playlistIds, ["pl-1"])
+  }
+
+  func testPlacementsHeldWhilePendingArePushedOnceTheFolderAdopts() async throws {
+    seedPlaylist(id: "pl-1", name: "Playlist 1")
+    seedPlaylist(id: "pl-2", name: "Playlist 2")
+    configureStoreWithFailingCreate()
+
+    let createdFolder = store.createFolder(name: "Rock", parent: nil)
+    await waitForCreateAttempt()
+    store.addPlaylists(["pl-1", "pl-2"], to: createdFolder.id)
+
+    let serverId = PlaylistFolderNanoidFixture.make()
+    configureStoreForSync(succeedingCreate: serverId)
+    try await store.syncFromServer()
+    try? await Task.sleep(nanoseconds: 100_000_000)
+
+    // Without this replay the next reconcile would find a folder the server
+    // knows and no placements in it, and strip every one of them.
+    let upsertedPlaylistIds = placementUpsertLog.recordedUpserts
+      .filter { $0.folderId == serverId }
+      .map(\.playlistId)
+    XCTAssertEqual(Set(upsertedPlaylistIds), ["pl-1", "pl-2"])
+  }
+
+  func testAStillFailingRetryLeavesEverythingIntactAcrossAnotherSync() async throws {
+    seedPlaylist(id: "pl-1", name: "Playlist 1")
+    configureStoreWithFailingCreate()
+
+    let createdFolder = store.createFolder(name: "Rock", parent: nil)
+    await waitForCreateAttempt()
+    store.addPlaylists(["pl-1"], to: createdFolder.id)
+
+    configureStoreForSync(succeedingCreate: nil)
+    try await store.syncFromServer()
+    try await store.syncFromServer()
+
+    // Two failed passes, nothing lost and nothing given up on.
+    XCTAssertEqual(store.folder(byId: createdFolder.id)?.playlistIds, ["pl-1"])
+    XCTAssertGreaterThanOrEqual(createRequestLog.recordedRequests.count, 3)
+  }
+
+  // MARK: - Nested pending folders
+
+  func testAPendingChildIsCreatedAfterItsPendingParentAndUnderItsRealId() async throws {
+    configureStoreWithFailingCreate()
+
+    let pendingParent = store.createFolder(name: "Parent", parent: nil)
+    await waitForCreateAttempt()
+    let pendingChild = store.createFolder(name: "Child", parent: pendingParent.id)
+    await waitForCreateAttempt()
+    XCTAssertTrue(PlaylistFolder.isTemporaryId(pendingParent.id))
+    XCTAssertTrue(PlaylistFolder.isTemporaryId(pendingChild.id))
+
+    let parentServerId = PlaylistFolderNanoidFixture.make()
+    let childServerId = PlaylistFolderNanoidFixture.make()
+    configureStoreForSync(assigningServerIdsByFolderName: [
+      "Parent": parentServerId,
+      "Child": childServerId,
+    ])
+    try await store.syncFromServer()
+
+    // Both landed, and the child was filed under the id its parent had just
+    // adopted — not under the temporary id it was pointing at when the pass began.
+    XCTAssertTrue(store.folders.contains { $0.id == parentServerId })
+    XCTAssertEqual(store.folder(byId: parentServerId)?.subfolders.map(\.id), [childServerId])
+    let childRequest = createRequestLog.recordedRequests.last { $0.name == "Child" }
+    XCTAssertEqual(childRequest?.parentId, parentServerId)
+  }
+
+  func testAPendingChildStaysPendingWhenItsParentsRetryFails() async throws {
+    configureStoreWithFailingCreate()
+
+    let pendingParent = store.createFolder(name: "Parent", parent: nil)
+    await waitForCreateAttempt()
+    let pendingChild = store.createFolder(name: "Child", parent: pendingParent.id)
+    await waitForCreateAttempt()
+
+    configureStoreForSync(succeedingCreate: nil)
+    try await store.syncFromServer()
+
+    // Creating the child at the root would silently flatten the tree, so it
+    // waits for its parent rather than going up without it.
+    XCTAssertEqual(store.folder(byId: pendingChild.id)?.name, "Child")
+    XCTAssertEqual(
+      store.folder(byId: pendingParent.id)?.subfolders.map(\.name),
+      ["Child"]
     )
-    // The playlist itself is untouched — placements are edges, never membership.
-    XCTAssertNotNil(library.getPlaylists(for: account).first { $0.id == "pl-1" })
-    XCTAssertEqual(store.folders.map(\.id), [existingServerFolderId])
   }
 }
