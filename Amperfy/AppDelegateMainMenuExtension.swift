@@ -96,6 +96,16 @@ extension AppDelegate {
       builder.insertSibling(openSettingsMenu, afterMenu: .about)
     #endif
 
+    // Playlist-folder organization. These are first-responder commands: they
+    // route to whichever screen is handling them (the folder browse list), and
+    // UIKit greys the whole menu out everywhere else, so they cost nothing when
+    // another screen is up. Select All and Delete are deliberately absent —
+    // they use the standard responder selectors and so already appear under Edit.
+    builder.insertSibling(
+      UIMenu(title: "Organize", children: buildOrganizeMenu()),
+      afterMenu: .edit
+    )
+
     // Add media controls
     builder.insertSibling(
       UIMenu(title: "Controls", children: buildControlsMenu()),
@@ -169,6 +179,64 @@ extension AppDelegate {
   private func keyCommandShuffleOff() {
     guard player.isShuffle else { return }
     player.toggleShuffle()
+  }
+
+  /// Menu-bar placement for the playlist-folder bulk actions. The selectors are
+  /// implemented on `PlaylistFolderContentsVC`; passing them here with no target
+  /// sends them up the responder chain, and `canPerformAction` on that screen
+  /// decides when each is enabled.
+  private func buildOrganizeMenu() -> [UIMenuElement] {
+    [
+      UIMenu(options: .displayInline, children: [
+        UIKeyCommand(
+          title: "New Folder",
+          image: UIImage(systemName: "folder.badge.plus"),
+          action: Selector(("keyboardNewFolder")),
+          input: "n",
+          modifierFlags: .command
+        ),
+        UIKeyCommand(
+          title: "New Folder from Selection\u{2026}",
+          image: UIImage(systemName: "folder.badge.plus"),
+          action: Selector(("newFolderFromSelection")),
+          input: "n",
+          modifierFlags: [.command, .shift]
+        ),
+      ]),
+      UIMenu(options: .displayInline, children: [
+        UIKeyCommand(
+          title: "Move to Folder\u{2026}",
+          image: UIImage(systemName: "folder"),
+          action: Selector(("moveSelectionToFolder")),
+          input: "m",
+          modifierFlags: .command
+        ),
+        UIAction(
+          title: "Add to Folder\u{2026}",
+          image: UIImage(systemName: "folder.badge.plus")
+        ) { _ in
+          UIApplication.shared.sendAction(
+            Selector(("addSelectionToFolder")), to: nil, from: nil, for: nil
+          )
+        },
+        UIAction(
+          title: "Remove from This Folder",
+          image: UIImage(systemName: "folder.badge.minus")
+        ) { _ in
+          UIApplication.shared.sendAction(
+            Selector(("removeSelectionFromFolder")), to: nil, from: nil, for: nil
+          )
+        },
+      ]),
+      UIMenu(options: .displayInline, children: [
+        UIKeyCommand(
+          title: "Rename\u{2026}",
+          image: UIImage(systemName: "pencil"),
+          action: Selector(("keyboardRenameFocusedRow")),
+          input: "\r"
+        ),
+      ]),
+    ]
   }
 
   private func buildControlsMenu() -> [UIMenuElement] {

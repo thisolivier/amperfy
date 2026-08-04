@@ -27,21 +27,55 @@ import UIKit
 
 /// Shared base for the folder-aware playlist browsing tables. Both the main
 /// Playlists screen (`PlaylistFolderContentsVC`) and the "Add to Playlist"
-/// picker (`PlaylistSelectorVC`) present the same two-section list — top-level
-/// folders plus (unfiled) playlists at the root, or a folder's subfolders plus
-/// its playlists when folder-scoped — with always-on search and sort.
+/// picker (`PlaylistSelectorVC`) present the same single interleaved list —
+/// top-level folders and unfiled playlists at the root, or a folder's subfolders
+/// and its playlists when folder-scoped — with always-on search and sort.
 ///
-/// This base owns the data loading, the section/cell plumbing, the search
+/// Folders and playlists are one list, not two sections, because they are one
+/// ordering space: a playlist deliberately placed between two folders has to
+/// render between them. `displayedRows` is that merged list.
+///
+/// This base owns the data loading, the row/cell plumbing, the search
 /// controller, and the folder-change observer. Subclasses override the small
 /// set of hooks below to supply their screen-specific behavior (what a folder
 /// tap pushes, what a playlist tap does, edit-mode interception, and the two
 /// playlist-cell styling differences).
 class PlaylistFolderBrowsingTableViewController: UITableViewController {
-  // MARK: - Sections
+  // MARK: - Rows
 
-  enum Section: Int, CaseIterable {
-    case folders = 0
-    case playlists = 1
+  /// One entry in the single interleaved list. Folders and playlists share one
+  /// ordering space per parent, so they share one section too — see
+  /// `PlaylistFolderBrowseListBuilder` for why the two-section layout was wrong.
+  enum PlaylistFolderBrowseRow {
+    case folder(PlaylistFolder)
+    case playlist(Playlist)
+
+    var identity: PlaylistFolderBrowseRowIdentity {
+      switch self {
+      // Folder identity is the `UUID`'s string form throughout the UI layer, so
+      // it round-trips back to a `UUID` for the store without ever needing the
+      // stored server id, whose case may differ.
+      case let .folder(folder): return .folder(folder.id.uuidString)
+      case let .playlist(playlist): return .playlist(playlist.id)
+      }
+    }
+
+    var displayName: String {
+      switch self {
+      case let .folder(folder): return folder.name
+      case let .playlist(playlist): return playlist.name
+      }
+    }
+
+    var asFolder: PlaylistFolder? {
+      guard case let .folder(folder) = self else { return nil }
+      return folder
+    }
+
+    var asPlaylist: Playlist? {
+      guard case let .playlist(playlist) = self else { return nil }
+      return playlist
+    }
   }
 
   // MARK: - Properties
@@ -52,7 +86,21 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
 
   var displayedFolders: [PlaylistFolder] = []
   var displayedPlaylists: [Playlist] = []
+  /// The rendered list: subfolders and playlists interleaved in sibling order.
+  var displayedRows: [PlaylistFolderBrowseRow] = []
   private var folderObserver: (any NSObjectProtocol)?
+
+  var displayedRowIdentities: [PlaylistFolderBrowseRowIdentity] {
+    displayedRows.map(\.identity)
+  }
+
+  func row(at rowIndex: Int) -> PlaylistFolderBrowseRow? {
+    displayedRows.indices.contains(rowIndex) ? displayedRows[rowIndex] : nil
+  }
+
+  func row(at indexPath: IndexPath) -> PlaylistFolderBrowseRow? {
+    row(at: indexPath.row)
+  }
 
   var sortType: PlaylistSortType = .name
   var searchText: String = ""
@@ -131,8 +179,58 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
       displayedFolders = searchText.isEmpty ? sortFolders(folderStore.folders) : []
       displayedPlaylists = fetchUnfiledPlaylists()
     }
+    displayedRows = buildInterleavedRows()
     tableView.reloadData()
     updateContentUnavailable()
+    didReloadRows()
+  }
+
+  /// Merge the fetched folders and playlists into the one list the table shows.
+  ///
+  /// Both inputs are already filtered by search and offline mode, so whatever
+  /// survives is ordered here with the shared sibling comparator. Under an
+  /// attribute sort the two are concatenated instead — sorting a folder by
+  /// duration means nothing — but it is still one list, not two sections.
+  private func buildInterleavedRows() -> [PlaylistFolderBrowseRow] {
+    let folderSiblings = displayedFolders.map {
+      PlaylistFolderSibling(
+        kind: .folder,
+        id: $0.id.uuidString,
+        name: $0.name,
+        sortOrder: $0.sortOrder
+      )
+    }
+    let playlistSortOrders = folderStore.playlistSortOrders(inFolder: parentFolderId)
+    let playlistSiblings = displayedPlaylists.map {
+      PlaylistFolderSibling(
+        kind: .playlist,
+        id: $0.id,
+        name: $0.name,
+        sortOrder: playlistSortOrders[$0.id]
+      )
+    }
+
+    let foldersById = Dictionary(
+      displayedFolders.map { ($0.id.uuidString, $0) },
+      uniquingKeysWith: { first, _ in first }
+    )
+    let playlistsById = Dictionary(
+      displayedPlaylists.map { ($0.id, $0) },
+      uniquingKeysWith: { first, _ in first }
+    )
+
+    return PlaylistFolderBrowseListBuilder.rowIdentities(
+      folderSiblings: folderSiblings,
+      playlistSiblings: playlistSiblings,
+      keepsFoldersFirst: !usesManualSiblingOrder
+    ).compactMap { identity in
+      switch identity.kind {
+      case .folder:
+        return foldersById[identity.id].map { PlaylistFolderBrowseRow.folder($0) }
+      case .playlist:
+        return playlistsById[identity.id].map { PlaylistFolderBrowseRow.playlist($0) }
+      }
+    }
   }
 
   private func fetchUnfiledPlaylists() -> [Playlist] {
@@ -188,10 +286,8 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
   /// Order playlists by the sibling comparator: `sortOrder` ascending, ties
   /// broken by name, and playlists with no placement in this parent last.
   ///
-  /// Folders and playlists share one ordering space per parent, but the table
-  /// renders them as two sections, so what each section shows is that single
-  /// order projected onto its own members. The relative order within each
-  /// section is identical to the interleaved order.
+  /// This orders the playlists among themselves; `buildInterleavedRows()` then
+  /// merges them with the folders into the single order actually rendered.
   private func sortPlaylistsBySiblingOrder(_ playlists: [Playlist]) -> [Playlist] {
     let sortOrdersByPlaylistId = folderStore.playlistSortOrders(inFolder: parentFolderId)
     return playlists
@@ -237,7 +333,7 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
   }
 
   private func updateContentUnavailable() {
-    if displayedFolders.isEmpty, displayedPlaylists.isEmpty {
+    if displayedRows.isEmpty {
       if !searchText.isEmpty {
         contentUnavailableConfiguration = UIContentUnavailableConfiguration.search()
       } else {
@@ -309,6 +405,11 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
   /// the subclass handle the tap itself (e.g. multi-select in edit mode).
   func shouldInterceptSelection(at indexPath: IndexPath) -> Bool { false }
 
+  /// Called at the end of every `reloadContent()`, after `displayedRows` and the
+  /// table have been refreshed. Subclasses holding row-index state — a
+  /// selection, a keyboard focus — reconcile it here.
+  func didReloadRows() {}
+
   /// Whether playlist cells show the leading cache-status fragment in the
   /// detail line. The main screen wants this; the picker does not.
   var playlistCellShowsCacheStatus: Bool { true }
@@ -324,30 +425,10 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
 
   // MARK: - UITableViewDataSource
 
-  override func numberOfSections(in tableView: UITableView) -> Int {
-    Section.allCases.count
-  }
+  override func numberOfSections(in tableView: UITableView) -> Int { 1 }
 
   override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    switch Section(rawValue: section) {
-    case .folders: return displayedFolders.count
-    case .playlists: return displayedPlaylists.count
-    case .none: return 0
-    }
-  }
-
-  override func tableView(
-    _ tableView: UITableView,
-    titleForHeaderInSection section: Int
-  )
-    -> String? {
-    switch Section(rawValue: section) {
-    case .folders: return displayedFolders.isEmpty ? nil : "Folders"
-    case .playlists:
-      if displayedPlaylists.isEmpty { return nil }
-      return parentFolderId == nil ? "Playlists" : nil
-    case .none: return nil
-    }
+    displayedRows.count
   }
 
   override func tableView(
@@ -355,18 +436,17 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
     cellForRowAt indexPath: IndexPath
   )
     -> UITableViewCell {
-    switch Section(rawValue: indexPath.section) {
-    case .folders:
-      return folderCell(for: indexPath)
-    case .playlists:
-      return playlistCell(for: indexPath)
+    switch row(at: indexPath) {
+    case let .folder(folder):
+      return folderCell(for: folder)
+    case let .playlist(playlist):
+      return playlistCell(for: playlist)
     case .none:
       return UITableViewCell()
     }
   }
 
-  private func folderCell(for indexPath: IndexPath) -> UITableViewCell {
-    let folder = displayedFolders[indexPath.row]
+  private func folderCell(for folder: PlaylistFolder) -> UITableViewCell {
     let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "FolderCell")
     cell.imageView?.image = UIImage(systemName: "folder.fill")?.withRenderingMode(.alwaysTemplate)
     cell.imageView?.tintColor = ThemeStore.shared.dynamicTint ?? .systemBlue
@@ -390,8 +470,7 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
     return cell
   }
 
-  private func playlistCell(for indexPath: IndexPath) -> UITableViewCell {
-    let playlist = displayedPlaylists[indexPath.row]
+  private func playlistCell(for playlist: Playlist) -> UITableViewCell {
     let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "PlaylistCell")
     cell.textLabel?.text = playlist.name
     cell.textLabel?.textColor = ThemeStore.shared.dynamicText ?? .label
@@ -430,18 +509,22 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
 
   override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
     if shouldInterceptSelection(at: indexPath) { return }
-    switch Section(rawValue: indexPath.section) {
-    case .folders:
-      let folder = displayedFolders[indexPath.row]
-      let childVC = makeChildBrowser(parentFolderId: folder.id)
-      navigationController?.pushViewController(childVC, animated: true)
-    case .playlists:
-      let playlist = displayedPlaylists[indexPath.row]
+    switch row(at: indexPath) {
+    case let .folder(folder):
+      openFolder(folder)
+    case let .playlist(playlist):
       onPlaylistSelected(playlist, at: indexPath)
     case .none:
       break
     }
     tableView.deselectRow(at: indexPath, animated: true)
+  }
+
+  /// Push the folder-scoped browser for `folder`. Shared by taps, keyboard
+  /// activation and the spring-loaded descend during a drag.
+  func openFolder(_ folder: PlaylistFolder) {
+    let childVC = makeChildBrowser(parentFolderId: folder.id)
+    navigationController?.pushViewController(childVC, animated: true)
   }
 }
 

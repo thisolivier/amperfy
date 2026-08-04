@@ -25,16 +25,23 @@ import UIKit
 
 // MARK: - PlaylistFolderContentsVC
 
-/// Shows the contents of a playlist folder (subfolders + playlists), or the
-/// root-level view (top-level folders + unfiled playlists) when `parentFolderId`
-/// is nil. Replaces `PlaylistsVC` as the Playlists tab entry point.
+/// Shows the contents of a playlist folder, or the root level when
+/// `parentFolderId` is nil. Replaces `PlaylistsVC` as the Playlists tab entry
+/// point.
 ///
-/// v2 redesign: single unified list (no flat/folder toggle), always-on search
-/// and sort, custom floating action bar for multi-select (above tab bar).
+/// v3: one interleaved list of siblings (folders and playlists together, in the
+/// order the user arranged them), built for bulk organization — multi-select
+/// with command- and shift-click, drag and drop onto folders, keyboard commands,
+/// and bulk toolbar/context-menu actions. The screen is designed around a Mac
+/// Catalyst session where a whole folder tree is rebuilt in one sitting, while
+/// staying usable with touch alone.
 ///
-/// The folder-aware list plumbing (sections, cells, search, sort, data loading)
-/// lives in `PlaylistFolderBrowsingTableViewController`, shared with the
-/// "Add to Playlist" picker (`PlaylistSelectorVC`).
+/// The list plumbing (rows, cells, search, sort, data loading) lives in
+/// `PlaylistFolderBrowsingTableViewController`, shared with the "Add to
+/// Playlist" picker (`PlaylistSelectorVC`). The bulk behaviour is split across:
+/// - `PlaylistFolderContentsVC+BulkSelection.swift` — selection and bulk actions
+/// - `PlaylistFolderContentsVC+DragAndDrop.swift` — drag, drop, reorder
+/// - `PlaylistFolderContentsVC+Keyboard.swift` — key commands and focus
 class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
   // MARK: - Init
 
@@ -45,12 +52,23 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError() }
 
+  // MARK: - Selection state
+
+  /// The source of truth for what is selected. The table view is driven from
+  /// this, not read as the answer — see `PlaylistFolderSelectionModel`.
+  var selectionModel = PlaylistFolderSelectionModel()
+  /// Modifier keys currently held, so a click can be classified as plain,
+  /// command- or shift-click on Catalyst and iPad.
+  var modifierKeyState = PlaylistFolderModifierKeyState()
+  /// True between drag start and drag end, so a spring-loaded row activation is
+  /// understood as "descend into this folder" rather than as a selection tap.
+  var isDraggingRows = false
+
   // MARK: - Floating action bar
 
-  private let editActionBar = UIView()
-  private var editActionBarButtons: [UIButton] = []
-  private var selectionCountLabel: UILabel?
-  private var editActionBarBottomConstraint: NSLayoutConstraint?
+  let editActionBar = UIView()
+  var editActionBarButtons: [UIButton] = []
+  var selectionCountLabel: UILabel?
 
   // MARK: - Lifecycle
 
@@ -69,6 +87,8 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     tableView.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemGroupedBackground
     tableView.allowsMultipleSelectionDuringEditing = true
 
+    configureDragAndDrop()
+
     navigationItem.searchController = searchController
     definesPresentationContext = true
 
@@ -86,9 +106,23 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     reloadContent()
   }
 
+  override func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    // Needed for `keyCommands` to reach this screen rather than stopping at the
+    // window; without it every shortcut below is dead on Mac.
+    becomeFirstResponder()
+  }
+
+  override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    // A modifier released while another screen is up would never be seen, so a
+    // stale "command is down" must not survive leaving this list.
+    modifierKeyState.reset()
+  }
+
   // MARK: - Navigation items
 
-  private func rebuildNavigationItems() {
+  func rebuildNavigationItems() {
     let optionsButton = UIBarButtonItem(
       image: UIImage(systemName: "ellipsis.circle"),
       menu: UIMenu.lazyMenu { [weak self] in
@@ -127,160 +161,6 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     rebuildNavigationItems()
   }
 
-  // MARK: - Floating action bar
-
-  private func configureEditActionBar() {
-    editActionBar.translatesAutoresizingMaskIntoConstraints = false
-    editActionBar.backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
-    editActionBar.isHidden = true
-    view.addSubview(editActionBar)
-
-    let separator = UIView()
-    separator.translatesAutoresizingMaskIntoConstraints = false
-    separator.backgroundColor = .separator
-    editActionBar.addSubview(separator)
-
-    NSLayoutConstraint.activate([
-      separator.topAnchor.constraint(equalTo: editActionBar.topAnchor),
-      separator.leadingAnchor.constraint(equalTo: editActionBar.leadingAnchor),
-      separator.trailingAnchor.constraint(equalTo: editActionBar.trailingAnchor),
-      separator.heightAnchor.constraint(equalToConstant: 0.5),
-    ])
-
-    let countLabel = UILabel()
-    countLabel.translatesAutoresizingMaskIntoConstraints = false
-    countLabel.font = .preferredFont(forTextStyle: .caption1)
-    countLabel.textColor = ThemeStore.shared.dynamicSecondaryText ?? .secondaryLabel
-    countLabel.textAlignment = .center
-    countLabel.text = "0 selected"
-    editActionBar.addSubview(countLabel)
-    selectionCountLabel = countLabel
-
-    let stackView = UIStackView()
-    stackView.translatesAutoresizingMaskIntoConstraints = false
-    stackView.axis = .horizontal
-    stackView.distribution = .fillEqually
-    stackView.spacing = 12
-    editActionBar.addSubview(stackView)
-
-    NSLayoutConstraint.activate([
-      countLabel.topAnchor.constraint(equalTo: separator.bottomAnchor, constant: 4),
-      countLabel.centerXAnchor.constraint(equalTo: editActionBar.centerXAnchor),
-      stackView.topAnchor.constraint(equalTo: countLabel.bottomAnchor, constant: 4),
-      stackView.leadingAnchor.constraint(equalTo: editActionBar.leadingAnchor, constant: 16),
-      stackView.trailingAnchor.constraint(equalTo: editActionBar.trailingAnchor, constant: -16),
-      stackView.bottomAnchor.constraint(equalTo: editActionBar.bottomAnchor, constant: -8),
-    ])
-
-    if parentFolderId != nil {
-      let moveButton = makeActionBarButton(
-        title: "Move to Folder",
-        action: #selector(moveSelectedToFolder)
-      )
-      let removeButton = makeActionBarButton(
-        title: "Remove from Folder",
-        action: #selector(removeSelectedFromFolder)
-      )
-      stackView.addArrangedSubview(moveButton)
-      stackView.addArrangedSubview(removeButton)
-      editActionBarButtons = [moveButton, removeButton]
-    } else {
-      let addButton = makeActionBarButton(
-        title: "Add to Folder",
-        action: #selector(addSelectedToFolder)
-      )
-      stackView.addArrangedSubview(addButton)
-      editActionBarButtons = [addButton]
-    }
-
-    let barHeight: CGFloat = 68
-
-    NSLayoutConstraint.activate([
-      editActionBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      editActionBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      editActionBar.heightAnchor.constraint(equalToConstant: barHeight),
-      editActionBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-    ])
-
-    updateEditActionBarState()
-  }
-
-  private func makeActionBarButton(title: String, action: Selector) -> UIButton {
-    var config = UIButton.Configuration.filled()
-    config.title = title
-    config.cornerStyle = .medium
-    config.buttonSize = .medium
-    let button = UIButton(configuration: config)
-    button.addTarget(self, action: action, for: .touchUpInside)
-    button.isEnabled = false
-    return button
-  }
-
-  private func updateEditActionBarState() {
-    let selectedCount = tableView.indexPathsForSelectedRows?
-      .filter { $0.section == Section.playlists.rawValue }
-      .count ?? 0
-    let hasSelection = selectedCount > 0
-    for button in editActionBarButtons {
-      button.isEnabled = hasSelection
-    }
-    selectionCountLabel?.text = "\(selectedCount) selected"
-  }
-
-  // MARK: - Edit mode
-
-  override func setEditing(_ editing: Bool, animated: Bool) {
-    super.setEditing(editing, animated: animated)
-    editActionBar.isHidden = !editing
-    tableView.contentInset.bottom = editing ? 68 : 0
-    if editing {
-      updateEditActionBarState()
-    }
-  }
-
-  @objc
-  private func addSelectedToFolder() {
-    guard let selectedRows = tableView.indexPathsForSelectedRows else { return }
-    let selectedPlaylistIds = selectedRows
-      .filter { $0.section == Section.playlists.rawValue }
-      .compactMap { displayedPlaylists[safe: $0.row]?.id }
-    guard !selectedPlaylistIds.isEmpty else { return }
-    presentFolderPicker(title: "Add to Folder") { [weak self] folderId in
-      self?.folderStore.addPlaylists(selectedPlaylistIds, to: folderId)
-      self?.setEditing(false, animated: true)
-    }
-  }
-
-  @objc
-  private func moveSelectedToFolder() {
-    guard let currentFolderId = parentFolderId,
-          let selectedRows = tableView.indexPathsForSelectedRows
-    else { return }
-    let selectedPlaylistIds = selectedRows
-      .filter { $0.section == Section.playlists.rawValue }
-      .compactMap { displayedPlaylists[safe: $0.row]?.id }
-    guard !selectedPlaylistIds.isEmpty else { return }
-    presentFolderPicker(title: "Move to Folder", excluding: currentFolderId) { [weak self] destId in
-      for playlistId in selectedPlaylistIds {
-        self?.folderStore.movePlaylist(playlistId, from: currentFolderId, to: destId)
-      }
-      self?.setEditing(false, animated: true)
-    }
-  }
-
-  @objc
-  private func removeSelectedFromFolder() {
-    guard let currentFolderId = parentFolderId,
-          let selectedRows = tableView.indexPathsForSelectedRows
-    else { return }
-    let selectedPlaylistIds = selectedRows
-      .filter { $0.section == Section.playlists.rawValue }
-      .compactMap { displayedPlaylists[safe: $0.row]?.id }
-    guard !selectedPlaylistIds.isEmpty else { return }
-    folderStore.removePlaylists(selectedPlaylistIds, from: currentFolderId)
-    setEditing(false, animated: true)
-  }
-
   // MARK: - Browsing hooks
 
   override func makeChildBrowser(parentFolderId: UUID) -> UITableViewController {
@@ -292,28 +172,20 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     navigationController?.pushViewController(detailVC, animated: true)
   }
 
-  override func shouldInterceptSelection(at indexPath: IndexPath) -> Bool {
-    if isEditing {
-      updateEditActionBarState()
-      return true
-    }
-    return false
+  /// Row indices are only meaningful against the list they were taken from, so
+  /// the selection is reconciled against the freshly built one.
+  ///
+  /// Lives here rather than beside the rest of the selection code because Swift
+  /// will not let a non-`@objc` method be overridden from an extension.
+  override func didReloadRows() {
+    selectionModel.reconcile(rowCount: displayedRows.count)
+    applySelectionToTableView()
   }
 
-  // MARK: - UITableViewDelegate
-
-  override func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
-    if isEditing {
-      updateEditActionBarState()
-    }
-  }
+  // MARK: - Row editing
 
   override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-    switch Section(rawValue: indexPath.section) {
-    case .playlists: return true
-    case .folders: return true
-    case .none: return false
-    }
+    row(at: indexPath) != nil
   }
 
   override func tableView(
@@ -322,16 +194,7 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     forRowAt indexPath: IndexPath
   ) {
     guard editingStyle == .delete else { return }
-    switch Section(rawValue: indexPath.section) {
-    case .folders:
-      guard let folder = displayedFolders[safe: indexPath.row] else { return }
-      handleFolderDelete(folder)
-    case .playlists:
-      guard let playlist = displayedPlaylists[safe: indexPath.row] else { return }
-      confirmDeletePlaylist(playlist)
-    case .none:
-      break
-    }
+    deleteRow(at: indexPath.row)
   }
 
   override func tableView(
@@ -339,10 +202,10 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
   )
     -> UISwipeActionsConfiguration? {
+    guard let row = row(at: indexPath) else { return nil }
     let deleteAction: UIContextualAction
-    switch Section(rawValue: indexPath.section) {
-    case .folders:
-      guard let folder = displayedFolders[safe: indexPath.row] else { return nil }
+    switch row {
+    case let .folder(folder):
       deleteAction = UIContextualAction(
         style: .destructive,
         title: "Delete"
@@ -350,8 +213,7 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
         self?.handleFolderDelete(folder)
         completion(true)
       }
-    case .playlists:
-      guard let playlist = displayedPlaylists[safe: indexPath.row] else { return nil }
+    case let .playlist(playlist):
       // completion(false): leave the row in place until the user confirms;
       // `deletePlaylist` calls `reloadContent()` to remove it on success, so a
       // cancelled confirmation doesn't animate away a row that still exists.
@@ -362,17 +224,25 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
         self?.confirmDeletePlaylist(playlist)
         completion(false)
       }
-    case .none:
-      return nil
     }
     deleteAction.image = UIImage(systemName: "trash")
     return UISwipeActionsConfiguration(actions: [deleteAction])
   }
 
-  /// Entry point shared by swipe, edit-mode commit, and context menu.
-  /// Empty folders delete immediately; non-empty folders go through
+  /// Delete whatever sits at `rowIndex`, routing folders and playlists to their
+  /// own confirmation flows.
+  func deleteRow(at rowIndex: Int) {
+    switch row(at: rowIndex) {
+    case let .folder(folder): handleFolderDelete(folder)
+    case let .playlist(playlist): confirmDeletePlaylist(playlist)
+    case .none: break
+    }
+  }
+
+  /// Entry point shared by swipe, edit-mode commit, the context menu and the
+  /// delete key. Empty folders delete immediately; non-empty folders go through
   /// `confirmDeleteFolder`.
-  private func handleFolderDelete(_ folder: PlaylistFolder) {
+  func handleFolderDelete(_ folder: PlaylistFolder) {
     if folder.playlistIds.isEmpty, folder.subfolders.isEmpty {
       folderStore.deleteFolder(id: folder.id)
     } else {
@@ -380,113 +250,9 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     }
   }
 
-  // MARK: - Context menus
-
-  override func tableView(
-    _ tableView: UITableView,
-    contextMenuConfigurationForRowAt indexPath: IndexPath,
-    point: CGPoint
-  )
-    -> UIContextMenuConfiguration? {
-    switch Section(rawValue: indexPath.section) {
-    case .folders:
-      return folderContextMenu(at: indexPath)
-    case .playlists:
-      return playlistContextMenu(at: indexPath)
-    case .none:
-      return nil
-    }
-  }
-
-  private func folderContextMenu(at indexPath: IndexPath) -> UIContextMenuConfiguration {
-    let folder = displayedFolders[indexPath.row]
-    return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
-      let renameAction = UIAction(
-        title: "Rename",
-        image: UIImage(systemName: "pencil")
-      ) { [weak self] _ in
-        self?.promptRenameFolder(folder)
-      }
-      let deleteAction = UIAction(
-        title: "Delete Folder",
-        image: UIImage(systemName: "trash"),
-        attributes: .destructive
-      ) { [weak self] _ in
-        self?.handleFolderDelete(folder)
-      }
-      return UIMenu(children: [renameAction, deleteAction])
-    }
-  }
-
-  private func playlistContextMenu(at indexPath: IndexPath) -> UIContextMenuConfiguration {
-    let playlist = displayedPlaylists[indexPath.row]
-    return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
-      guard let self else { return UIMenu(children: []) }
-      var actions = [UIMenuElement]()
-
-      actions.append(UIAction(
-        title: "Rename",
-        image: UIImage(systemName: "pencil")
-      ) { [weak self] _ in
-        self?.promptRenamePlaylist(playlist)
-      })
-
-      if let currentFolderId = parentFolderId {
-        actions.append(UIAction(
-          title: "Move to Folder\u{2026}",
-          image: UIImage(systemName: "folder")
-        ) { [weak self] _ in
-          self?.presentFolderPicker(title: "Move to Folder", excluding: currentFolderId) { destId in
-            self?.folderStore.movePlaylist(playlist.id, from: currentFolderId, to: destId)
-          }
-        })
-
-        actions.append(UIAction(
-          title: "Also Show in Folder\u{2026}",
-          image: UIImage(systemName: "folder.badge.plus")
-        ) { [weak self] _ in
-          self?
-            .presentFolderPicker(
-              title: "Also Show in Folder",
-              excluding: currentFolderId
-            ) { destId in
-              self?.folderStore.addPlaylists([playlist.id], to: destId)
-            }
-        })
-
-        actions.append(UIAction(
-          title: "Remove from Folder",
-          image: UIImage(systemName: "folder.badge.minus"),
-          attributes: .destructive
-        ) { [weak self] _ in
-          self?.folderStore.removePlaylists([playlist.id], from: currentFolderId)
-        })
-      } else {
-        actions.append(UIAction(
-          title: "Add to Folder\u{2026}",
-          image: UIImage(systemName: "folder.badge.plus")
-        ) { [weak self] _ in
-          self?.presentFolderPicker(title: "Add to Folder") { folderId in
-            self?.folderStore.addPlaylists([playlist.id], to: folderId)
-          }
-        })
-      }
-
-      actions.append(UIAction(
-        title: "Delete Playlist",
-        image: UIImage(systemName: "trash"),
-        attributes: .destructive
-      ) { [weak self] _ in
-        self?.confirmDeletePlaylist(playlist)
-      })
-
-      return UIMenu(children: actions)
-    }
-  }
-
   // MARK: - Folder management prompts
 
-  private func promptCreatePlaylist() {
+  func promptCreatePlaylist() {
     let alert = UIAlertController(title: "New Playlist", message: nil, preferredStyle: .alert)
     alert.addTextField { textField in
       textField.placeholder = "Playlist name"
@@ -528,7 +294,7 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     reloadContent()
   }
 
-  private func promptCreateFolder() {
+  func promptCreateFolder() {
     let alert = UIAlertController(title: "New Folder", message: nil, preferredStyle: .alert)
     alert.addTextField { textField in
       textField.placeholder = "Folder name"
@@ -542,7 +308,7 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     present(alert, animated: true)
   }
 
-  private func promptRenameFolder(_ folder: PlaylistFolder) {
+  func promptRenameFolder(_ folder: PlaylistFolder) {
     let alert = UIAlertController(title: "Rename Folder", message: nil, preferredStyle: .alert)
     alert.addTextField { textField in
       textField.text = folder.name
@@ -556,7 +322,7 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     present(alert, animated: true)
   }
 
-  private func promptRenamePlaylist(_ playlist: Playlist) {
+  func promptRenamePlaylist(_ playlist: Playlist) {
     let currentName = playlist.name
     let alert = UIAlertController(title: "Rename Playlist", message: nil, preferredStyle: .alert)
     let renameAction = UIAlertAction(
@@ -596,7 +362,7 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     present(alert, animated: true)
   }
 
-  private func confirmDeletePlaylist(_ playlist: Playlist) {
+  func confirmDeletePlaylist(_ playlist: Playlist) {
     let alert = UIAlertController(
       title: "Delete Playlist",
       message: "Delete \u{201C}\(playlist.name)\u{201D}? This removes it from all your synced devices.",
@@ -612,7 +378,7 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
   /// Deletes a playlist locally, persists, then tells the server. The server
   /// upload is essential: without it the next `syncDownPlaylistsWithoutSongs()`
   /// re-creates the playlist, so the deletion would not stick.
-  private func deletePlaylist(_ playlist: Playlist) {
+  func deletePlaylist(_ playlist: Playlist) {
     let playlistId = playlist.id
     let account = playlist.account
     appDelegate.storage.main.library.deletePlaylist(playlist)
@@ -630,13 +396,11 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
     }
   }
 
-  private func confirmDeleteFolder(_ folder: PlaylistFolder) {
-    let playlistCount = folder.playlistIds.count
-    let subfolderCount = folder.subfolders.count
+  func confirmDeleteFolder(_ folder: PlaylistFolder) {
     let message = deleteFolderConfirmationMessage(
       folderName: folder.name,
-      playlistCount: playlistCount,
-      subfolderCount: subfolderCount
+      playlistCount: folder.playlistIds.count,
+      subfolderCount: folder.subfolders.count
     )
     let alert = UIAlertController(title: "Delete Folder", message: message, preferredStyle: .alert)
     alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -650,7 +414,7 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
   /// for both playlists and sub-folders, and trims either half when the count
   /// is zero. Counts reflect *direct* children only (grandchildren stay inside
   /// their direct parent, which itself pops up one level).
-  private func deleteFolderConfirmationMessage(
+  func deleteFolderConfirmationMessage(
     folderName: String,
     playlistCount: Int,
     subfolderCount: Int
@@ -682,67 +446,22 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
 
   // MARK: - Folder picker
 
-  private func presentFolderPicker(
+  /// Present the destination picker. `excludingSelectedFolders` keeps the
+  /// folders being moved (and their subtrees) out of the list, since either
+  /// would be a cycle.
+  func presentFolderPicker(
     title: String,
-    excluding excludedFolderId: UUID? = nil,
-    completion: @escaping (UUID) -> ()
+    includesRootDestination: Bool,
+    excludingFolderIds excludedFolderIds: Set<UUID> = [],
+    onDestinationChosen: @escaping (UUID?) -> ()
   ) {
-    let allFolders = flattenFolders(folderStore.folders, depth: 0, excluding: excludedFolderId)
-
-    let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
-
-    for (folder, depth) in allFolders {
-      let indent = String(repeating: "  ", count: depth)
-      alert.addAction(UIAlertAction(title: "\(indent)\(folder.name)", style: .default) { _ in
-        completion(folder.id)
-      })
-    }
-
-    alert.addAction(UIAlertAction(title: "New Folder\u{2026}", style: .default) { [weak self] _ in
-      let nameAlert = UIAlertController(title: "New Folder", message: nil, preferredStyle: .alert)
-      nameAlert.addTextField { $0.placeholder = "Folder name"; $0.autocapitalizationType = .words }
-      nameAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-      nameAlert.addAction(UIAlertAction(title: "Create", style: .default) { _ in
-        guard let name = nameAlert.textFields?.first?.text, !name.isEmpty else { return }
-        let newFolder = self?.folderStore.createFolder(name: name, parent: self?.parentFolderId)
-        if let newFolder { completion(newFolder.id) }
-      })
-      self?.present(nameAlert, animated: true)
-    })
-
-    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-
-    if let popover = alert.popoverPresentationController {
-      popover.sourceView = view
-      popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
-    }
-    present(alert, animated: true)
-  }
-
-  private func flattenFolders(
-    _ folders: [PlaylistFolder],
-    depth: Int,
-    excluding excludedId: UUID?
-  )
-    -> [(PlaylistFolder, Int)] {
-    var result = [(PlaylistFolder, Int)]()
-    for folder in folders {
-      if folder.id == excludedId { continue }
-      result.append((folder, depth))
-      result.append(contentsOf: flattenFolders(
-        folder.subfolders,
-        depth: depth + 1,
-        excluding: excludedId
-      ))
-    }
-    return result
-  }
-}
-
-// MARK: - Array safe subscript
-
-extension Array {
-  fileprivate subscript(safe index: Int) -> Element? {
-    indices.contains(index) ? self[index] : nil
+    let pickerVC = PlaylistFolderPickerVC(
+      promptTitle: title,
+      includesRootDestination: includesRootDestination,
+      excludedFolderIds: excludedFolderIds,
+      onDestinationChosen: onDestinationChosen
+    )
+    let navigationVC = UINavigationController(rootViewController: pickerVC)
+    present(navigationVC, animated: true)
   }
 }
