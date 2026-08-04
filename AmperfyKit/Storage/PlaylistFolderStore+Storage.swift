@@ -165,6 +165,11 @@ extension PlaylistFolderStore {
   /// wrong one. An empty id is the root, which is not a folder row.
   func fetchFolderMO(byServerId serverId: String, in context: NSManagedObjectContext)
     -> PlaylistFolderMO? {
+    // Backstop for the aliasing done at the public entry points: this is the one
+    // lookup every folder write funnels through, so resolving here as well means
+    // an entry point added later cannot silently skip it. Idempotent, so the
+    // double resolution costs nothing.
+    let serverId = resolveFolderId(serverId)
     guard !serverId.isEmpty else { return nil }
     let fetchRequest = PlaylistFolderMO.fetchRequest()
     fetchRequest.predicate = NSPredicate(format: "id == %@", serverId)

@@ -169,6 +169,16 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     "amperfy.fork.playlistFolders.didChange"
   )
 
+  /// Posted when a folder swaps its temporary id for the server's, carrying a
+  /// ``PlaylistFolderAdoption``. NotificationCenter rather than a Combine
+  /// subject or an AsyncSequence: it is the idiom every store in AmperfyKit
+  /// already uses, `didChangeNotification` above is already what the browse
+  /// screens subscribe to, and the payload follows `DownloadNotification`'s
+  /// established shape. A second mechanism would buy nothing here.
+  public static let didAdoptFolderIdNotification = Notification.Name(
+    "amperfy.fork.playlistFolders.didAdoptFolderId"
+  )
+
   // MARK: - Dependencies (set after init via configure())
 
   var managedObjectContext: NSManagedObjectContext?
@@ -187,6 +197,30 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   /// Guards the "server has no folder API" warning so a per-sync condition does
   /// not spam the log on every library refresh.
   var hasLoggedServerLacksFolderApi = false
+
+  /// Where every folder id that has been superseded points now.
+  ///
+  /// A folder created optimistically is handed to the UI under a temporary id.
+  /// When its create lands, the id changes — but screens, pending navigation,
+  /// drag payloads and in-flight user actions all still hold the old one, and
+  /// nothing tells them otherwise. Writes made against a dead id used to be
+  /// accepted and then quietly lost: a subfolder created from a stale screen
+  /// wrote a `parentId` no folder had, so its own create 404'd forever; a
+  /// playlist filed against one became a placement into an unknown folder that
+  /// the next reconcile dropped.
+  ///
+  /// Both are the same bug — an id that used to mean something still being
+  /// offered — and both are fixed in one place: every id entering the store is
+  /// resolved through this map first, so a stale write lands on the folder the
+  /// user actually meant.
+  ///
+  /// Session-lifetime and deliberately not persisted. It exists to catch
+  /// references held by a running app; across a launch there are none, and the
+  /// temporary ids themselves are gone from Core Data by then.
+  private var adoptedFolderIdsByTemporaryId = [String: String]()
+  /// Guards the map alone. Adoption can be recorded from the sync task's hop to
+  /// the main actor while a UI write is reading it.
+  private let adoptedFolderIdLock = NSLock()
 
   /// How many nested ``performBatchedUpdates(_:)`` calls are in flight. While
   /// this is above zero, change notifications and tree exports are held back and
@@ -335,6 +369,10 @@ public final class PlaylistFolderStore: @unchecked Sendable {
 
   @discardableResult
   public func createFolder(name: String, parent: String?) -> PlaylistFolder {
+    // A screen that was showing the parent when it adopted still names the old
+    // id; without this the new folder would be filed under a parent that no
+    // longer exists and its own create would 404 forever.
+    let parent = resolveFolderId(parent)
     guard let context = managedObjectContext else {
       return legacyCreateFolder(name: name, parent: parent)
     }
@@ -392,6 +430,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   }
 
   public func renameFolder(id: String, to name: String) {
+    let id = resolveFolderId(id)
     guard let context = managedObjectContext else {
       legacyRenameFolder(id: id, to: name)
       return
@@ -422,6 +461,8 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   /// runs locally first so an illegal move is refused outright rather than
   /// applied optimistically and then bounced.
   public func moveFolder(id: String, toParent newParentFolderId: String?) {
+    let id = resolveFolderId(id)
+    let newParentFolderId = resolveFolderId(newParentFolderId)
     guard let context = managedObjectContext else { return }
     guard let folderMO = fetchFolderMO(byServerId: id, in: context) else { return }
 
@@ -494,6 +535,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   /// Nothing is destroyed by that transient state, and if the delete fails the
   /// refetch puts the folder straight back.
   public func deleteFolder(id: String) {
+    let id = resolveFolderId(id)
     guard let context = managedObjectContext else {
       legacyDeleteFolder(id: id)
       return
@@ -538,6 +580,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     // nothing on the server (so the membership is lost on the next folder
     // reconciliation). Callers must file only after the id is assigned; drop
     // empty ids defensively so a mistimed call can never corrupt membership.
+    let folderId = resolveFolderId(folderId)
     let validPlaylistIds = playlistIds.filter { !$0.isEmpty }
     guard !validPlaylistIds.isEmpty else { return }
 
@@ -583,6 +626,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   }
 
   public func removePlaylists(_ playlistIds: [String], from folderId: String) {
+    let folderId = resolveFolderId(folderId)
     guard let context = managedObjectContext else {
       legacyRemovePlaylists(playlistIds, from: folderId)
       return
@@ -620,6 +664,8 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   public func movePlaylist(
     _ playlistId: String, from sourceFolderId: String, to destFolderId: String
   ) {
+    let sourceFolderId = resolveFolderId(sourceFolderId)
+    let destFolderId = resolveFolderId(destFolderId)
     guard let context = managedObjectContext else {
       legacyRemovePlaylists([playlistId], from: sourceFolderId)
       legacyAddPlaylists([playlistId], to: destFolderId)
@@ -675,6 +721,9 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     inFolder parentFolderId: String?,
     toIndex targetIndex: Int
   ) {
+    let parentFolderId = resolveFolderId(parentFolderId)
+    // A dragged folder row carries the id it had when the drag began.
+    let siblingId = kind == .folder ? resolveFolderId(siblingId) : siblingId
     guard let context = managedObjectContext else { return }
 
     var parentServerId = PlaylistFolderRootId.canonical
@@ -747,15 +796,44 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     exportCurrentTree()
   }
 
+  // MARK: - Id aliasing
+
+  /// The live id for `folderId`, following it through any adoption that has
+  /// happened since the caller obtained it.
+  ///
+  /// Cheap and idempotent: a server id is not in the map and comes straight
+  /// back out. Safe to call on every entry point, which is exactly what the
+  /// store does.
+  public func resolveFolderId(_ folderId: String) -> String {
+    adoptedFolderIdLock.lock()
+    defer { adoptedFolderIdLock.unlock() }
+    // One hop is enough: adoption only ever maps a temporary id to a server id,
+    // and a server id is never superseded.
+    return adoptedFolderIdsByTemporaryId[folderId] ?? folderId
+  }
+
+  /// `nil` (the root) passes through untouched — the root has no id to adopt.
+  func resolveFolderId(_ folderId: String?) -> String? {
+    folderId.map { resolveFolderId($0) }
+  }
+
+  func recordFolderIdAdoption(temporaryFolderId: String, serverFolderId: String) {
+    guard temporaryFolderId != serverFolderId else { return }
+    adoptedFolderIdLock.lock()
+    adoptedFolderIdsByTemporaryId[temporaryFolderId] = serverFolderId
+    adoptedFolderIdLock.unlock()
+  }
+
   // MARK: - Query
 
   public func folder(byId id: String) -> PlaylistFolder? {
-    Self.findFolder(id: id, in: folders)
+    Self.findFolder(id: resolveFolderId(id), in: folders)
   }
 
   /// The complete ordering space of one parent — subfolders and placed
   /// playlists interleaved, in display order.
   public func orderedSiblings(inFolder parentFolderId: String?) -> [PlaylistFolderSibling] {
+    let parentFolderId = resolveFolderId(parentFolderId)
     guard let context = managedObjectContext else { return [] }
     var parentServerId = PlaylistFolderRootId.canonical
     if let parentFolderId {
@@ -773,6 +851,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   /// playlists — and still order whatever survives with the sibling comparator.
   /// Playlists absent from the result have no placement, so they sort last.
   public func playlistSortOrders(inFolder parentFolderId: String?) -> [String: Int] {
+    let parentFolderId = resolveFolderId(parentFolderId)
     guard let context = managedObjectContext else { return [:] }
     var parentServerId = PlaylistFolderRootId.canonical
     if let parentFolderId {
@@ -795,6 +874,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   /// response. Placements the playlist already has keep their order; new ones
   /// append.
   public func syncMemberships(playlistId: String, folderIds: [String]) {
+    let folderIds = folderIds.map { resolveFolderId($0) }
     guard let context = managedObjectContext else { return }
     guard let playlistMO = fetchPlaylistMO(by: playlistId, in: context) else { return }
 
