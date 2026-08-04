@@ -64,6 +64,8 @@ extension AccountMO {
   public var searchHistories: NSSet?
   @NSManaged
   public var playlistFolders: NSSet?
+  @NSManaged
+  public var playlistFolderPlacements: NSSet?
 }
 
 // MARK: Generated accessors for artworks

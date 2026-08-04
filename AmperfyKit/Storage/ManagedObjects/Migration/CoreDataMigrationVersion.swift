@@ -63,6 +63,8 @@ enum CoreDataMigrationVersion: String, CaseIterable {
   case v50 =
     "Amperfy v50" // Add Album.releaseType (OpenSubsonic releaseTypes) for isWholeAlbum primitive
   case v51 = "Amperfy v51" // Add PlaylistFolder entity for server-backed folder sync
+  case v52 =
+    "Amperfy v52" // Playlist folders v2: PlaylistFolder.sortOrder + PlaylistFolderPlacement entity
 
   // MARK: - Current
 
@@ -179,6 +181,8 @@ enum CoreDataMigrationVersion: String, CaseIterable {
     case .v50:
       return .v51
     case .v51:
+      return .v52
+    case .v52:
       return nil
     }
   }
