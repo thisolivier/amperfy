@@ -28,40 +28,31 @@ public struct NavidromeAuthResponse: Codable, Sendable {
   public let token: String
 }
 
-// MARK: - NavidromeFolderResponse
+// MARK: - NavidromeSortOrderUpdate
 
-public struct NavidromeFolderResponse: Codable, Sendable {
-  public let id: String
-  public let name: String
-  public let parentId: String?
-
-  enum CodingKeys: String, CodingKey {
-    case id, name
-    case parentId = "parent_id"
-  }
+/// Tri-state for the `sortOrder` field of a partial folder update.
+///
+/// The contract distinguishes three cases that an `Int?` cannot express:
+/// omitting the key leaves the stored value alone, a number sets it, and an
+/// explicit JSON `null` clears it.
+public enum NavidromeSortOrderUpdate: Sendable, Equatable {
+  case unchanged
+  case set(Int)
+  case cleared
 }
 
-// MARK: - NavidromeFolderDetailResponse
+// MARK: - NavidromePlacementWrite
 
-public struct NavidromeFolderDetailResponse: Codable, Sendable {
-  public let id: String
-  public let name: String
-  public let parentId: String?
-  public let childFolders: [NavidromeFolderResponse]?
-  public let playlists: [NavidromePlaylistRef]?
+/// One entry of a replace-all placements body.
+public struct NavidromePlacementWrite: Codable, Sendable, Equatable {
+  /// Target folder. Accepts `""` or `"root"` for the root.
+  public let folderId: String
+  public let sortOrder: Int?
 
-  enum CodingKeys: String, CodingKey {
-    case id, name, playlists
-    case parentId = "parent_id"
-    case childFolders = "child_folders"
+  public init(folderId: String, sortOrder: Int? = nil) {
+    self.folderId = folderId
+    self.sortOrder = sortOrder
   }
-}
-
-// MARK: - NavidromePlaylistRef
-
-public struct NavidromePlaylistRef: Codable, Sendable {
-  public let id: String
-  public let name: String
 }
 
 // MARK: - NavidromeApiError
@@ -268,13 +259,7 @@ public final class NavidromeServerApi: Sendable {
     credentials.serverUrl
   }
 
-  // MARK: - Folder CRUD
-
-  public func listFolders() async throws -> [NavidromeFolderResponse] {
-    let url = "\(baseUrl)/api/playlist/folder"
-    logger.info("Listing playlist folders")
-    return try await request([NavidromeFolderResponse].self, url: url)
-  }
+  // MARK: - Folder CRUD (v2 organization contract)
 
   /// Probes whether this server owns playlist-folder data by fetching the v2
   /// organization envelope from `GET /api/playlist/folder`.
@@ -291,22 +276,27 @@ public final class NavidromeServerApi: Sendable {
     return try await request(NavidromeFolderOrganizationResponse.self, url: url)
   }
 
-  public func getFolder(id: String) async throws -> NavidromeFolderDetailResponse {
-    let url = "\(baseUrl)/api/playlist/folder/\(id)"
-    logger.info("Getting playlist folder: \(id, privacy: .public)")
-    return try await request(NavidromeFolderDetailResponse.self, url: url)
-  }
-
-  public func createFolder(name: String, parentId: String?) async throws
-    -> NavidromeFolderResponse {
+  /// `POST /api/playlist/folder` with `{name, parentId?, sortOrder?}`.
+  ///
+  /// The v2 contract is camelCase throughout — the pre-v2 client sent
+  /// `parent_id`, which this server ignores.
+  public func createFolder(
+    name: String,
+    parentId: String?,
+    sortOrder: Int? = nil
+  ) async throws
+    -> NavidromeOrganizationFolder {
     let url = "\(baseUrl)/api/playlist/folder"
-    var bodyParameters: [String: String] = ["name": name]
-    if let parentId = parentId {
-      bodyParameters["parent_id"] = parentId
+    var bodyParameters: Parameters = ["name": name]
+    if let parentId {
+      bodyParameters["parentId"] = parentId
+    }
+    if let sortOrder {
+      bodyParameters["sortOrder"] = sortOrder
     }
     logger.info("Creating playlist folder: \(name, privacy: .public)")
     return try await request(
-      NavidromeFolderResponse.self,
+      NavidromeOrganizationFolder.self,
       url: url,
       method: .post,
       parameters: bodyParameters,
@@ -314,14 +304,35 @@ public final class NavidromeServerApi: Sendable {
     )
   }
 
-  public func updateFolder(id: String, name: String?, parentId: String?) async throws {
+  /// `PUT /api/playlist/folder/{id}` with a partial body.
+  ///
+  /// Every field is independently optional: omitting a key leaves that property
+  /// unchanged. `sortOrder` additionally distinguishes "leave alone" from
+  /// "clear", the latter sent as an explicit JSON `null`, which is why it takes
+  /// a tri-state rather than an `Int?`.
+  ///
+  /// The server answers 400 if `parentId` would create a cycle.
+  public func updateFolder(
+    id: String,
+    name: String? = nil,
+    parentId: String? = nil,
+    sortOrder: NavidromeSortOrderUpdate = .unchanged
+  ) async throws {
     let url = "\(baseUrl)/api/playlist/folder/\(id)"
-    var bodyParameters: [String: String] = [:]
-    if let name = name {
+    var bodyParameters: Parameters = [:]
+    if let name {
       bodyParameters["name"] = name
     }
-    if let parentId = parentId {
-      bodyParameters["parent_id"] = parentId
+    if let parentId {
+      bodyParameters["parentId"] = parentId
+    }
+    switch sortOrder {
+    case .unchanged:
+      break
+    case let .set(newSortOrder):
+      bodyParameters["sortOrder"] = newSortOrder
+    case .cleared:
+      bodyParameters["sortOrder"] = NSNull()
     }
     logger.info("Updating playlist folder: \(id, privacy: .public)")
     try await requestVoid(
@@ -332,27 +343,79 @@ public final class NavidromeServerApi: Sendable {
     )
   }
 
+  /// `DELETE /api/playlist/folder/{id}`. The server re-parents the folder's
+  /// children to its own parent and drops its placements; playlists survive.
   public func deleteFolder(id: String) async throws {
     let url = "\(baseUrl)/api/playlist/folder/\(id)"
     logger.info("Deleting playlist folder: \(id, privacy: .public)")
     try await requestVoid(url: url, method: .delete)
   }
 
-  // MARK: - Folder Membership
+  // MARK: - Placements
 
-  public func addPlaylistToFolder(folderId: String, playlistId: String) async throws {
+  /// Upsert one placement: `PUT /api/playlist/folder/{folderId}/playlist/{playlistId}`.
+  ///
+  /// `folderId` may be the literal `"root"` to file a playlist explicitly at the
+  /// root, which is how a root placement gets an order (an *absent* placement
+  /// also means root, but unordered).
+  public func setPlaylistPlacement(
+    folderId: String,
+    playlistId: String,
+    sortOrder: Int? = nil
+  ) async throws {
     let url = "\(baseUrl)/api/playlist/folder/\(folderId)/playlist/\(playlistId)"
+    var bodyParameters: Parameters = [:]
+    if let sortOrder {
+      bodyParameters["sortOrder"] = sortOrder
+    }
     logger.info(
-      "Adding playlist \(playlistId, privacy: .public) to folder \(folderId, privacy: .public)"
+      "Placing playlist \(playlistId, privacy: .public) in folder \(folderId, privacy: .public)"
     )
-    try await requestVoid(url: url, method: .post)
+    try await requestVoid(
+      url: url,
+      method: .put,
+      parameters: bodyParameters.isEmpty ? nil : bodyParameters,
+      encoding: JSONEncoding.default
+    )
   }
 
-  public func removePlaylistFromFolder(folderId: String, playlistId: String) async throws {
+  /// Remove one placement. Idempotent server-side.
+  public func removePlaylistPlacement(folderId: String, playlistId: String) async throws {
     let url = "\(baseUrl)/api/playlist/folder/\(folderId)/playlist/\(playlistId)"
     logger.info(
       "Removing playlist \(playlistId, privacy: .public) from folder \(folderId, privacy: .public)"
     )
     try await requestVoid(url: url, method: .delete)
+  }
+
+  /// Replace every placement of one playlist in a single call:
+  /// `PUT /api/playlist/{playlistId}/placements`.
+  ///
+  /// This is the move primitive — an empty `placements` array unfiles the
+  /// playlist back to the implicit root.
+  public func replacePlaylistPlacements(
+    playlistId: String,
+    placements: [NavidromePlacementWrite]
+  ) async throws {
+    let url = "\(baseUrl)/api/playlist/\(playlistId)/placements"
+    let encodedPlacements: [[String: Any]] = placements.map { placement in
+      var encoded: [String: Any] = ["folderId": placement.folderId]
+      if let sortOrder = placement.sortOrder {
+        encoded["sortOrder"] = sortOrder
+      }
+      return encoded
+    }
+    logger.info(
+      """
+      Replacing placements for playlist \(playlistId, privacy: .public) \
+      (\(placements.count, privacy: .public) placement(s))
+      """
+    )
+    try await requestVoid(
+      url: url,
+      method: .put,
+      parameters: ["placements": encodedPlacements],
+      encoding: JSONEncoding.default
+    )
   }
 }

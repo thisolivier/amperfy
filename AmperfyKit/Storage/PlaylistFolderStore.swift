@@ -37,19 +37,26 @@ public typealias PlaylistFolderOrganizationFetcher =
 public struct PlaylistFolder: Codable, Identifiable, Equatable {
   public let id: UUID
   public var name: String
+  /// Playlist ids placed directly in this folder, already in sibling order.
   public var playlistIds: [String]
+  /// Direct subfolders, already in sibling order.
   public var subfolders: [PlaylistFolder]
+  /// This folder's own position among its siblings. `nil` means unordered,
+  /// which sorts after every ordered sibling.
+  public var sortOrder: Int?
 
   public init(
     id: UUID = UUID(),
     name: String,
     playlistIds: [String] = [],
-    subfolders: [PlaylistFolder] = []
+    subfolders: [PlaylistFolder] = [],
+    sortOrder: Int? = nil
   ) {
     self.id = id
     self.name = name
     self.playlistIds = playlistIds
     self.subfolders = subfolders
+    self.sortOrder = sortOrder
   }
 
   /// All playlist IDs contained in this folder and all subfolders recursively.
@@ -64,6 +71,23 @@ public struct PlaylistFolder: Codable, Identifiable, Equatable {
 
 // MARK: - PlaylistFolderStore
 
+/// Owns the device's playlist-folder organization.
+///
+/// ## Placements, not memberships
+/// Organization is stored as *placement edges* — one row per (playlist, folder)
+/// pair, each carrying its own `sortOrder` — mirroring the v2 server contract.
+/// A playlist may hold several placements at once; a playlist with none is
+/// implicitly at the root, unordered.
+///
+/// ## Ordering
+/// Sibling folders and sibling playlists share one ordering space per parent.
+/// See ``PlaylistFolderOrdering`` for the comparator and the gap-numbering
+/// scheme used when assigning new `sortOrder` values.
+///
+/// ## Safety
+/// Server-driven reconciliation is gated by ``PlaylistFolderSyncCapability``
+/// (see `PlaylistFolderStore+Sync.swift`), and every successful local mutation
+/// writes a JSON snapshot through ``PlaylistFolderTreeExporter``.
 public final class PlaylistFolderStore: @unchecked Sendable {
   public static let shared = PlaylistFolderStore()
 
@@ -73,18 +97,19 @@ public final class PlaylistFolderStore: @unchecked Sendable {
 
   // MARK: - Dependencies (set after init via configure())
 
-  private var managedObjectContext: NSManagedObjectContext?
-  private var navidromeApi: NavidromeServerApi?
-  private var accountMO: AccountMO?
-  private var folderOrganizationFetcher: PlaylistFolderOrganizationFetcher?
+  var managedObjectContext: NSManagedObjectContext?
+  var navidromeApi: NavidromeServerApi?
+  var accountMO: AccountMO?
+  var folderOrganizationFetcher: PlaylistFolderOrganizationFetcher?
+  var treeExporter: PlaylistFolderTreeExporter
 
-  private let logger = Logger(
+  let logger = Logger(
     subsystem: "dev.thisolivier.amperfy",
     category: "PlaylistFolderSync"
   )
   /// Guards the "server has no folder API" warning so a per-sync condition does
   /// not spam the log on every library refresh.
-  private var hasLoggedServerLacksFolderApi = false
+  var hasLoggedServerLacksFolderApi = false
 
   /// Configure with CoreData context and API client.
   /// Called once during app startup after storage is initialized.
@@ -105,6 +130,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
       folderOrganizationFetcher = nil
     }
     hasLoggedServerLacksFolderApi = false
+    backfillPlacementsFromLegacyMembershipsIfNeeded(in: context)
   }
 
   /// Test seam: configure the destructive sync path without a live Navidrome
@@ -112,28 +138,36 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   func configureForTesting(
     context: NSManagedObjectContext,
     account: AccountMO?,
-    organizationFetcher: @escaping PlaylistFolderOrganizationFetcher
+    organizationFetcher: PlaylistFolderOrganizationFetcher? = nil,
+    treeExporter: PlaylistFolderTreeExporter? = nil
   ) {
     managedObjectContext = context
     navidromeApi = nil
     accountMO = account
     folderOrganizationFetcher = organizationFetcher
     hasLoggedServerLacksFolderApi = false
+    if let treeExporter {
+      self.treeExporter = treeExporter
+    }
   }
 
   /// Whether the store has been configured with CoreData.
-  private var isConfigured: Bool {
+  var isConfigured: Bool {
     managedObjectContext != nil
   }
 
   // MARK: - Legacy UserDefaults support
 
-  private let defaultsKey = "amperfy.fork.playlistFolders"
-  private let defaults: UserDefaults
-  private var _legacyFolders: [PlaylistFolder]?
+  let defaultsKey = "amperfy.fork.playlistFolders"
+  let defaults: UserDefaults
+  var legacyFoldersCache: [PlaylistFolder]?
 
-  public init(defaults: UserDefaults = .standard) {
+  public init(
+    defaults: UserDefaults = .standard,
+    treeExporter: PlaylistFolderTreeExporter = PlaylistFolderTreeExporter()
+  ) {
     self.defaults = defaults
+    self.treeExporter = treeExporter
   }
 
   // MARK: - Folders property
@@ -151,29 +185,28 @@ public final class PlaylistFolderStore: @unchecked Sendable {
         return
       }
       // Legacy path: persist to UserDefaults
-      _legacyFolders = newValue
+      legacyFoldersCache = newValue
       legacyPersist()
     }
   }
 
   // MARK: - Computed
 
-  /// All playlist IDs that appear in at least one folder at any depth.
+  /// All playlist IDs placed in at least one real folder at any depth.
+  ///
+  /// An explicit *root* placement does not count as filed — it orders a playlist
+  /// within the root list rather than moving it out of it.
   public var allFiledPlaylistIds: Set<String> {
     guard let context = managedObjectContext else {
       return folders.reduce(into: Set<String>()) { result, folder in
         result.formUnion(folder.allPlaylistIdsRecursive)
       }
     }
-    let fetchRequest = PlaylistFolderMO.fetchRequest()
-    guard let folderMOs = try? context.fetch(fetchRequest) else { return [] }
     var result = Set<String>()
-    for folderMO in folderMOs {
-      if let playlists = folderMO.playlists as? Set<PlaylistMO> {
-        for playlistMO in playlists {
-          result.insert(playlistMO.id)
-        }
-      }
+    for placementMO in fetchPlacements(in: context) {
+      guard !PlaylistFolderRootId.isRoot(placementMO.folderId),
+            let playlistId = placementMO.playlist?.id else { continue }
+      result.insert(playlistId)
     }
     return result
   }
@@ -195,11 +228,17 @@ public final class PlaylistFolderStore: @unchecked Sendable {
       parentServerId = parentMO.id
     }
 
+    // A new folder lands after everything already in its parent.
+    let appendSortOrder = PlaylistFolderOrdering.appendSortOrder(
+      after: siblings(inFolderId: PlaylistFolderRootId.normalized(parentServerId), in: context)
+    )
+
     // Create in CoreData immediately (optimistic)
     let folderMO = PlaylistFolderMO(context: context)
     folderMO.id = newFolder.id.uuidString
     folderMO.name = name
     folderMO.parentId = parentServerId
+    folderMO.sortOrderValue = appendSortOrder
     folderMO.account = accountMO
     try? context.save()
 
@@ -210,15 +249,24 @@ public final class PlaylistFolderStore: @unchecked Sendable {
       Task {
         do {
           let serverResponse = try await api.createFolder(
-            name: name, parentId: parentServerId
+            name: name, parentId: parentServerId, sortOrder: appendSortOrder
           )
-          // Update the local MO with server-assigned ID
+          // Adopt the server-assigned id, carrying any placements or child
+          // folders made against the optimistic local id across to it.
           await MainActor.run {
+            let optimisticFolderId = unsafeFolderMO.id
             unsafeFolderMO.id = serverResponse.id
-            if let serverParentId = serverResponse.parentId {
-              unsafeFolderMO.parentId = serverParentId
+            unsafeFolderMO.parentId = serverResponse.normalizedParentId
+            if let serverSortOrder = serverResponse.sortOrder {
+              unsafeFolderMO.sortOrderValue = serverSortOrder
             }
+            self.repointFolderReferences(
+              from: optimisticFolderId,
+              to: serverResponse.id,
+              in: unsafeContext
+            )
             try? unsafeContext.save()
+            self.exportCurrentTree()
           }
         } catch {
           // Server creation failed — the optimistic local entry remains.
@@ -228,6 +276,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     }
 
     notifyChange()
+    exportCurrentTree()
     return newFolder
   }
 
@@ -244,17 +293,74 @@ public final class PlaylistFolderStore: @unchecked Sendable {
 
     if let api = navidromeApi {
       Task {
-        try? await api.updateFolder(id: serverId, name: name, parentId: nil)
+        try? await api.updateFolder(id: serverId, name: name)
       }
     }
 
     notifyChange()
+    exportCurrentTree()
   }
 
-  /// Deletes the folder with the given id, lifting its direct `playlistIds` and
-  /// `subfolders` up one level into the containing array (root if the folder
-  /// was at root). Grandchildren remain inside their direct parent — the pop is
-  /// one level only. Playlists themselves are never deleted.
+  /// Move a folder into a different parent, appending it after that parent's
+  /// existing children.
+  ///
+  /// The server answers 400 if the move would create a cycle; the same check
+  /// runs locally first so an illegal move is refused outright rather than
+  /// applied optimistically and then bounced.
+  public func moveFolder(id: UUID, toParent newParentFolderId: UUID?) {
+    guard let context = managedObjectContext else { return }
+    guard let folderMO = findFolderMO(by: id, in: context) else { return }
+
+    var newParentServerId: String?
+    if let newParentFolderId {
+      guard let newParentMO = findFolderMO(by: newParentFolderId, in: context) else { return }
+      newParentServerId = newParentMO.id
+    }
+
+    let normalizedNewParentId = PlaylistFolderRootId.normalized(newParentServerId)
+    guard !wouldCreateCycle(
+      movingFolderId: folderMO.id,
+      intoParentId: normalizedNewParentId,
+      in: context
+    ) else {
+      logger.warning("Refusing playlist folder move: it would create a cycle")
+      return
+    }
+
+    let serverId = folderMO.id
+    let appendSortOrder = PlaylistFolderOrdering.appendSortOrder(
+      after: siblings(inFolderId: normalizedNewParentId, in: context)
+    )
+    folderMO.parentId = newParentServerId
+    folderMO.sortOrderValue = appendSortOrder
+    try? context.save()
+
+    if let api = navidromeApi {
+      let serverParentId = normalizedNewParentId.isEmpty
+        ? PlaylistFolderRootId.literal : normalizedNewParentId
+      Task {
+        try? await api.updateFolder(
+          id: serverId,
+          parentId: serverParentId,
+          sortOrder: .set(appendSortOrder)
+        )
+      }
+    }
+
+    notifyChange()
+    exportCurrentTree()
+  }
+
+  /// Deletes the folder with the given id, lifting its direct playlists and
+  /// subfolders up one level into the containing folder (root if the folder was
+  /// at root). Grandchildren remain inside their direct parent — the pop is one
+  /// level only. Playlists themselves are never deleted.
+  ///
+  /// The server's own delete re-parents child *folders* but merely drops the
+  /// deleted folder's placements, which would scatter its playlists to the root.
+  /// To keep this fork's friendlier behaviour, the lifted placements are written
+  /// to the server explicitly *before* the folder is deleted, so server and
+  /// device agree once the dust settles.
   public func deleteFolder(id: UUID) {
     guard let context = managedObjectContext else {
       legacyDeleteFolder(id: id)
@@ -264,36 +370,62 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     guard let folderMO = findFolderMO(by: id, in: context) else { return }
     let serverId = folderMO.id
     let parentId = folderMO.parentId
+    let normalizedParentId = PlaylistFolderRootId.normalized(parentId)
 
     // Promote child folders: move their parentId to this folder's parentId
-    let childFolders = fetchChildFolders(of: serverId, in: context)
-    for childMO in childFolders {
-      childMO.parentId = parentId
+    for childFolderMO in fetchChildFolders(of: serverId, in: context) {
+      childFolderMO.parentId = parentId
     }
 
-    // Promote playlists to parent folder if one exists
-    if let parentId = parentId,
-       let parentMO = fetchFolderMO(byServerId: parentId, in: context),
-       let playlists = folderMO.playlists as? Set<PlaylistMO> {
-      for playlistMO in playlists {
-        parentMO.addToPlaylists(playlistMO)
+    // Promote the folder's playlists into the parent's ordering space.
+    var promotedPlaylistIds = [String]()
+    var nextSortOrder = PlaylistFolderOrdering.appendSortOrder(
+      after: siblings(inFolderId: normalizedParentId, in: context)
+    )
+    for placementMO in fetchPlacements(folderId: serverId, in: context) {
+      guard let playlistMO = placementMO.playlist else {
+        context.delete(placementMO)
+        continue
       }
+      if fetchPlacement(
+        playlistId: playlistMO.id, folderId: normalizedParentId, in: context
+      ) != nil {
+        // Already placed in the parent — the lifted edge would be a duplicate.
+        context.delete(placementMO)
+        continue
+      }
+      promotedPlaylistIds.append(playlistMO.id)
+      // Re-point the existing edge at the parent rather than deleting and
+      // re-creating it, so the playlist is never momentarily unfiled.
+      placementMO.folderId = normalizedParentId
+      placementMO.sortOrderValue = nextSortOrder
+      nextSortOrder += PlaylistFolderOrdering.sortOrderGap
     }
 
-    // Remove the folder (remaining playlists become unfiled)
     context.delete(folderMO)
     try? context.save()
 
     if let api = navidromeApi {
+      let playlistIdsToPromote = promotedPlaylistIds
+      let promotionTargetId = normalizedParentId.isEmpty
+        ? PlaylistFolderRootId.literal : normalizedParentId
       Task {
+        // Re-file first: once the folder is gone the server has nothing left to
+        // re-file from.
+        for playlistId in playlistIdsToPromote {
+          try? await api.setPlaylistPlacement(
+            folderId: promotionTargetId, playlistId: playlistId
+          )
+        }
         try? await api.deleteFolder(id: serverId)
       }
     }
 
     notifyChange()
+    exportCurrentTree()
   }
 
-  // MARK: - Membership
+  // MARK: - Placements
 
   public func addPlaylists(_ playlistIds: [String], to folderId: UUID) {
     // A not-yet-synced playlist has an empty server id until its create request
@@ -301,33 +433,47 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     // nothing on the server (so the membership is lost on the next folder
     // reconciliation). Callers must file only after the id is assigned; drop
     // empty ids defensively so a mistimed call can never corrupt membership.
-    let validIds = playlistIds.filter { !$0.isEmpty }
-    guard !validIds.isEmpty else { return }
+    let validPlaylistIds = playlistIds.filter { !$0.isEmpty }
+    guard !validPlaylistIds.isEmpty else { return }
 
     guard let context = managedObjectContext else {
-      legacyAddPlaylists(validIds, to: folderId)
+      legacyAddPlaylists(validPlaylistIds, to: folderId)
       return
     }
 
     guard let folderMO = findFolderMO(by: folderId, in: context) else { return }
     let serverId = folderMO.id
 
-    for playlistId in validIds {
-      if let playlistMO = fetchPlaylistMO(by: playlistId, in: context) {
-        folderMO.addToPlaylists(playlistMO)
-      }
+    var appendedSortOrders = [(playlistId: String, sortOrder: Int)]()
+    var nextSortOrder = PlaylistFolderOrdering.appendSortOrder(
+      after: siblings(inFolderId: serverId, in: context)
+    )
+    for playlistId in validPlaylistIds {
+      guard let playlistMO = fetchPlaylistMO(by: playlistId, in: context) else { continue }
+      let placementMO = fetchPlacement(
+        playlistId: playlistId, folderId: serverId, in: context
+      ) ?? makePlacementMO(playlist: playlistMO, folderId: serverId, in: context)
+      placementMO.sortOrderValue = nextSortOrder
+      appendedSortOrders.append((playlistId: playlistId, sortOrder: nextSortOrder))
+      nextSortOrder += PlaylistFolderOrdering.sortOrderGap
     }
     try? context.save()
 
     if let api = navidromeApi {
+      let placementsToWrite = appendedSortOrders
       Task {
-        for playlistId in validIds {
-          try? await api.addPlaylistToFolder(folderId: serverId, playlistId: playlistId)
+        for placement in placementsToWrite {
+          try? await api.setPlaylistPlacement(
+            folderId: serverId,
+            playlistId: placement.playlistId,
+            sortOrder: placement.sortOrder
+          )
         }
       }
     }
 
     notifyChange()
+    exportCurrentTree()
   }
 
   public func removePlaylists(_ playlistIds: [String], from folderId: UUID) {
@@ -340,28 +486,146 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     let serverId = folderMO.id
 
     for playlistId in playlistIds {
-      if let playlistMO = fetchPlaylistMO(by: playlistId, in: context) {
-        folderMO.removeFromPlaylists(playlistMO)
-      }
+      guard let placementMO = fetchPlacement(
+        playlistId: playlistId, folderId: serverId, in: context
+      ) else { continue }
+      context.delete(placementMO)
     }
     try? context.save()
 
     if let api = navidromeApi {
       Task {
         for playlistId in playlistIds {
-          try? await api.removePlaylistFromFolder(folderId: serverId, playlistId: playlistId)
+          try? await api.removePlaylistPlacement(folderId: serverId, playlistId: playlistId)
         }
       }
     }
 
     notifyChange()
+    exportCurrentTree()
   }
 
+  /// Move a playlist between folders.
+  ///
+  /// Uses the contract's replace-all endpoint rather than a remove/add pair: a
+  /// playlist may legitimately sit in several folders, so the server is told the
+  /// complete resulting placement set in one call and no intermediate state is
+  /// ever visible to another client.
   public func movePlaylist(
     _ playlistId: String, from sourceFolderId: UUID, to destFolderId: UUID
   ) {
-    removePlaylists([playlistId], from: sourceFolderId)
-    addPlaylists([playlistId], to: destFolderId)
+    guard let context = managedObjectContext else {
+      legacyRemovePlaylists([playlistId], from: sourceFolderId)
+      legacyAddPlaylists([playlistId], to: destFolderId)
+      return
+    }
+
+    guard let sourceFolderMO = findFolderMO(by: sourceFolderId, in: context),
+          let destinationFolderMO = findFolderMO(by: destFolderId, in: context),
+          let playlistMO = fetchPlaylistMO(by: playlistId, in: context) else { return }
+
+    if let sourcePlacementMO = fetchPlacement(
+      playlistId: playlistId, folderId: sourceFolderMO.id, in: context
+    ) {
+      context.delete(sourcePlacementMO)
+    }
+
+    let destinationServerId = destinationFolderMO.id
+    let placementMO = fetchPlacement(
+      playlistId: playlistId, folderId: destinationServerId, in: context
+    ) ?? makePlacementMO(playlist: playlistMO, folderId: destinationServerId, in: context)
+    placementMO.sortOrderValue = PlaylistFolderOrdering.appendSortOrder(
+      after: siblings(inFolderId: destinationServerId, in: context)
+    )
+    try? context.save()
+
+    pushReplaceAllPlacements(playlistId: playlistId, in: context)
+    notifyChange()
+    exportCurrentTree()
+  }
+
+  /// Unfile a playlist completely — remove every placement it has, returning it
+  /// to the implicit, unordered root.
+  public func unfilePlaylist(_ playlistId: String) {
+    guard let context = managedObjectContext else { return }
+    let placements = fetchPlacements(playlistId: playlistId, in: context)
+    guard !placements.isEmpty else { return }
+    for placementMO in placements {
+      context.delete(placementMO)
+    }
+    try? context.save()
+
+    pushReplaceAllPlacements(playlistId: playlistId, in: context)
+    notifyChange()
+    exportCurrentTree()
+  }
+
+  /// Move a sibling — folder or playlist — to `targetIndex` within its parent's
+  /// ordering space, assigning sortOrders by gap numbering and renumbering the
+  /// siblings only when no gap remains.
+  public func moveSibling(
+    kind: PlaylistFolderSiblingKind,
+    id siblingId: String,
+    inFolder parentFolderId: UUID?,
+    toIndex targetIndex: Int
+  ) {
+    guard let context = managedObjectContext else { return }
+
+    var parentServerId = PlaylistFolderRootId.canonical
+    if let parentFolderId {
+      guard let parentFolderMO = findFolderMO(by: parentFolderId, in: context) else { return }
+      parentServerId = parentFolderMO.id
+    }
+
+    let allSiblings = siblings(inFolderId: parentServerId, in: context)
+    let otherSiblings = allSiblings.filter { !($0.kind == kind && $0.id == siblingId) }
+    let sortOrderPlan = PlaylistFolderOrdering.insertionPlan(
+      into: otherSiblings,
+      targetIndex: targetIndex
+    )
+
+    var sortOrderUpdates = [PlaylistFolderSortOrderAssignment]()
+    switch sortOrderPlan {
+    case let .assign(sortOrder):
+      sortOrderUpdates = [PlaylistFolderSortOrderAssignment(
+        kind: kind, id: siblingId, sortOrder: sortOrder
+      )]
+    case let .renumberSiblings(assignments, insertedSortOrder):
+      sortOrderUpdates = assignments
+      sortOrderUpdates.append(PlaylistFolderSortOrderAssignment(
+        kind: kind, id: siblingId, sortOrder: insertedSortOrder
+      ))
+    }
+
+    for assignment in sortOrderUpdates {
+      applySortOrderLocally(assignment, inFolderId: parentServerId, in: context)
+    }
+    try? context.save()
+
+    if let api = navidromeApi {
+      let serverUpdates = sortOrderUpdates
+      let placementFolderId = parentServerId.isEmpty
+        ? PlaylistFolderRootId.literal : parentServerId
+      Task {
+        for assignment in serverUpdates {
+          switch assignment.kind {
+          case .folder:
+            try? await api.updateFolder(
+              id: assignment.id, sortOrder: .set(assignment.sortOrder)
+            )
+          case .playlist:
+            try? await api.setPlaylistPlacement(
+              folderId: placementFolderId,
+              playlistId: assignment.id,
+              sortOrder: assignment.sortOrder
+            )
+          }
+        }
+      }
+    }
+
+    notifyChange()
+    exportCurrentTree()
   }
 
   // MARK: - Query
@@ -370,383 +634,130 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     Self.findFolder(id: id, in: folders)
   }
 
-  // MARK: - Sync (called during library sync)
-
-  /// Sync folders from server to CoreData. Called during library sync flow.
-  ///
-  /// Destructive reconciliation — deleting local folders or memberships because
-  /// the server did not mention them — runs **only** behind a capability probe.
-  /// The server must answer `GET /api/playlist/folder` with a v2 organization
-  /// envelope (`folderApiVersion >= 2`). A 404, any other failure, or a 200 that
-  /// is not an envelope all mean "this server does not own folder data", and
-  /// local state is left completely untouched.
-  ///
-  /// Background: this fork shipped against a Navidrome folder API that was never
-  /// deployed. Every folder call 404'd, protected only by `try?` swallowing the
-  /// error. On 2026-08-02 a resync against a corrupted server took the "success"
-  /// branch and delete-if-absent reconciliation wiped the entire folder tree.
-  public func syncFromServer() async throws {
-    guard let context = managedObjectContext,
-          let organizationFetcher = folderOrganizationFetcher else { return }
-
-    let probeOutcome: Result<NavidromeFolderOrganizationResponse, Error>
-    do {
-      probeOutcome = .success(try await organizationFetcher())
-    } catch {
-      probeOutcome = .failure(error)
+  /// The complete ordering space of one parent — subfolders and placed
+  /// playlists interleaved, in display order.
+  public func orderedSiblings(inFolder parentFolderId: UUID?) -> [PlaylistFolderSibling] {
+    guard let context = managedObjectContext else { return [] }
+    var parentServerId = PlaylistFolderRootId.canonical
+    if let parentFolderId {
+      guard let parentFolderMO = findFolderMO(by: parentFolderId, in: context) else { return [] }
+      parentServerId = parentFolderMO.id
     }
-
-    let localFolderCount = await MainActor.run {
-      ((try? context.fetch(PlaylistFolderMO.fetchRequest())) ?? []).count
-    }
-
-    let syncDecision = PlaylistFolderSyncCapability.evaluate(
-      probeOutcome: probeOutcome,
-      localFolderCount: localFolderCount
-    )
-
-    switch syncDecision {
-    case let .skipServerLacksFolderApi(reason):
-      logServerLacksFolderApiOnce(reason: reason)
-
-    case let .skipEmptyServerOrganizationWouldWipeLocalFolders(localFolderCount):
-      logger.warning(
-        """
-        Playlist folder sync skipped: server confirmed folder support but \
-        reported an empty organization while \(localFolderCount, privacy: .public) \
-        local folder(s) exist. Refusing to mass-delete; local folders kept.
-        """
-      )
-
-    case let .reconcile(organization):
-      await reconcile(organization: organization, in: context)
-      notifyChange()
-    }
+    return PlaylistFolderOrdering.sorted(siblings(inFolderId: parentServerId, in: context))
   }
 
-  /// Apply a capability-confirmed server organization to Core Data.
+  /// The placement sortOrder of each playlist placed directly in
+  /// `parentFolderId` (or at the root when `nil`).
   ///
-  /// Only reached once ``PlaylistFolderSyncCapability`` has authorized
-  /// destructive reconciliation.
-  private func reconcile(
-    organization: NavidromeFolderOrganizationResponse,
-    in context: NSManagedObjectContext
-  ) async {
-    let serverFolders = organization.folders
-
-    // Playlist memberships still come from the per-folder detail endpoint; v2
-    // `placements` consumption is a follow-up change. A folder whose detail
-    // fetch fails is simply skipped below — never emptied.
-    var folderDetails: [NavidromeFolderDetailResponse] = []
-    if let api = navidromeApi {
-      for serverFolder in serverFolders {
-        if let detail = try? await api.getFolder(id: serverFolder.id) {
-          folderDetails.append(detail)
-        }
-      }
+  /// Exposed so a view can apply its own filtering — offline, search, smart
+  /// playlists — and still order whatever survives with the sibling comparator.
+  /// Playlists absent from the result have no placement, so they sort last.
+  public func playlistSortOrders(inFolder parentFolderId: UUID?) -> [String: Int] {
+    guard let context = managedObjectContext else { return [:] }
+    var parentServerId = PlaylistFolderRootId.canonical
+    if let parentFolderId {
+      guard let parentFolderMO = findFolderMO(by: parentFolderId, in: context) else { return [:] }
+      parentServerId = parentFolderMO.id
     }
-
-    await MainActor.run {
-      let existingFolders = (try? context.fetch(PlaylistFolderMO.fetchRequest())) ?? []
-      let existingById = Dictionary(
-        uniqueKeysWithValues: existingFolders.map { ($0.id, $0) }
-      )
-      var serverIds = Set<String>()
-
-      for serverFolder in serverFolders {
-        serverIds.insert(serverFolder.id)
-        if let existing = existingById[serverFolder.id] {
-          existing.name = serverFolder.name
-          existing.parentId = serverFolder.normalizedParentId
-        } else {
-          let newMO = PlaylistFolderMO(context: context)
-          newMO.id = serverFolder.id
-          newMO.name = serverFolder.name
-          newMO.parentId = serverFolder.normalizedParentId
-          newMO.account = self.accountMO
-        }
-      }
-
-      // Delete folders not on server
-      for existing in existingFolders {
-        if !serverIds.contains(existing.id) {
-          context.delete(existing)
-        }
-      }
-
-      try? context.save()
-
-      // Reconcile playlist memberships from folder details
-      for detail in folderDetails {
-        guard let folderMO = self.fetchFolderMO(byServerId: detail.id, in: context) else {
-          continue
-        }
-        // Clear existing memberships for this folder
-        if let existingPlaylists = folderMO.playlists as? Set<PlaylistMO> {
-          for playlistMO in existingPlaylists {
-            folderMO.removeFromPlaylists(playlistMO)
-          }
-        }
-        // Add memberships from server response
-        for playlistRef in detail.playlists ?? [] {
-          if let playlistMO = self.fetchPlaylistMO(by: playlistRef.id, in: context) {
-            folderMO.addToPlaylists(playlistMO)
-          }
-        }
-      }
-
-      try? context.save()
+    var sortOrders = [String: Int]()
+    for placementMO in fetchPlacements(folderId: parentServerId, in: context) {
+      guard let playlistId = placementMO.playlist?.id,
+            let sortOrder = placementMO.sortOrderValue else { continue }
+      sortOrders[playlistId] = sortOrder
     }
+    return sortOrders
   }
 
-  private func logServerLacksFolderApiOnce(
-    reason: PlaylistFolderServerUnsupportedReason
-  ) {
-    guard !hasLoggedServerLacksFolderApi else { return }
-    hasLoggedServerLacksFolderApi = true
-    logger.warning(
-      """
-      Playlist folder sync skipped: server did not confirm folder API v2 \
-      support (\(reason.logDescription, privacy: .public)). Local folders and \
-      memberships left untouched.
-      """
-    )
-  }
+  // MARK: - Membership sync from playlist responses
 
-  /// Sync folder memberships from playlist folderIds field.
-  /// Call after syncing playlists, passing the folderIds from each playlist's API response.
+  /// Replace a playlist's placements from the folder ids carried on its own API
+  /// response. Placements the playlist already has keep their order; new ones
+  /// append.
   public func syncMemberships(playlistId: String, folderIds: [String]) {
     guard let context = managedObjectContext else { return }
     guard let playlistMO = fetchPlaylistMO(by: playlistId, in: context) else { return }
 
-    // Remove all existing folder relationships
-    if let existingFolders = playlistMO.folders as? Set<PlaylistFolderMO> {
-      for folderMO in existingFolders {
-        folderMO.removeFromPlaylists(playlistMO)
-      }
+    let desiredFolderIds = Set(folderIds.map { PlaylistFolderRootId.normalized($0) })
+    let existingPlacements = fetchPlacements(playlistId: playlistId, in: context)
+
+    for placementMO in existingPlacements
+      where !desiredFolderIds.contains(placementMO.folderId) {
+      context.delete(placementMO)
     }
 
-    // Add to the specified folders
-    for folderId in folderIds {
-      if let folderMO = fetchFolderMO(byServerId: folderId, in: context) {
-        folderMO.addToPlaylists(playlistMO)
-      }
+    let existingFolderIds = Set(existingPlacements.map(\.folderId))
+    for desiredFolderId in desiredFolderIds where !existingFolderIds.contains(desiredFolderId) {
+      let placementMO = makePlacementMO(
+        playlist: playlistMO, folderId: desiredFolderId, in: context
+      )
+      placementMO.sortOrderValue = PlaylistFolderOrdering.appendSortOrder(
+        after: siblings(inFolderId: desiredFolderId, in: context)
+      )
     }
 
     try? context.save()
   }
 
-  // MARK: - CoreData Helpers
+  // MARK: - Export safety net
 
-  private func buildFolderTree(from context: NSManagedObjectContext) -> [PlaylistFolder] {
-    let fetchRequest = PlaylistFolderMO.fetchRequest()
-    guard let allFolders = try? context.fetch(fetchRequest) else { return [] }
-
-    // Build tree: root folders have nil/empty parentId
-    let rootFolders = allFolders.filter {
-      $0.parentId == nil || $0.parentId?.isEmpty == true
-    }
-
-    return rootFolders.map { buildPlaylistFolder(from: $0, allFolders: allFolders) }
+  /// Serialize the whole folder tree to the Files-app-visible JSON snapshot.
+  ///
+  /// Called after every successful local mutation. Failures are logged, never
+  /// propagated — the snapshot is a safety net, so it must never be able to fail
+  /// the operation it exists to protect.
+  func exportCurrentTree() {
+    guard let context = managedObjectContext else { return }
+    treeExporter.writeIgnoringFailure(buildExport(from: context))
   }
 
-  private func buildPlaylistFolder(
-    from folderMO: PlaylistFolderMO,
-    allFolders: [PlaylistFolderMO]
-  )
-    -> PlaylistFolder {
-    let children = allFolders.filter { $0.parentId == folderMO.id }
-    let playlistIds = (folderMO.playlists as? Set<PlaylistMO>)?.map { $0.id } ?? []
+  func buildExport(from context: NSManagedObjectContext) -> PlaylistFolderTreeExport {
+    let folderMOs = (try? context.fetch(PlaylistFolderMO.fetchRequest())) ?? []
+    let exportFolders = folderMOs
+      .map {
+        PlaylistFolderExportFolder(
+          id: $0.id,
+          name: $0.name,
+          parentId: PlaylistFolderRootId.normalized($0.parentId),
+          sortOrder: $0.sortOrderValue
+        )
+      }
+      .sorted { ($0.parentId, $0.name, $0.id) < ($1.parentId, $1.name, $1.id) }
 
-    return PlaylistFolder(
-      id: UUID(uuidString: folderMO.id) ?? UUID(),
-      name: folderMO.name,
-      playlistIds: playlistIds.sorted(),
-      subfolders: children.map { buildPlaylistFolder(from: $0, allFolders: allFolders) }
+    let exportPlacements = fetchPlacements(in: context)
+      .compactMap { placementMO -> PlaylistFolderExportPlacement? in
+        guard let playlistMO = placementMO.playlist else { return nil }
+        return PlaylistFolderExportPlacement(
+          playlistName: playlistMO.name ?? "",
+          playlistId: playlistMO.id,
+          folderId: placementMO.folderId,
+          sortOrder: placementMO.sortOrderValue
+        )
+      }
+      .sorted {
+        ($0.folderId, $0.playlistName, $0.playlistId)
+          < ($1.folderId, $1.playlistName, $1.playlistId)
+      }
+
+    return PlaylistFolderTreeExport(
+      exportedAt: Date(),
+      folders: exportFolders,
+      placements: exportPlacements
     )
   }
 
-  private func findFolderMO(by uuid: UUID, in context: NSManagedObjectContext)
-    -> PlaylistFolderMO? {
-    let fetchRequest = PlaylistFolderMO.fetchRequest()
-    fetchRequest.predicate = NSPredicate(format: "id == %@", uuid.uuidString)
-    fetchRequest.fetchLimit = 1
-    return (try? context.fetch(fetchRequest))?.first
-  }
+  // MARK: - Notification
 
-  private func fetchFolderMO(byServerId serverId: String, in context: NSManagedObjectContext)
-    -> PlaylistFolderMO? {
-    let fetchRequest = PlaylistFolderMO.fetchRequest()
-    fetchRequest.predicate = NSPredicate(format: "id == %@", serverId)
-    fetchRequest.fetchLimit = 1
-    return (try? context.fetch(fetchRequest))?.first
-  }
-
-  private func fetchChildFolders(of parentId: String, in context: NSManagedObjectContext)
-    -> [PlaylistFolderMO] {
-    let fetchRequest = PlaylistFolderMO.fetchRequest()
-    fetchRequest.predicate = NSPredicate(format: "parentId == %@", parentId)
-    return (try? context.fetch(fetchRequest)) ?? []
-  }
-
-  private func fetchPlaylistMO(by playlistId: String, in context: NSManagedObjectContext)
-    -> PlaylistMO? {
-    let fetchRequest = PlaylistMO.fetchRequest()
-    fetchRequest.predicate = NSPredicate(format: "id == %@", playlistId)
-    fetchRequest.fetchLimit = 1
-    return (try? context.fetch(fetchRequest))?.first
-  }
-
-  private func notifyChange() {
+  func notifyChange() {
     NotificationCenter.default.post(name: Self.didChangeNotification, object: self)
   }
 
   // MARK: - Static Helpers
 
-  private static func findFolder(id: UUID, in folders: [PlaylistFolder]) -> PlaylistFolder? {
+  static func findFolder(id: UUID, in folders: [PlaylistFolder]) -> PlaylistFolder? {
     for folder in folders {
       if folder.id == id { return folder }
       if let found = findFolder(id: id, in: folder.subfolders) { return found }
     }
     return nil
-  }
-
-  private static func applyingMutation(
-    id: UUID,
-    to folders: [PlaylistFolder],
-    mutation: (inout PlaylistFolder) -> ()
-  )
-    -> [PlaylistFolder] {
-    folders.map { folder in
-      var mutableFolder = folder
-      if mutableFolder.id == id {
-        mutation(&mutableFolder)
-      } else {
-        mutableFolder.subfolders = applyingMutation(
-          id: id,
-          to: mutableFolder.subfolders,
-          mutation: mutation
-        )
-      }
-      return mutableFolder
-    }
-  }
-
-  /// Tree-walk splice: when a folder with the given id is found in `folders`,
-  /// replace it in-place with its direct `subfolders` (its direct `playlistIds`
-  /// are attached to the containing folder by the caller via a companion
-  /// walk). Since `playlistIds` live on the *parent* folder, the top-level
-  /// splice uses the overload below that returns both the new subfolder list
-  /// and the playlist IDs to lift.
-  private static func flatteningFolder(
-    id: UUID,
-    from folders: [PlaylistFolder]
-  )
-    -> [PlaylistFolder] {
-    var result = [PlaylistFolder]()
-    result.reserveCapacity(folders.count)
-    for folder in folders {
-      if folder.id == id {
-        result.append(contentsOf: folder.subfolders)
-      } else {
-        var mutableFolder = folder
-        if folder.subfolders.contains(where: { $0.id == id }) {
-          mutableFolder = spliceDirectChild(id: id, into: mutableFolder)
-        } else {
-          mutableFolder.subfolders = flatteningFolder(id: id, from: mutableFolder.subfolders)
-        }
-        result.append(mutableFolder)
-      }
-    }
-    return result
-  }
-
-  /// Splice the direct-child folder `id` out of `parent`, lifting its
-  /// `playlistIds` into `parent.playlistIds` and its `subfolders` into
-  /// `parent.subfolders` at the deletion site.
-  private static func spliceDirectChild(
-    id: UUID,
-    into parent: PlaylistFolder
-  )
-    -> PlaylistFolder {
-    guard let index = parent.subfolders.firstIndex(where: { $0.id == id }) else {
-      return parent
-    }
-    var mutableParent = parent
-    let target = mutableParent.subfolders[index]
-    mutableParent.subfolders.remove(at: index)
-    mutableParent.subfolders.insert(contentsOf: target.subfolders, at: index)
-    for playlistId in target.playlistIds
-      where !mutableParent.playlistIds.contains(playlistId) {
-      mutableParent.playlistIds.append(playlistId)
-    }
-    return mutableParent
-  }
-
-  // MARK: - Legacy UserDefaults Fallback
-
-  private func loadFromUserDefaults() -> [PlaylistFolder] {
-    if let cached = _legacyFolders { return cached }
-    guard let data = defaults.data(forKey: defaultsKey),
-          let decoded = try? JSONDecoder().decode([PlaylistFolder].self, from: data)
-    else { return [] }
-    _legacyFolders = decoded
-    return decoded
-  }
-
-  private func legacyPersist() {
-    if let data = try? JSONEncoder().encode(_legacyFolders ?? []) {
-      defaults.set(data, forKey: defaultsKey)
-    }
-    NotificationCenter.default.post(name: Self.didChangeNotification, object: self)
-  }
-
-  private func legacyMutateFolder(id: UUID, mutation: (inout PlaylistFolder) -> ()) {
-    var currentFolders = loadFromUserDefaults()
-    currentFolders = Self.applyingMutation(id: id, to: currentFolders, mutation: mutation)
-    _legacyFolders = currentFolders
-    legacyPersist()
-  }
-
-  @discardableResult
-  private func legacyCreateFolder(name: String, parent: UUID?) -> PlaylistFolder {
-    let newFolder = PlaylistFolder(name: name)
-    if let parentId = parent {
-      legacyMutateFolder(id: parentId) { parentFolder in
-        parentFolder.subfolders.append(newFolder)
-      }
-    } else {
-      var currentFolders = loadFromUserDefaults()
-      currentFolders.append(newFolder)
-      _legacyFolders = currentFolders
-      legacyPersist()
-    }
-    return newFolder
-  }
-
-  private func legacyRenameFolder(id: UUID, to name: String) {
-    legacyMutateFolder(id: id) { folder in
-      folder.name = name
-    }
-  }
-
-  private func legacyDeleteFolder(id: UUID) {
-    let currentFolders = loadFromUserDefaults()
-    _legacyFolders = Self.flatteningFolder(id: id, from: currentFolders)
-    legacyPersist()
-  }
-
-  private func legacyAddPlaylists(_ playlistIds: [String], to folderId: UUID) {
-    legacyMutateFolder(id: folderId) { folder in
-      for playlistId in playlistIds where !folder.playlistIds.contains(playlistId) {
-        folder.playlistIds.append(playlistId)
-      }
-    }
-  }
-
-  private func legacyRemovePlaylists(_ playlistIds: [String], from folderId: UUID) {
-    legacyMutateFolder(id: folderId) { folder in
-      folder.playlistIds.removeAll { playlistIds.contains($0) }
-    }
   }
 }
