@@ -116,8 +116,10 @@ extension PlaylistFolderStore {
         sortOrder: $0.sortOrderValue
       )
     }
-    siblings.append(contentsOf: fetchPlacements(folderId: parentServerId, in: context)
-      .compactMap(playlistSibling(for:)))
+    siblings.append(
+      contentsOf: fetchPlacements(folderId: parentServerId, in: context)
+        .compactMap(playlistSibling(for:))
+    )
     return siblings
   }
 

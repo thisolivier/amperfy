@@ -632,6 +632,9 @@
 		A5F2010000000000000050A0 /* PlaylistFolderOrdering.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F2020000000000000050A0 /* PlaylistFolderOrdering.swift */; };
 		A5B0E30000000000000050A0 /* PlaylistFolderStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */; };
 		A5FC030000000000000050A0 /* PlaylistFolderSyncCapabilityTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5FC040000000000000050A0 /* PlaylistFolderSyncCapabilityTest.swift */; };
+		A5F3050000000000000050A0 /* PlaylistFolderTreeExporterTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F3060000000000000050A0 /* PlaylistFolderTreeExporterTest.swift */; };
+		A5F3030000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F3040000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift */; };
+		A5F3010000000000000050A0 /* PlaylistFolderOrderingTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F3020000000000000050A0 /* PlaylistFolderOrderingTest.swift */; };
 		A5B0E50000000000000050A0 /* PlaylistFolderContentsVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E60000000000000050A0 /* PlaylistFolderContentsVC.swift */; };
 		A5B0E70000000000000050A0 /* PlaylistFolderBrowsingTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E80000000000000050A0 /* PlaylistFolderBrowsingTableViewController.swift */; };
 		A5B0F10000000000000050A0 /* ReleaseNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0F20000000000000050A0 /* ReleaseNotes.swift */; };
@@ -1423,6 +1426,9 @@
 		A5F2020000000000000050A0 /* PlaylistFolderOrdering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderOrdering.swift; sourceTree = "<group>"; };
 		A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderStoreTest.swift; sourceTree = "<group>"; };
 		A5FC040000000000000050A0 /* PlaylistFolderSyncCapabilityTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderSyncCapabilityTest.swift; sourceTree = "<group>"; };
+		A5F3060000000000000050A0 /* PlaylistFolderTreeExporterTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderTreeExporterTest.swift; sourceTree = "<group>"; };
+		A5F3040000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderPlacementSyncTest.swift; sourceTree = "<group>"; };
+		A5F3020000000000000050A0 /* PlaylistFolderOrderingTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderOrderingTest.swift; sourceTree = "<group>"; };
 		A5B0E60000000000000050A0 /* PlaylistFolderContentsVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderContentsVC.swift; sourceTree = "<group>"; };
 		A5B0E80000000000000050A0 /* PlaylistFolderBrowsingTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderBrowsingTableViewController.swift; sourceTree = "<group>"; };
 		A5B0F20000000000000050A0 /* ReleaseNotes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotes.swift; sourceTree = "<group>"; };
@@ -1996,6 +2002,9 @@
 				A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */,
 				A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */,
 				A5FC040000000000000050A0 /* PlaylistFolderSyncCapabilityTest.swift */,
+				A5F3060000000000000050A0 /* PlaylistFolderTreeExporterTest.swift */,
+				A5F3040000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift */,
+				A5F3020000000000000050A0 /* PlaylistFolderOrderingTest.swift */,
 				A517500500000000000001A0 /* StylingPresetStoreTest.swift */,
 				A5C0110000000000000050A0 /* GetRandomWholeAlbumsTest.swift */,
 				A753325B9ED789446346DF94 /* AccountServerUrlBackfillTest.swift */,
@@ -3651,6 +3660,9 @@
 				A5B0B30000000000000050A0 /* PinnedPlaylistStoreTest.swift in Sources */,
 				A5B0E30000000000000050A0 /* PlaylistFolderStoreTest.swift in Sources */,
 				A5FC030000000000000050A0 /* PlaylistFolderSyncCapabilityTest.swift in Sources */,
+				A5F3050000000000000050A0 /* PlaylistFolderTreeExporterTest.swift in Sources */,
+				A5F3030000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift in Sources */,
+				A5F3010000000000000050A0 /* PlaylistFolderOrderingTest.swift in Sources */,
 				A517500400000000000001A0 /* StylingPresetStoreTest.swift in Sources */,
 				A5C0100000000000000050A0 /* GetRandomWholeAlbumsTest.swift in Sources */,
 				50BE5D8E2850F50F00156FC6 /* PodcastEpisodesParserTest.swift in Sources */,
