@@ -66,8 +66,14 @@ extension PlaylistMO {
   public var artworkItems: [PlaylistItemMO]
   @NSManaged
   public var searchHistory: SearchHistoryItemMO?
+  /// Legacy many-to-many membership, superseded by `folderPlacements`.
+  /// Kept only so the one-time v2 backfill can read pre-v2 memberships.
   @NSManaged
   public var folders: NSSet?
+  /// The playlist's placements — one per folder it currently sits in. Empty
+  /// means the playlist is implicitly at the root, unordered.
+  @NSManaged
+  public var folderPlacements: NSSet?
 
   static let relationshipKeyPathsForPrefetching = [
     #keyPath(PlaylistMO.artworkItems),

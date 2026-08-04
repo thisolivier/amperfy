@@ -25,11 +25,10 @@ import Foundation
 
 /// A folder entry inside the v2 playlist-folder organization envelope.
 ///
-/// Carries the same `id` / `name` / `parentId` triple the pre-v2 sync path
-/// consumed, so folder reconciliation can be fed directly from the envelope.
-/// Note the key casing differs from `NavidromeFolderResponse`: the v2 envelope
-/// is camelCase (`parentId`), the older per-folder endpoints are snake_case
-/// (`parent_id`).
+/// Also the response type of folder create, so a folder round-trips through the
+/// same shape it syncs in. The v2 contract is camelCase throughout (`parentId`);
+/// the removed pre-v2 endpoints used snake_case (`parent_id`), which is why a
+/// client written against them silently failed to send a parent at all.
 public struct NavidromeOrganizationFolder: Codable, Sendable, Equatable {
   public let id: String
   public let name: String

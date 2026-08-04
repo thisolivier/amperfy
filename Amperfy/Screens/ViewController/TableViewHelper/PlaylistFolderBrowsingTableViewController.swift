@@ -57,6 +57,13 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
   var sortType: PlaylistSortType = .name
   var searchText: String = ""
 
+  /// Whether rows follow the folder tree's own ordering — the sibling
+  /// comparator over `sortOrder` — rather than one of the attribute sorts.
+  ///
+  /// This is the default, because it is the order the user arranged. Picking any
+  /// attribute sort turns it off for the duration of that choice.
+  var usesManualSiblingOrder = true
+
   // MARK: - Search
 
   lazy var searchController: UISearchController = {
@@ -115,13 +122,13 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
         navigationController?.popViewController(animated: true)
         return
       }
-      displayedFolders = folder.subfolders
+      displayedFolders = sortFolders(folder.subfolders)
       displayedPlaylists = fetchPlaylists(ids: folder.playlistIds)
     } else {
       // During an active root search the playlist list is exhaustive (it
       // surfaces playlists nested in folders too), so hide the folder section
       // to keep results flat and unambiguous.
-      displayedFolders = searchText.isEmpty ? folderStore.folders : []
+      displayedFolders = searchText.isEmpty ? sortFolders(folderStore.folders) : []
       displayedPlaylists = fetchUnfiledPlaylists()
     }
     tableView.reloadData()
@@ -178,7 +185,43 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
     return sortPlaylists(playlists)
   }
 
+  /// Order playlists by the sibling comparator: `sortOrder` ascending, ties
+  /// broken by name, and playlists with no placement in this parent last.
+  ///
+  /// Folders and playlists share one ordering space per parent, but the table
+  /// renders them as two sections, so what each section shows is that single
+  /// order projected onto its own members. The relative order within each
+  /// section is identical to the interleaved order.
+  private func sortPlaylistsBySiblingOrder(_ playlists: [Playlist]) -> [Playlist] {
+    let sortOrdersByPlaylistId = folderStore.playlistSortOrders(inFolder: parentFolderId)
+    return playlists
+      .map { playlist in
+        (
+          playlist: playlist,
+          sibling: PlaylistFolderSibling(
+            kind: .playlist,
+            id: playlist.id,
+            name: playlist.name,
+            sortOrder: sortOrdersByPlaylistId[playlist.id]
+          )
+        )
+      }
+      .sorted { PlaylistFolderOrdering.isOrderedBefore($0.sibling, $1.sibling) }
+      .map(\.playlist)
+  }
+
+  /// Folders as delivered by the store are already in sibling order. The
+  /// attribute sorts have no meaning for folders, so they fall back to name.
+  private func sortFolders(_ folders: [PlaylistFolder]) -> [PlaylistFolder] {
+    guard !usesManualSiblingOrder else { return folders }
+    return folders
+      .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+  }
+
   private func sortPlaylists(_ playlists: [Playlist]) -> [Playlist] {
+    guard !usesManualSiblingOrder else {
+      return sortPlaylistsBySiblingOrder(playlists)
+    }
     switch sortType {
     case .name:
       return playlists
@@ -214,24 +257,40 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
   /// nav item or toolbar. Selecting an option updates `sortType`, asks the
   /// subclass to rebuild its nav items, and reloads.
   func createSortButtonMenu() -> UIMenu {
+    let manualOrderAction = UIAction(
+      title: "Manual",
+      image: usesManualSiblingOrder ? .check : nil
+    ) { [weak self] _ in
+      guard let self else { return }
+      usesManualSiblingOrder = true
+      rebuildNavigationItemsForSortChange()
+      reloadContent()
+    }
+
     let sortOptions: [(String, PlaylistSortType)] = [
       ("Name", .name),
       ("Last time played", .lastPlayed),
       ("Change date", .lastChanged),
       ("Duration", .duration),
     ]
-    let actions = sortOptions.map { title, option in
+    let attributeSortActions = sortOptions.map { title, option in
       UIAction(
         title: title,
-        image: sortType == option ? .check : nil
+        image: (!usesManualSiblingOrder && sortType == option) ? .check : nil
       ) { [weak self] _ in
         guard let self else { return }
+        usesManualSiblingOrder = false
         sortType = option
         rebuildNavigationItemsForSortChange()
         reloadContent()
       }
     }
-    return UIMenu(title: "Sort", image: .sort, options: [], children: actions)
+    return UIMenu(
+      title: "Sort",
+      image: .sort,
+      options: [],
+      children: [manualOrderAction] + attributeSortActions
+    )
   }
 
   // MARK: - Overridable hooks

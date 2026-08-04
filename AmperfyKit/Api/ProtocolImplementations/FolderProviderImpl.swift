@@ -40,6 +40,10 @@ public class FolderProviderImpl: FolderProvider {
     folderStore.deleteFolder(id: id)
   }
 
+  public func moveFolder(id: UUID, toParent newParentFolderId: UUID?) {
+    folderStore.moveFolder(id: id, toParent: newParentFolderId)
+  }
+
   public func addPlaylists(_ playlistIds: [String], to folderId: UUID) {
     folderStore.addPlaylists(playlistIds, to: folderId)
   }
@@ -56,8 +60,31 @@ public class FolderProviderImpl: FolderProvider {
     folderStore.movePlaylist(playlistId, from: sourceFolderId, to: destFolderId)
   }
 
+  public func unfilePlaylist(_ playlistId: String) {
+    folderStore.unfilePlaylist(playlistId)
+  }
+
+  public func moveSibling(
+    kind: PlaylistFolderSiblingKind,
+    id siblingId: String,
+    inFolder parentFolderId: UUID?,
+    toIndex targetIndex: Int
+  ) {
+    folderStore.moveSibling(
+      kind: kind, id: siblingId, inFolder: parentFolderId, toIndex: targetIndex
+    )
+  }
+
   public func folder(byId id: UUID) -> PlaylistFolder? {
     folderStore.folder(byId: id)
+  }
+
+  public func orderedSiblings(inFolder parentFolderId: UUID?) -> [PlaylistFolderSibling] {
+    folderStore.orderedSiblings(inFolder: parentFolderId)
+  }
+
+  public func playlistSortOrders(inFolder parentFolderId: UUID?) -> [String: Int] {
+    folderStore.playlistSortOrders(inFolder: parentFolderId)
   }
 
   public func syncFromServer() async throws {

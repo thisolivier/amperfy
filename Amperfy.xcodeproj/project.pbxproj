@@ -558,6 +558,8 @@
 		6F06EBB8351A1A501F35A266 /* gigs_events.json in Resources */ = {isa = PBXBuildFile; fileRef = BF445FB4625EB7686E50F0F9 /* gigs_events.json */; };
 		706790844DE32C4BDAFFEEC5 /* DeckSeedResolverTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = DADC71ACFD77D1D88398B31D /* DeckSeedResolverTest.swift */; };
 		70C85FEED8BFF2C4D7C8E82D /* PlaylistFolderMO+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F0DF2BE2466E004E8A817A /* PlaylistFolderMO+CoreDataClass.swift */; };
+		A5F1030000000000000050A0 /* PlaylistFolderPlacementMO+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F1040000000000000050A0 /* PlaylistFolderPlacementMO+CoreDataProperties.swift */; };
+		A5F1010000000000000050A0 /* PlaylistFolderPlacementMO+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F1020000000000000050A0 /* PlaylistFolderPlacementMO+CoreDataClass.swift */; };
 		795F083AEE4DAE91A5422E99 /* DiscoveryTelemetryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F55BAFEF959299057BD755E9 /* DiscoveryTelemetryTest.swift */; };
 		7A11FACE0001BEEF00000001 /* AdjacencyGatewaySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A11FACE0002BEEF00000002 /* AdjacencyGatewaySettings.swift */; };
 		7A11FACE0003BEEF00000003 /* AdjacencyGatewayRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A11FACE0004BEEF00000004 /* AdjacencyGatewayRoute.swift */; };
@@ -622,8 +624,17 @@
 		A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */; };
 		A5B0E10000000000000050A0 /* PlaylistFolderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */; };
 		A5FC010000000000000050A0 /* PlaylistFolderSyncCapability.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5FC020000000000000050A0 /* PlaylistFolderSyncCapability.swift */; };
+		A5F2110000000000000050A0 /* PlaylistFolderStore+Legacy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F2120000000000000050A0 /* PlaylistFolderStore+Legacy.swift */; };
+		A5F2090000000000000050A0 /* PlaylistFolderStore+Sync.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F2100000000000000050A0 /* PlaylistFolderStore+Sync.swift */; };
+		A5F2070000000000000050A0 /* PlaylistFolderStore+Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F2080000000000000050A0 /* PlaylistFolderStore+Storage.swift */; };
+		A5F2050000000000000050A0 /* PlaylistFolderTreeExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F2060000000000000050A0 /* PlaylistFolderTreeExporter.swift */; };
+		A5F2030000000000000050A0 /* PlaylistFolderPlacementReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F2040000000000000050A0 /* PlaylistFolderPlacementReconciler.swift */; };
+		A5F2010000000000000050A0 /* PlaylistFolderOrdering.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F2020000000000000050A0 /* PlaylistFolderOrdering.swift */; };
 		A5B0E30000000000000050A0 /* PlaylistFolderStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */; };
 		A5FC030000000000000050A0 /* PlaylistFolderSyncCapabilityTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5FC040000000000000050A0 /* PlaylistFolderSyncCapabilityTest.swift */; };
+		A5F3050000000000000050A0 /* PlaylistFolderTreeExporterTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F3060000000000000050A0 /* PlaylistFolderTreeExporterTest.swift */; };
+		A5F3030000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F3040000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift */; };
+		A5F3010000000000000050A0 /* PlaylistFolderOrderingTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F3020000000000000050A0 /* PlaylistFolderOrderingTest.swift */; };
 		A5B0E50000000000000050A0 /* PlaylistFolderContentsVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E60000000000000050A0 /* PlaylistFolderContentsVC.swift */; };
 		A5B0E70000000000000050A0 /* PlaylistFolderBrowsingTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0E80000000000000050A0 /* PlaylistFolderBrowsingTableViewController.swift */; };
 		A5B0F10000000000000050A0 /* ReleaseNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0F20000000000000050A0 /* ReleaseNotes.swift */; };
@@ -773,6 +784,8 @@
 		42A0E721A0B9C71F75554C98 /* DeckFusionEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckFusionEngine.swift; sourceTree = "<group>"; };
 		43FBE27E250D4DFD00D5F9B3 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		44F0DF2BE2466E004E8A817A /* PlaylistFolderMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderMO+CoreDataClass.swift"; sourceTree = "<group>"; };
+		A5F1040000000000000050A0 /* PlaylistFolderPlacementMO+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderPlacementMO+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		A5F1020000000000000050A0 /* PlaylistFolderPlacementMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderPlacementMO+CoreDataClass.swift"; sourceTree = "<group>"; };
 		48B06D4244E7689789337050 /* GigsModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GigsModels.swift; sourceTree = "<group>"; };
 		4D9D2A1B832989F845D00A3B /* PlaylistFolderMO+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderMO+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		5002565625E69DC700674CE1 /* SpinnerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinnerViewController.swift; sourceTree = "<group>"; };
@@ -1319,6 +1332,7 @@
 		50RA71NG2F5A01230085CBB3 /* RatingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingView.swift; sourceTree = "<group>"; };
 		51614CC26638A58BD40E0315 /* CoreDataPlaylistProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CoreDataPlaylistProvider.swift; sourceTree = "<group>"; };
 		54567B0942D948DCADE4FB21 /* Amperfy v51.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v51.xcdatamodel"; sourceTree = "<group>"; };
+		A5F5200000000000000052A0 /* Amperfy v52.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v52.xcdatamodel"; sourceTree = "<group>"; };
 		55BABDC494A4BA93B61B318B /* AuditionDeckEndCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuditionDeckEndCardView.swift; sourceTree = "<group>"; };
 		5644DE0ABADFA04BDF9BDDC9 /* GigsLocationProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GigsLocationProvider.swift; sourceTree = "<group>"; };
 		590A639B44AC70AC88BDAF49 /* DeckBlendInterleaver.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeckBlendInterleaver.swift; sourceTree = "<group>"; };
@@ -1404,8 +1418,17 @@
 		A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistItemsSyncTracker.swift; sourceTree = "<group>"; };
 		A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderStore.swift; sourceTree = "<group>"; };
 		A5FC020000000000000050A0 /* PlaylistFolderSyncCapability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderSyncCapability.swift; sourceTree = "<group>"; };
+		A5F2120000000000000050A0 /* PlaylistFolderStore+Legacy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderStore+Legacy.swift"; sourceTree = "<group>"; };
+		A5F2100000000000000050A0 /* PlaylistFolderStore+Sync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderStore+Sync.swift"; sourceTree = "<group>"; };
+		A5F2080000000000000050A0 /* PlaylistFolderStore+Storage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistFolderStore+Storage.swift"; sourceTree = "<group>"; };
+		A5F2060000000000000050A0 /* PlaylistFolderTreeExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderTreeExporter.swift; sourceTree = "<group>"; };
+		A5F2040000000000000050A0 /* PlaylistFolderPlacementReconciler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderPlacementReconciler.swift; sourceTree = "<group>"; };
+		A5F2020000000000000050A0 /* PlaylistFolderOrdering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderOrdering.swift; sourceTree = "<group>"; };
 		A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderStoreTest.swift; sourceTree = "<group>"; };
 		A5FC040000000000000050A0 /* PlaylistFolderSyncCapabilityTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderSyncCapabilityTest.swift; sourceTree = "<group>"; };
+		A5F3060000000000000050A0 /* PlaylistFolderTreeExporterTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderTreeExporterTest.swift; sourceTree = "<group>"; };
+		A5F3040000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderPlacementSyncTest.swift; sourceTree = "<group>"; };
+		A5F3020000000000000050A0 /* PlaylistFolderOrderingTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderOrderingTest.swift; sourceTree = "<group>"; };
 		A5B0E60000000000000050A0 /* PlaylistFolderContentsVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderContentsVC.swift; sourceTree = "<group>"; };
 		A5B0E80000000000000050A0 /* PlaylistFolderBrowsingTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistFolderBrowsingTableViewController.swift; sourceTree = "<group>"; };
 		A5B0F20000000000000050A0 /* ReleaseNotes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotes.swift; sourceTree = "<group>"; };
@@ -1617,6 +1640,8 @@
 				50FE808C26A55CEA00CB434D /* DownloadMO+CoreDataClass.swift */,
 				50FE808D26A55CEA00CB434D /* DownloadMO+CoreDataProperties.swift */,
 				44F0DF2BE2466E004E8A817A /* PlaylistFolderMO+CoreDataClass.swift */,
+				A5F1040000000000000050A0 /* PlaylistFolderPlacementMO+CoreDataProperties.swift */,
+				A5F1020000000000000050A0 /* PlaylistFolderPlacementMO+CoreDataClass.swift */,
 				4D9D2A1B832989F845D00A3B /* PlaylistFolderMO+CoreDataProperties.swift */,
 			);
 			path = ManagedObjects;
@@ -1977,6 +2002,9 @@
 				A5B0B40000000000000050A0 /* PinnedPlaylistStoreTest.swift */,
 				A5B0E40000000000000050A0 /* PlaylistFolderStoreTest.swift */,
 				A5FC040000000000000050A0 /* PlaylistFolderSyncCapabilityTest.swift */,
+				A5F3060000000000000050A0 /* PlaylistFolderTreeExporterTest.swift */,
+				A5F3040000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift */,
+				A5F3020000000000000050A0 /* PlaylistFolderOrderingTest.swift */,
 				A517500500000000000001A0 /* StylingPresetStoreTest.swift */,
 				A5C0110000000000000050A0 /* GetRandomWholeAlbumsTest.swift */,
 				A753325B9ED789446346DF94 /* AccountServerUrlBackfillTest.swift */,
@@ -2119,6 +2147,12 @@
 				A5B0D20000000000000050A0 /* PlaylistItemsSyncTracker.swift */,
 				A5B0E20000000000000050A0 /* PlaylistFolderStore.swift */,
 				A5FC020000000000000050A0 /* PlaylistFolderSyncCapability.swift */,
+				A5F2120000000000000050A0 /* PlaylistFolderStore+Legacy.swift */,
+				A5F2100000000000000050A0 /* PlaylistFolderStore+Sync.swift */,
+				A5F2080000000000000050A0 /* PlaylistFolderStore+Storage.swift */,
+				A5F2060000000000000050A0 /* PlaylistFolderTreeExporter.swift */,
+				A5F2040000000000000050A0 /* PlaylistFolderPlacementReconciler.swift */,
+				A5F2020000000000000050A0 /* PlaylistFolderOrdering.swift */,
 				50223EF2264543EA007445BC /* LibrarySyncVersion.swift */,
 				50073BDE22301D9A000130D8 /* DownloadRequestManager.swift */,
 				50C16C2121E7A38A00F086F0 /* Identifyable.swift */,
@@ -3387,6 +3421,12 @@
 				A5B0D10000000000000050A0 /* PlaylistItemsSyncTracker.swift in Sources */,
 				A5B0E10000000000000050A0 /* PlaylistFolderStore.swift in Sources */,
 				A5FC010000000000000050A0 /* PlaylistFolderSyncCapability.swift in Sources */,
+				A5F2110000000000000050A0 /* PlaylistFolderStore+Legacy.swift in Sources */,
+				A5F2090000000000000050A0 /* PlaylistFolderStore+Sync.swift in Sources */,
+				A5F2070000000000000050A0 /* PlaylistFolderStore+Storage.swift in Sources */,
+				A5F2050000000000000050A0 /* PlaylistFolderTreeExporter.swift in Sources */,
+				A5F2030000000000000050A0 /* PlaylistFolderPlacementReconciler.swift in Sources */,
+				A5F2010000000000000050A0 /* PlaylistFolderOrdering.swift in Sources */,
 				A5B0B10000000000000050A0 /* PinnedPlaylistStore.swift in Sources */,
 				A5D0D110000000000000070A0 /* ThemeGradient.swift in Sources */,
 				50C9D682284FAA6C007F18D0 /* PodcastEpisodeMO+CoreDataProperties.swift in Sources */,
@@ -3539,6 +3579,8 @@
 				AE61916CA3697B2E077A30D0 /* DefaultTrackAdjacencyService.swift in Sources */,
 				628ED22FD9FD47992DFD5854 /* NavidromeServerApi.swift in Sources */,
 				70C85FEED8BFF2C4D7C8E82D /* PlaylistFolderMO+CoreDataClass.swift in Sources */,
+				A5F1030000000000000050A0 /* PlaylistFolderPlacementMO+CoreDataProperties.swift in Sources */,
+				A5F1010000000000000050A0 /* PlaylistFolderPlacementMO+CoreDataClass.swift in Sources */,
 				A31946AF6D046CC2164E3618 /* PlaylistFolderMO+CoreDataProperties.swift in Sources */,
 				A5C00200000000000000B001 /* AmperfyServices.swift in Sources */,
 				A5C00200000000000000B002 /* LibraryProvider.swift in Sources */,
@@ -3618,6 +3660,9 @@
 				A5B0B30000000000000050A0 /* PinnedPlaylistStoreTest.swift in Sources */,
 				A5B0E30000000000000050A0 /* PlaylistFolderStoreTest.swift in Sources */,
 				A5FC030000000000000050A0 /* PlaylistFolderSyncCapabilityTest.swift in Sources */,
+				A5F3050000000000000050A0 /* PlaylistFolderTreeExporterTest.swift in Sources */,
+				A5F3030000000000000050A0 /* PlaylistFolderPlacementSyncTest.swift in Sources */,
+				A5F3010000000000000050A0 /* PlaylistFolderOrderingTest.swift in Sources */,
 				A517500400000000000001A0 /* StylingPresetStoreTest.swift in Sources */,
 				A5C0100000000000000050A0 /* GetRandomWholeAlbumsTest.swift in Sources */,
 				50BE5D8E2850F50F00156FC6 /* PodcastEpisodesParserTest.swift in Sources */,
@@ -4300,6 +4345,7 @@
 		500BB49521CAAA2700D367CF /* Amperfy.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
+				A5F5200000000000000052A0 /* Amperfy v52.xcdatamodel */,
 				54567B0942D948DCADE4FB21 /* Amperfy v51.xcdatamodel */,
 				A5B0500000000000000050A0 /* Amperfy v50.xcdatamodel */,
 				506C314D2EE6D2100011A2C3 /* Amperfy v49.xcdatamodel */,
@@ -4352,7 +4398,7 @@
 				506B3A3823B4539D00E31F21 /* Amperfy v2.xcdatamodel */,
 				500BB49621CAAA2700D367CF /* Amperfy.xcdatamodel */,
 			);
-			currentVersion = 54567B0942D948DCADE4FB21 /* Amperfy v51.xcdatamodel */;
+			currentVersion = A5F5200000000000000052A0 /* Amperfy v52.xcdatamodel */;
 			path = Amperfy.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

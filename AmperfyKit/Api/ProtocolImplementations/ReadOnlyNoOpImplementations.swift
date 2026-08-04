@@ -206,6 +206,7 @@ public class NoOpFolderProvider: FolderProvider {
 
   public func renameFolder(id: UUID, to name: String) {}
   public func deleteFolder(id: UUID) {}
+  public func moveFolder(id: UUID, toParent newParentFolderId: UUID?) {}
   public func addPlaylists(_ playlistIds: [String], to folderId: UUID) {}
   public func removePlaylists(_ playlistIds: [String], from folderId: UUID) {}
   public func movePlaylist(
@@ -213,7 +214,16 @@ public class NoOpFolderProvider: FolderProvider {
     from sourceFolderId: UUID,
     to destFolderId: UUID
   ) {}
+  public func unfilePlaylist(_ playlistId: String) {}
+  public func moveSibling(
+    kind: PlaylistFolderSiblingKind,
+    id siblingId: String,
+    inFolder parentFolderId: UUID?,
+    toIndex targetIndex: Int
+  ) {}
   public func folder(byId id: UUID) -> PlaylistFolder? { nil }
+  public func orderedSiblings(inFolder parentFolderId: UUID?) -> [PlaylistFolderSibling] { [] }
+  public func playlistSortOrders(inFolder parentFolderId: UUID?) -> [String: Int] { [:] }
   public func syncFromServer() async throws {}
   public func syncMemberships(playlistId: String, folderIds: [String]) {}
 }
