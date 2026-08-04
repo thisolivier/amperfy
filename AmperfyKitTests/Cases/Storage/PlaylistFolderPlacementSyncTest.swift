@@ -100,6 +100,32 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
     )
   }
 
+  /// A folder delete notifies twice: once synchronously for the local part, and
+  /// again once the post-delete refetch has reconciled. Waiting on the *second*
+  /// is what makes an assertion about the converged state deterministic —
+  /// waiting on the fetch itself only proves the request went out.
+  private func expectationForDeleteConvergence() -> XCTestExpectation {
+    let convergenceExpectation = expectation(
+      forNotification: PlaylistFolderStore.didChangeNotification,
+      object: nil,
+      handler: nil
+    )
+    convergenceExpectation.expectedFulfillmentCount = 2
+    return convergenceExpectation
+  }
+
+  private func storedPlacementSortOrders() -> [String: Int] {
+    let fetchRequest = PlaylistFolderPlacementMO.fetchRequest()
+    let placementMOs = (try? testContext.fetch(fetchRequest)) ?? []
+    var sortOrders = [String: Int]()
+    for placementMO in placementMOs {
+      guard let playlistId = placementMO.playlist?.id,
+            let sortOrder = placementMO.sortOrderValue else { continue }
+      sortOrders["\(playlistId)@\(placementMO.folderId)"] = sortOrder
+    }
+    return sortOrders
+  }
+
   private func storedPlacementEdges() -> [String] {
     let fetchRequest = PlaylistFolderPlacementMO.fetchRequest()
     let placementMOs = (try? testContext.fetch(fetchRequest)) ?? []
@@ -534,7 +560,152 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
     XCTAssertEqual(store.folders.first?.subfolders.map(\.name), ["Child"])
   }
 
-  // MARK: - 7. Legacy membership backfill
+  // MARK: - 7. Folder delete defers promotion to the server
+
+  /// The whole server surface of a folder delete is one DELETE followed by one
+  /// organization fetch — in that order, and with no placement write anywhere.
+  ///
+  /// This replaces an earlier client-side workaround that wrote the promoted
+  /// placements itself *before* issuing the DELETE, because the server used to
+  /// scatter them to the root. The server now promotes them, so those writes
+  /// would duplicate its work, and the non-atomic window between them was the
+  /// reason the behaviour moved server-side at all.
+  func testFolderDeleteIssuesOnlyADeleteThenARefetch() async throws {
+    let parentServerId = UUID().uuidString
+    let rockServerId = UUID().uuidString
+    seedLocalFolder(serverId: parentServerId, name: "Parent")
+    seedLocalFolder(serverId: rockServerId, name: "Rock", parentId: parentServerId)
+    seedLocalPlaylist(id: "pl-1", name: "Riffs")
+
+    let serverCallLog = ServerCallLog()
+    store.configureForTesting(
+      context: testContext,
+      account: account.managedObject,
+      organizationFetcher: {
+        serverCallLog.record("fetchOrganization")
+        // The server's post-delete truth: Rock is gone, its playlist promoted.
+        return NavidromeFolderOrganizationResponse(
+          folderApiVersion: 2,
+          folders: [
+            NavidromeOrganizationFolder(id: parentServerId, name: "Parent", parentId: ""),
+          ],
+          placements: [
+            NavidromeOrganizationPlacement(
+              playlistId: "pl-1", folderId: parentServerId, sortOrder: 70
+            ),
+          ]
+        )
+      },
+      folderDeleteRequester: { folderId in
+        serverCallLog.record("deleteFolder:\(folderId)")
+      }
+    )
+    let rockFolderId = try XCTUnwrap(UUID(uuidString: rockServerId))
+    store.addPlaylists(["pl-1"], to: rockFolderId)
+
+    let convergenceExpectation = expectationForDeleteConvergence()
+    store.deleteFolder(id: rockFolderId)
+    await fulfillment(of: [convergenceExpectation], timeout: 5)
+
+    XCTAssertEqual(
+      serverCallLog.recordedCalls,
+      ["deleteFolder:\(rockServerId)", "fetchOrganization"],
+      "Folder delete must issue no placement writes of its own"
+    )
+    // And it converged on the server's promotion.
+    XCTAssertEqual(storedPlacementEdges(), ["pl-1@\(parentServerId)"])
+    XCTAssertEqual(storedPlacementSortOrders()["pl-1@\(parentServerId)"], 70)
+  }
+
+  /// The case that makes local prediction unsafe: a playlist filed in both the
+  /// folder and its parent. Promotion merges the two, the existing home wins, and
+  /// the placement count goes *down* — so the client must take the server's word
+  /// for the outcome rather than computing one.
+  func testFolderDeleteConvergesOnServerPromotionEvenWhenPlacementCountDrops()
+    async throws {
+    let parentServerId = UUID().uuidString
+    let rockServerId = UUID().uuidString
+    seedLocalFolder(serverId: parentServerId, name: "Parent")
+    seedLocalFolder(serverId: rockServerId, name: "Rock", parentId: parentServerId)
+    seedLocalPlaylist(id: "pl-1", name: "Riffs")
+
+    store.configureForTesting(
+      context: testContext,
+      account: account.managedObject,
+      organizationFetcher: {
+        NavidromeFolderOrganizationResponse(
+          folderApiVersion: 2,
+          folders: [
+            NavidromeOrganizationFolder(id: parentServerId, name: "Parent", parentId: ""),
+          ],
+          // Two placements became one, keeping the parent's own sortOrder.
+          placements: [
+            NavidromeOrganizationPlacement(
+              playlistId: "pl-1", folderId: parentServerId, sortOrder: 40
+            ),
+          ]
+        )
+      },
+      folderDeleteRequester: { _ in }
+    )
+    let parentFolderId = try XCTUnwrap(UUID(uuidString: parentServerId))
+    let rockFolderId = try XCTUnwrap(UUID(uuidString: rockServerId))
+    store.addPlaylists(["pl-1"], to: parentFolderId)
+    store.addPlaylists(["pl-1"], to: rockFolderId)
+    XCTAssertEqual(storedPlacementEdges().count, 2)
+
+    let convergenceExpectation = expectationForDeleteConvergence()
+    store.deleteFolder(id: rockFolderId)
+    await fulfillment(of: [convergenceExpectation], timeout: 5)
+
+    XCTAssertEqual(storedPlacementEdges(), ["pl-1@\(parentServerId)"])
+    XCTAssertEqual(
+      storedPlacementSortOrders()["pl-1@\(parentServerId)"], 40,
+      "The surviving placement must keep the server's sortOrder, not a locally invented one"
+    )
+    XCTAssertEqual(storedFolderNames, ["Parent"])
+  }
+
+  /// The two deterministic parts of a delete are still applied immediately, so
+  /// the UI does not wait on a round trip to stop showing a deleted folder.
+  func testFolderDeleteAppliesTheDeterministicPartsLocallyStraightAway() async throws {
+    let parentServerId = UUID().uuidString
+    let rockServerId = UUID().uuidString
+    seedLocalFolder(serverId: parentServerId, name: "Parent")
+    seedLocalFolder(serverId: rockServerId, name: "Rock", parentId: parentServerId)
+    seedLocalFolder(serverId: UUID().uuidString, name: "Metal", parentId: rockServerId)
+    store.configureForTesting(context: testContext, account: account.managedObject)
+
+    store.deleteFolder(id: try XCTUnwrap(UUID(uuidString: rockServerId)))
+
+    XCTAssertEqual(storedFolderNames, ["Metal", "Parent"])
+    let parentFolder = try XCTUnwrap(store.folders.first { $0.name == "Parent" })
+    XCTAssertEqual(
+      parentFolder.subfolders.map(\.name), ["Metal"],
+      "Child folders re-parent one level, which the contract guarantees"
+    )
+  }
+
+  /// With no server configured there is nothing to converge to, so the delete
+  /// must not leave edges pointing at a folder that no longer exists.
+  func testFolderDeleteDropsEdgesIntoTheDeletedFolder() async throws {
+    seedLocalPlaylist(id: "pl-1", name: "Riffs")
+    let folder = store.createFolderForTesting(
+      context: testContext, account: account, name: "Rock"
+    )
+    store.addPlaylists(["pl-1"], to: folder.id)
+    XCTAssertEqual(storedPlacementEdges().count, 1)
+
+    store.deleteFolder(id: folder.id)
+
+    XCTAssertTrue(storedPlacementEdges().isEmpty)
+    XCTAssertNotNil(
+      library.getPlaylists(for: account).first { $0.id == "pl-1" },
+      "Deleting a folder must never reach through to a playlist"
+    )
+  }
+
+  // MARK: - 8. Legacy membership backfill
 
   /// Pre-v2 devices stored memberships in a bare many-to-many join. Dropping it
   /// at migration would have been schema-clean and would have silently discarded
@@ -580,6 +751,27 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
     )
 
     XCTAssertEqual(storedPlacementEdges(), ["pl-current@folder-rock"])
+  }
+}
+
+// MARK: - ServerCallLog
+
+/// Records, in order, every server call a store makes through its injected
+/// seams — so a test can assert on the calls that were *not* made.
+private final class ServerCallLog: @unchecked Sendable {
+  private let lock = NSLock()
+  private var calls = [String]()
+
+  func record(_ call: String) {
+    lock.lock()
+    defer { lock.unlock() }
+    calls.append(call)
+  }
+
+  var recordedCalls: [String] {
+    lock.lock()
+    defer { lock.unlock() }
+    return calls
   }
 }
 

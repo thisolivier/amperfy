@@ -32,6 +32,17 @@ import os.log
 public typealias PlaylistFolderOrganizationFetcher =
   @Sendable () async throws -> NavidromeFolderOrganizationResponse
 
+// MARK: - PlaylistFolderDeleteRequester
+
+/// Issues `DELETE /api/playlist/folder/{id}`.
+///
+/// Injectable for the same reason the probe is: folder delete now hands the
+/// promotion of the folder's placements entirely to the server, so what the
+/// client must be shown to do is issue this one request and then re-sync — never
+/// a placement write of its own.
+public typealias PlaylistFolderDeleteRequester =
+  @Sendable (String) async throws -> ()
+
 // MARK: - PlaylistFolder
 
 public struct PlaylistFolder: Codable, Identifiable, Equatable {
@@ -101,6 +112,7 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   var navidromeApi: NavidromeServerApi?
   var accountMO: AccountMO?
   var folderOrganizationFetcher: PlaylistFolderOrganizationFetcher?
+  var folderDeleteRequester: PlaylistFolderDeleteRequester?
   var treeExporter: PlaylistFolderTreeExporter
 
   let logger = Logger(
@@ -126,25 +138,32 @@ public final class PlaylistFolderStore: @unchecked Sendable {
         try await api.fetchFolderOrganization()
       }
       folderOrganizationFetcher = fetcher
+      let deleteRequester: PlaylistFolderDeleteRequester = { folderId in
+        try await api.deleteFolder(id: folderId)
+      }
+      folderDeleteRequester = deleteRequester
     } else {
       folderOrganizationFetcher = nil
+      folderDeleteRequester = nil
     }
     hasLoggedServerLacksFolderApi = false
     backfillPlacementsFromLegacyMembershipsIfNeeded(in: context)
   }
 
   /// Test seam: configure the destructive sync path without a live Navidrome
-  /// client, supplying the capability probe directly.
+  /// client, supplying the capability probe and the delete request directly.
   func configureForTesting(
     context: NSManagedObjectContext,
     account: AccountMO?,
     organizationFetcher: PlaylistFolderOrganizationFetcher? = nil,
+    folderDeleteRequester: PlaylistFolderDeleteRequester? = nil,
     treeExporter: PlaylistFolderTreeExporter? = nil
   ) {
     managedObjectContext = context
     navidromeApi = nil
     accountMO = account
     folderOrganizationFetcher = organizationFetcher
+    self.folderDeleteRequester = folderDeleteRequester
     hasLoggedServerLacksFolderApi = false
     if let treeExporter {
       self.treeExporter = treeExporter
@@ -192,10 +211,20 @@ public final class PlaylistFolderStore: @unchecked Sendable {
 
   // MARK: - Computed
 
-  /// All playlist IDs placed in at least one real folder at any depth.
+  /// All playlist IDs placed in at least one real folder at any depth — that is,
+  /// the playlists a root listing should *not* also show.
   ///
-  /// An explicit *root* placement does not count as filed — it orders a playlist
-  /// within the root list rather than moving it out of it.
+  /// An explicit root placement is deliberately excluded. Note this reads the
+  /// opposite way to the word "filed" in the API contract, which calls an
+  /// explicit root placement "filed" to distinguish it (ordered at root) from a
+  /// playlist with no placement at all (unordered at root). That distinction is
+  /// preserved here — it lives in ``playlistSortOrders(inFolder:)``, where an
+  /// explicit root placement has a sortOrder and an absent one does not.
+  ///
+  /// This property answers a different question: *is this playlist somewhere
+  /// other than the root?* Folding explicit root placements in would drop those
+  /// playlists from the root listing, and since they live at the root, they would
+  /// simply vanish from the UI.
   public var allFiledPlaylistIds: Set<String> {
     guard let context = managedObjectContext else {
       return folders.reduce(into: Set<String>()) { result, folder in
@@ -351,16 +380,29 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     exportCurrentTree()
   }
 
-  /// Deletes the folder with the given id, lifting its direct playlists and
-  /// subfolders up one level into the containing folder (root if the folder was
-  /// at root). Grandchildren remain inside their direct parent — the pop is one
-  /// level only. Playlists themselves are never deleted.
+  /// Deletes the folder with the given id. Child folders and the folder's
+  /// playlists are lifted one level, into the containing folder (root if the
+  /// folder was at root). Grandchildren remain inside their direct parent — the
+  /// pop is one level only. Playlists themselves are never deleted.
   ///
-  /// The server's own delete re-parents child *folders* but merely drops the
-  /// deleted folder's placements, which would scatter its playlists to the root.
-  /// To keep this fork's friendlier behaviour, the lifted placements are written
-  /// to the server explicitly *before* the folder is deleted, so server and
-  /// device agree once the dust settles.
+  /// **The promotion is the server's job, and its result is fetched rather than
+  /// predicted.** `DELETE /api/playlist/folder/{id}` re-parents child folders
+  /// and promotes the folder's placements to the deleted folder's parent, with
+  /// the existing home winning on conflict and sortOrder carried verbatim. That
+  /// last rule means a delete can legitimately *reduce* the placement count: a
+  /// playlist filed in both the folder and its parent ends up with one placement
+  /// on the parent's terms, not the promoted one's. Any local guess at the
+  /// outcome would drift on exactly that case, so once the delete succeeds the
+  /// organization is re-fetched and run back through the ordinary
+  /// capability-gated reconciliation.
+  ///
+  /// Locally only the two deterministic parts are applied up front, so the UI
+  /// responds immediately: the folder disappears and its child folders re-parent.
+  /// Its placements are dropped rather than re-pointed — an edge into a folder
+  /// that no longer exists means nothing — which shows the affected playlists at
+  /// the root for the moment before the refetch files them into the parent.
+  /// Nothing is destroyed by that transient state, and if the delete fails the
+  /// refetch puts the folder straight back.
   public func deleteFolder(id: UUID) {
     guard let context = managedObjectContext else {
       legacyDeleteFolder(id: id)
@@ -370,54 +412,26 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     guard let folderMO = findFolderMO(by: id, in: context) else { return }
     let serverId = folderMO.id
     let parentId = folderMO.parentId
-    let normalizedParentId = PlaylistFolderRootId.normalized(parentId)
 
-    // Promote child folders: move their parentId to this folder's parentId
+    // Re-parent child folders: contract-guaranteed, so safe to apply locally.
     for childFolderMO in fetchChildFolders(of: serverId, in: context) {
       childFolderMO.parentId = parentId
     }
 
-    // Promote the folder's playlists into the parent's ordering space.
-    var promotedPlaylistIds = [String]()
-    var nextSortOrder = PlaylistFolderOrdering.appendSortOrder(
-      after: siblings(inFolderId: normalizedParentId, in: context)
-    )
     for placementMO in fetchPlacements(folderId: serverId, in: context) {
-      guard let playlistMO = placementMO.playlist else {
-        context.delete(placementMO)
-        continue
-      }
-      if fetchPlacement(
-        playlistId: playlistMO.id, folderId: normalizedParentId, in: context
-      ) != nil {
-        // Already placed in the parent — the lifted edge would be a duplicate.
-        context.delete(placementMO)
-        continue
-      }
-      promotedPlaylistIds.append(playlistMO.id)
-      // Re-point the existing edge at the parent rather than deleting and
-      // re-creating it, so the playlist is never momentarily unfiled.
-      placementMO.folderId = normalizedParentId
-      placementMO.sortOrderValue = nextSortOrder
-      nextSortOrder += PlaylistFolderOrdering.sortOrderGap
+      context.delete(placementMO)
     }
 
     context.delete(folderMO)
     try? context.save()
 
-    if let api = navidromeApi {
-      let playlistIdsToPromote = promotedPlaylistIds
-      let promotionTargetId = normalizedParentId.isEmpty
-        ? PlaylistFolderRootId.literal : normalizedParentId
+    if let folderDeleteRequester {
       Task {
-        // Re-file first: once the folder is gone the server has nothing left to
-        // re-file from.
-        for playlistId in playlistIdsToPromote {
-          try? await api.setPlaylistPlacement(
-            folderId: promotionTargetId, playlistId: playlistId
-          )
-        }
-        try? await api.deleteFolder(id: serverId)
+        try? await folderDeleteRequester(serverId)
+        // Converge on the server's promotion rather than guessing at it. This
+        // deliberately reuses the capability-gated sync path instead of adding a
+        // write path of its own.
+        try? await self.syncFromServer()
       }
     }
 
