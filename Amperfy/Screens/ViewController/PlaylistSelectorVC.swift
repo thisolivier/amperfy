@@ -164,7 +164,10 @@ class PlaylistSelectorVC: PlaylistFolderBrowsingTableViewController {
 
   private func promptCreatePlaylist() {
     let alert = UIAlertController(title: "New Playlist", message: nil, preferredStyle: .alert)
-    let createAction = UIAlertAction(title: "Create", style: .default) { [weak self, weak alert] _ in
+    let createAction = UIAlertAction(
+      title: "Create",
+      style: .default
+    ) { [weak self, weak alert] _ in
       guard let self,
             let name = alert?.textFields?.first?.text?
             .trimmingCharacters(in: .whitespacesAndNewlines),

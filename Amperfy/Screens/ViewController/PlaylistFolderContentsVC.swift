@@ -559,7 +559,10 @@ class PlaylistFolderContentsVC: PlaylistFolderBrowsingTableViewController {
   private func promptRenamePlaylist(_ playlist: Playlist) {
     let currentName = playlist.name
     let alert = UIAlertController(title: "Rename Playlist", message: nil, preferredStyle: .alert)
-    let renameAction = UIAlertAction(title: "Rename", style: .default) { [weak self, weak alert] _ in
+    let renameAction = UIAlertAction(
+      title: "Rename",
+      style: .default
+    ) { [weak self, weak alert] _ in
       guard let self,
             let newName = alert?.textFields?.first?.text?
             .trimmingCharacters(in: .whitespacesAndNewlines),
