@@ -37,6 +37,21 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 82,
+      date: "2026-08-04",
+      title: "Build 82 — Folder fixes: offline folders, remove vs delete",
+      whatsNew: [
+        "Fixed: after a full resync, Show in Playlists could confidently tell you a song wasn't in any playlist when it actually was. The app was trusting a stale record of what it had already synced, so playlist contents were never re-downloaded.",
+        "Folders you create on a slow or offline connection are now fully editable straight away. You can rename them, file playlists into them and keep working while the folder finishes syncing, and if you're inside one when it syncs, the screen follows it rather than emptying out.",
+        "In folder browsing, Delete now means remove from this folder. The Delete key, swiping, and the bulk actions all take the playlist out of the folder and leave it untouched in your library. Deleting a playlist from your library for good is still only on the playlist's own page.",
+      ],
+      testingFocus: [
+        "Turn on airplane mode, create a folder and file some playlists into it, then reconnect. Confirm the folder uploads with its contents intact and stays editable throughout.",
+        "While browsing inside a folder, remove a playlist with the Delete key, a swipe, and a bulk action. Confirm each takes it out of the folder but the playlist is still in your library.",
+        "Do a full resync from Settings, then use Show in Playlists on a song you know is filed in a playlist. Confirm it lists the playlist instead of showing nothing.",
+      ]
+    ),
+    ReleaseNote(
       id: 81,
       date: "2026-08-04",
       title: "Build 81 — Bulk playlist organization",
