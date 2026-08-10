@@ -70,6 +70,7 @@ class EntityPreviewActionBuilder {
   private var isShowPodcastDetails = false
   private var isShowSongDetails = false
   private var isInstantMix = false
+  private var isShareable = false
 
   init(
     container: PlayableContainable,
@@ -159,6 +160,9 @@ class EntityPreviewActionBuilder {
     }
     if isDeleteOnServer {
       elementHandlingActions.append(createDeleteOnServerAction())
+    }
+    if isShareable, let playable = entityContainer as? AbstractPlayable {
+      elementHandlingActions.append(createShareAction(playable: playable))
     }
     if isGoToSiteUrl, let url = (entityContainer as? AbstractPlayable)?.asRadio?.siteURL {
       elementHandlingActions.append(createGoToSiteUrl(url: url))
@@ -262,6 +266,7 @@ class EntityPreviewActionBuilder {
     isShowPodcastDetails = false
     isShowSongDetails = true
     isInstantMix = appDelegate.storage.settings.user.isOnlineMode
+    isShareable = song.isCached || appDelegate.storage.settings.user.isOnlineMode
   }
 
   private func configureFor(podcastEpisode: PodcastEpisode) {
@@ -286,6 +291,7 @@ class EntityPreviewActionBuilder {
     isGoToSiteUrl = false
     isShowPodcastDetails = true
     isShowSongDetails = false
+    isShareable = podcastEpisode.isCached || appDelegate.storage.settings.user.isOnlineMode
   }
 
   private func configureFor(radio: Radio) {
@@ -793,6 +799,31 @@ class EntityPreviewActionBuilder {
         // do nothing
       }))
       self.rootView.present(alert, animated: true, completion: nil)
+    }
+  }
+
+  private func createShareAction(playable: AbstractPlayable) -> UIAction {
+    UIAction(
+      title: "Share",
+      image: UIImage(systemName: "square.and.arrow.up")
+    ) { _ in
+      // Used if the song is not cached, otherwise never called
+      let downloadManagerProvider: () -> DownloadManageable? = { [weak self] in
+        guard let self = self,
+              let accountInfo = playable.account?.info
+        else { return nil }
+        return appDelegate
+          .getMeta(accountInfo)
+          .playableDownloadManager
+      }
+
+      // Note: This is strongly coupled, I could protocolize and inject. But this is simplest and the project doesn't seem to do DI/tests for this target.
+      ShareSongAction.share(
+        playable: playable,
+        from: self.rootView.view,
+        presenter: self.rootView,
+        downloadManagerProvider: downloadManagerProvider
+      )
     }
   }
 
