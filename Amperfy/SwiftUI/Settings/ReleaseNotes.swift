@@ -37,6 +37,26 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 83,
+      date: "2026-08-17",
+      title: "Build 83 — Smart Playlists",
+      whatsNew: [
+        "New in Library: Smart Playlists. Build a query from stackable rules — added in the last X days, never played (or not played in the last X days), in fewer or more than N playlists, and in / not in a specific playlist — and get back a playable track list.",
+        "The result is a frozen snapshot: it survives app restarts and never changes behind your back. When you want it brought up to date, tap the Refresh button under the artwork — nothing updates until you do.",
+        "Results play like any playlist: tap a song to start there, skip forward and back through the query results, shuffle the lot.",
+        "Refreshing online also backfills recently added albums from the server, so 'added in the last X days' catches music that arrived via other apps.",
+        "Play counts from the server now merge into the app, and plays you make offline still count immediately — so 'never played' respects both your other devices and your bus rides.",
+        "Playlists can now be deleted from the ⋯ menu on the playlist's own page, with a confirmation step.",
+      ],
+      testingFocus: [
+        "Library → Smart Playlists: build 'Added within 90 days' + 'Never played', run it, and sanity-check the results against what you know is new.",
+        "Play a track from a never-played query, then tap Refresh — the track you just played should drop out of the results.",
+        "Force-quit the app and come back: the result list and its 'Refreshed' time should be exactly as you left them.",
+        "Add a 'Not in playlist …' rule pointing at a playlist you use, refresh, and confirm none of its songs appear.",
+        "Open a playlist, tap ⋯ → Delete Playlist, confirm, and check it's gone on your other devices too.",
+      ]
+    ),
+    ReleaseNote(
       id: 82,
       date: "2026-08-04",
       title: "Build 82 — Folder fixes: offline folders, remove vs delete",
