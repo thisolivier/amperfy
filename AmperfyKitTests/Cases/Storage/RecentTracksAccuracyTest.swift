@@ -56,6 +56,7 @@ final class SPY_LibrarySyncer: LibrarySyncer {
   }
 
   func syncRecentAlbums(offset: Int, count: Int) async throws {}
+  func syncAlbumListPage(offset: Int, count: Int) async throws -> Int { 0 }
   func syncFavoriteLibraryElements() async throws {}
   func syncRadios() async throws {}
   func syncDownPlaylistsWithoutSongs() async throws {}

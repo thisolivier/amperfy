@@ -855,6 +855,40 @@ class AmpacheLibrarySyncer: CommonLibrarySyncer, LibrarySyncer {
     }
   }
 
+  /// One page of the full `albums` listing — the same request the initial
+  /// library sync pages through. Ordering is stable and covers every album,
+  /// which is what makes it usable as a whole-library `remoteSongCount`
+  /// refresh. Writes no newest/recent section bookkeeping.
+  @MainActor
+  func syncAlbumListPage(offset: Int, count: Int) async throws -> Int {
+    guard isSyncAllowed else { return 0 }
+    os_log("Sync album list page: offset: %i count: %i", log: log, type: .info, offset, count)
+    let response = try await ampacheXmlServerApi.requestAlbums(
+      startIndex: offset,
+      pollCount: count
+    )
+    return try await storage.async.performAndGet { asyncCompanion in
+      let accountAsync = asyncCompanion.library.getAccount(managedObjectId: self.accountObjectId)
+      let idParserDelegate = IDsParserDelegate(performanceMonitor: self.performanceMonitor)
+      try self.parse(
+        response: response,
+        delegate: idParserDelegate,
+        isThrowingErrorsAllowed: false
+      )
+      let prefetch = asyncCompanion.library.getElements(
+        account: accountAsync,
+        prefetchIDs: idParserDelegate.prefetchIDs
+      )
+
+      let parserDelegate = AlbumParserDelegate(
+        performanceMonitor: self.performanceMonitor, prefetch: prefetch, account: accountAsync,
+        library: asyncCompanion.library
+      )
+      try self.parse(response: response, delegate: parserDelegate)
+      return parserDelegate.albumsParsedArray.count
+    }
+  }
+
   @MainActor
   func syncFavoriteLibraryElements() async throws {
     guard isSyncAllowed else { return }

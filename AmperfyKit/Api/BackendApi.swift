@@ -151,6 +151,14 @@ public protocol LibrarySyncer: Sendable {
   func syncNewestAlbums(offset: Int, count: Int) async throws
   @MainActor
   func syncRecentAlbums(offset: Int, count: Int) async throws
+  /// Syncs one page of the FULL album listing (stable, non-recency ordering) so
+  /// server-side album metadata — most importantly `remoteSongCount` — is
+  /// refreshed for albums that no recency listing would ever return. Returns the
+  /// number of albums the page actually held, so a caller can page to the end.
+  /// Unlike `syncNewestAlbums` / `syncRecentAlbums` it writes no
+  /// newest/recent section bookkeeping.
+  @MainActor
+  func syncAlbumListPage(offset: Int, count: Int) async throws -> Int
   @MainActor
   func syncNewestPodcastEpisodes() async throws
   @MainActor

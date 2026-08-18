@@ -720,6 +720,38 @@ class SubsonicLibrarySyncer: CommonLibrarySyncer, LibrarySyncer {
     }
   }
 
+  /// One page of `getAlbumList2 type=alphabeticalByName` — the same request the
+  /// initial library sync pages through, minus the status notifier. Ordering is
+  /// stable and covers every album, which is what makes it usable as a
+  /// whole-library `remoteSongCount` refresh (`SsAlbumParserDelegate` writes the
+  /// server's `songCount` and clears `isSongsMetaDataSynced` when it moved).
+  @MainActor
+  func syncAlbumListPage(offset: Int, count: Int) async throws -> Int {
+    guard isSyncAllowed else { return 0 }
+    os_log("Sync album list page: offset: %i count: %i", log: log, type: .info, offset, count)
+    let response = try await subsonicServerApi.requestAlbums(offset: offset, count: count)
+    return try await storage.async.performAndGet { asyncCompanion in
+      let accountAsync = asyncCompanion.library.getAccount(managedObjectId: self.accountObjectId)
+      let idParserDelegate = SsIDsParserDelegate(performanceMonitor: self.performanceMonitor)
+      try self.parse(
+        response: response,
+        delegate: idParserDelegate,
+        isThrowingErrorsAllowed: false
+      )
+      let prefetch = asyncCompanion.library.getElements(
+        account: accountAsync,
+        prefetchIDs: idParserDelegate.prefetchIDs
+      )
+
+      let parserDelegate = SsAlbumParserDelegate(
+        performanceMonitor: self.performanceMonitor, prefetch: prefetch, account: accountAsync,
+        library: asyncCompanion.library
+      )
+      try self.parse(response: response, delegate: parserDelegate)
+      return parserDelegate.parsedAlbums.count
+    }
+  }
+
   @MainActor
   func syncFavoriteLibraryElements() async throws {
     guard isSyncAllowed else { return }
