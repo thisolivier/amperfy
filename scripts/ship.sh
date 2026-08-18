@@ -68,32 +68,30 @@ security unlock-keychain \
 echo "Keychain unlocked, KEY_ID=$APPSTORE_KEY_ID"
 
 # ------------------------------------------------------------------
-step "2/6 Bump version"
+step "2/6 Check release notes + bump version"
+
+# The in-app What's New must already have an entry for the build we are about
+# to ship. Checked before the bump so a failure leaves the pbxproj untouched.
+RELEASE_NOTES="$PROJECT_DIR/Amperfy/SwiftUI/Settings/ReleaseNotes.swift"
+if [[ ! -f "$RELEASE_NOTES" ]]; then
+  fail "release notes (ReleaseNotes.swift not found at expected path)"
+fi
+if ! grep -qE "^[[:space:]]*id:[[:space:]]*$NEW_VERSION," "$RELEASE_NOTES"; then
+  echo "Error: ReleaseNotes.swift has no entry with id: $NEW_VERSION."
+  echo "Add the new build's What's New and Testing Focus before shipping."
+  fail "release notes (missing id: $NEW_VERSION entry)"
+fi
+echo "Release notes entry for build $NEW_VERSION found"
 
 "$SCRIPTS_DIR/bump-version.sh" "$NEW_VERSION" || fail "version bump"
-
-# Check if ReleaseNotes.swift was updated more recently than the version bump
-RELEASE_NOTES="$PROJECT_DIR/Amperfy/SwiftUI/Settings/ReleaseNotes.swift"
-if [[ -f "$RELEASE_NOTES" ]]; then
-  NOTES_MOD=$(stat -f %m "$RELEASE_NOTES" 2>/dev/null || echo 0)
-  PBXPROJ_MOD=$(stat -f %m "$PBXPROJ" 2>/dev/null || echo 0)
-  if [[ "$NOTES_MOD" -lt "$PBXPROJ_MOD" ]]; then
-    echo ""
-    echo "⚠️  WARNING: ReleaseNotes.swift has NOT been updated since the last version bump!"
-    echo "    Update Amperfy/SwiftUI/Settings/ReleaseNotes.swift with the new build's"
-    echo "    What's New and Testing Focus before archiving."
-    echo ""
-  fi
-else
-  echo ""
-  echo "⚠️  WARNING: ReleaseNotes.swift not found at expected path!"
-  echo ""
-fi
 
 # ------------------------------------------------------------------
 step "3/6 Archive"
 
 mkdir -p "$BUILD_DIR"
+# A stale archive from a previous run would pass the existence check below and
+# silently ship an old binary if this run's archive step failed part-way.
+rm -rf "$BUILD_DIR/Amperfy.xcarchive" "$BUILD_DIR/export"
 xcodebuild \
   -project "$PROJECT_DIR/Amperfy.xcodeproj" \
   -scheme Amperfy \
@@ -107,7 +105,14 @@ xcodebuild \
 if [[ ! -d "$BUILD_DIR/Amperfy.xcarchive" ]]; then
   fail "archive (xcarchive not found)"
 fi
-echo "Archive succeeded"
+
+# Belt and braces: assert the archive really contains the build we asked for.
+ARCHIVE_INFO_PLIST="$BUILD_DIR/Amperfy.xcarchive/Products/Applications/Amperfy.app/Info.plist"
+ARCHIVED_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$ARCHIVE_INFO_PLIST" 2>/dev/null || echo "unreadable")
+if [[ "$ARCHIVED_BUILD" != "$NEW_VERSION" ]]; then
+  fail "archive (embedded CFBundleVersion is '$ARCHIVED_BUILD', expected '$NEW_VERSION')"
+fi
+echo "Archive succeeded (CFBundleVersion $ARCHIVED_BUILD)"
 
 # ------------------------------------------------------------------
 step "4/6 Export"
