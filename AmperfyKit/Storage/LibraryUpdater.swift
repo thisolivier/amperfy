@@ -261,6 +261,34 @@ public class LibraryUpdater {
         type: .info
       )
     }
+    if storage.settings.app.librarySyncVersion < .v23,
+       let activeAccountInfo = storage.settings.accounts.active {
+      // Same shape as the Gigs migration above, for the Smart Playlists row:
+      // settings saved before the .smartPlaylists case existed decode with it
+      // absent from BOTH inUse and notUsed, so the row would never appear.
+      // Inject it into inUse exactly once; a user who later removes it moves
+      // it to notUsed, and the "absent from both" guard (plus the one-time
+      // version gate) prevents any re-injection.
+      let existingSettings = storage.settings.accounts.getSetting(activeAccountInfo).read
+        .libraryDisplaySettings
+      let knownTypes = Set(existingSettings.combined.flatMap { $0 })
+      if !knownTypes.contains(.smartPlaylists) {
+        var libraryDisplaySettingsInUse = existingSettings.inUse
+        libraryDisplaySettingsInUse.append(.smartPlaylists)
+        storage.settings.accounts.updateSetting(activeAccountInfo) { accountSettings in
+          accountSettings
+            .libraryDisplaySettings = LibraryDisplaySettings(inUse: libraryDisplaySettingsInUse)
+        }
+      }
+      storage
+        .settings.app.librarySyncVersion =
+        .v23 // one-time: don't re-inject on next launch
+      os_log(
+        "Perform blocking library update (DONE): Smart Playlists tab display migration",
+        log: self.log,
+        type: .info
+      )
+    }
   }
 
   @MainActor

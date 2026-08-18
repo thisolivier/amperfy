@@ -66,6 +66,10 @@ extension UIImage {
   /// Gigs library tab icon (fork 2026-07). A system symbol used directly since
   /// Gigs isn't part of the upstream AmperfyImage catalog.
   public static let gigs = UIImage.create(systemName: "music.mic")
+  /// Smart Playlists library row. `wand.and.stars` rather than the spec's
+  /// `sparkles` suggestion because `sparkles` is already the What's New /
+  /// generative-art icon elsewhere in the app.
+  public static let smartPlaylists = UIImage.create(systemName: "wand.and.stars")
   public static let antenna = UIImage.create(systemName: AmperfyImage.antenna.systemName)
   public static let artist = UIImage.create(systemName: AmperfyImage.artist.systemName)
   public static let appIcon = UIImage.create("Icon-1024")

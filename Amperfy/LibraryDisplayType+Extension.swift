@@ -57,6 +57,8 @@ extension LibraryDisplayType {
       return UIImage.album
     case .gigs:
       return UIImage.gigs
+    case .smartPlaylists:
+      return UIImage.smartPlaylists
     }
   }
 
@@ -115,6 +117,8 @@ extension LibraryDisplayType {
       )
     case .gigs:
       return AppStoryboard.Main.segueToGigs(account: account)
+    case .smartPlaylists:
+      return AppStoryboard.Main.segueToSmartPlaylists(account: account)
     }
   }
 }

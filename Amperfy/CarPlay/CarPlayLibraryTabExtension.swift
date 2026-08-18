@@ -32,7 +32,10 @@ extension LibraryDisplayType {
          .podcasts,
          .radios, .recentAlbums:
       return true
-    case .completeAlbums, .directories, .downloads, .gigs, .songs:
+    case .completeAlbums, .directories, .downloads, .gigs, .smartPlaylists, .songs:
+      // Smart Playlists is excluded from CarPlay in V1: its whole point is the
+      // explicit refresh + rule builder, neither of which belongs on a car
+      // screen.
       return false
     case .playlists:
       return false // playlists have their own tab
@@ -114,7 +117,7 @@ extension CarPlaySceneDelegate {
         sectionToDisplay = albumsRecentSection
       case .radios:
         sectionToDisplay = radioSection
-      case .completeAlbums, .directories, .downloads, .gigs, .playlists, .songs:
+      case .completeAlbums, .directories, .downloads, .gigs, .playlists, .smartPlaylists, .songs:
         break // do nothing
       }
       guard let sectionToDisplay else { completion(); return }

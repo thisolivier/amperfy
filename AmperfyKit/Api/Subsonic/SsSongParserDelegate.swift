@@ -30,6 +30,64 @@ class SsSongParserDelegate: SsPlayableParserDelegate {
   var guessedAlbum: Album?
   var guessedGenre: Genre?
 
+  /// RFC3339 with fractional seconds, e.g. `2024-07-21T20:02:24.995815902Z`.
+  /// `ISO8601DateFormatter` treats `.withFractionalSeconds` as REQUIRED, not
+  /// optional, hence the pair of formatters below.
+  nonisolated(unsafe) private static let fractionalSecondsDateFormatter: ISO8601DateFormatter = {
+    let dateFormatter = ISO8601DateFormatter()
+    dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return dateFormatter
+  }()
+
+  /// RFC3339 without fractional seconds, e.g. `2024-07-21T20:02:24Z`. Go's
+  /// RFC3339 marshalling (our Navidrome fork) omits trailing-zero fractions, so
+  /// most `created` / `played` values arrive in THIS shape and used to parse to
+  /// nil under the fractional-seconds-only formatter.
+  nonisolated(unsafe) private static let plainDateFormatter: ISO8601DateFormatter = {
+    let dateFormatter = ISO8601DateFormatter()
+    dateFormatter.formatOptions = [.withInternetDateTime]
+    return dateFormatter
+  }()
+
+  /// Tolerant RFC3339 parsing: fractional seconds first (the stricter, more
+  /// specific format), then plain. Both formatters are static because
+  /// `ISO8601DateFormatter` construction is expensive and this runs once per
+  /// date attribute per song across whole-library syncs.
+  static func parseServerDate(_ rawValue: String) -> Date? {
+    fractionalSecondsDateFormatter.date(from: rawValue)
+      ?? plainDateFormatter.date(from: rawValue)
+  }
+
+  /// Merges the server's play data into the EXISTING local fields rather than
+  /// adding Core Data columns (fork convention: no schema changes).
+  ///
+  /// * `playCount = max(local, server)`
+  /// * `lastTimePlayed` (the `lastPlayedDate` column) `= later(local, server)`
+  ///
+  /// `AbstractPlayable.countPlayed()` bumps the local values the instant a song
+  /// starts playing — including offline, on a bus — so those must never be
+  /// clobbered by a server value that predates them. Taking the max/later in
+  /// both directions means neither source can lose data: local plays stay
+  /// visible immediately, and a later sync raises the floor with plays that
+  /// happened on other clients.
+  private func mergeServerPlayData(from attributeDict: [String: String]) {
+    guard let songBuffer else { return }
+
+    if let playCountTag = attributeDict["playCount"],
+       let serverPlayCount = Int(playCountTag) {
+      songBuffer.playCount = max(songBuffer.playCount, serverPlayCount)
+    }
+
+    if let playedTag = attributeDict["played"],
+       let serverLastPlayedDate = Self.parseServerDate(playedTag) {
+      if let localLastPlayedDate = songBuffer.lastTimePlayed {
+        songBuffer.lastTimePlayed = max(localLastPlayedDate, serverLastPlayedDate)
+      } else {
+        songBuffer.lastTimePlayed = serverLastPlayedDate
+      }
+    }
+  }
+
   override func parser(
     _ parser: XMLParser,
     didStartElement elementName: String,
@@ -131,10 +189,9 @@ class SsSongParserDelegate: SsPlayableParserDelegate {
         }
       }
       if let createdTag = attributeDict["created"] {
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        songBuffer?.addedDate = dateFormatter.date(from: createdTag)
+        songBuffer?.addedDate = Self.parseServerDate(createdTag)
       }
+      mergeServerPlayData(from: attributeDict)
     }
 
     super.parser(
