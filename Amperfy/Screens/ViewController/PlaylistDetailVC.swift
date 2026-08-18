@@ -195,6 +195,21 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
       }
       actions.insert(findSimilarAction, at: 1)
 
+      // Deleting is server-backed (the local delete alone gets undone by the
+      // next playlist sync), so it is offline-gated like Edit above. Smart
+      // playlists are not deletable through this path.
+      if self.appDelegate.storage.settings.user.isOnlineMode, !self.playlist.isSmartPlaylist {
+        let deleteAction = UIAction(
+          title: "Delete Playlist",
+          image: UIImage(systemName: "trash"),
+          attributes: .destructive
+        ) { [weak self] _ in
+          guard let self else { return }
+          confirmDeletePlaylist(playlist)
+        }
+        actions.append(UIMenu(options: .displayInline, children: [deleteAction]))
+      }
+
       return actions
     }
     favouriteButton = UIBarButtonItem(
@@ -335,6 +350,48 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
       }
       self.detailOperationsView?.refresh()
       self.refreshControl?.endRefreshing()
+    }
+  }
+
+  // MARK: - Delete playlist
+
+  private func confirmDeletePlaylist(_ playlist: Playlist) {
+    let alert = UIAlertController(
+      title: "Delete Playlist",
+      message: "Delete \u{201C}\(playlist.name)\u{201D}? This removes it from all your synced devices.",
+      preferredStyle: .alert
+    )
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(UIAlertAction(title: "Delete Playlist", style: .destructive) { [weak self] _ in
+      self?.deletePlaylist(playlist)
+    })
+    present(alert, animated: true)
+  }
+
+  /// Deletes a playlist locally, persists, then tells the server. The server
+  /// upload is essential: without it the next `syncDownPlaylistsWithoutSongs()`
+  /// re-creates the playlist, so the deletion would not stick.
+  ///
+  /// This screen's fetched-results controller is bound to the now-deleted
+  /// `PlaylistMO`, so the view controller is popped straight away — before the
+  /// FRC can fire a change for an object that no longer exists. This VC is only
+  /// ever pushed onto a navigation stack (see `AppStoryboard.segueToPlaylistDetail`
+  /// call sites and `PlaylistFolderContentsVC.onPlaylistSelected`).
+  private func deletePlaylist(_ playlist: Playlist) {
+    let playlistId = playlist.id
+    let account = playlist.account
+    appDelegate.storage.main.library.deletePlaylist(playlist)
+    appDelegate.storage.main.saveContext()
+    navigationController?.popViewController(animated: true)
+
+    guard let account else { return }
+    Task { @MainActor in
+      do {
+        try await self.appDelegate.getMeta(account.info).librarySyncer
+          .syncUpload(playlistIdToDelete: playlistId)
+      } catch {
+        self.appDelegate.eventLogger.report(topic: "Playlist Upload Deletion", error: error)
+      }
     }
   }
 
