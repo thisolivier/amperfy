@@ -140,6 +140,121 @@ class SmartPlaylistStoreTest: XCTestCase {
     XCTAssertNil(store.loadCurrentState())
   }
 
+  // MARK: - V1 → V1.5 migration
+
+  /// A VERBATIM state blob as build 83 wrote it: the query is the flat
+  /// `{"rules": [...]}` shape with an implicit AND and no `combinator`/`items`
+  /// keys, and every rule carries Swift's synthesised enum encoding.
+  ///
+  /// This string is the contract. It must never be regenerated from the current
+  /// types — if a change to `SmartPlaylistRule` breaks this test, it has broken
+  /// shipped users' persisted queries.
+  static let version1StateBlob = """
+  {
+    "query": {
+      "rules": [
+        {"addedWithinDays": {"_0": 14}},
+        {"played": {"_0": {"notInLastDays": {"_0": 90}}}},
+        {"played": {"_0": {"never": {}}}},
+        {"playlistCount": {"comparison": "fewerThan", "count": 2}},
+        {"notInPlaylist": {"playlistId": "pl-done", "name": "Done"}},
+        {"inPlaylist": {"playlistId": "pl-inbox", "name": "Inbox"}}
+      ]
+    },
+    "frozenSongIds": ["a", "b", "c"],
+    "refreshedAt": "2025-06-15T15:06:40Z",
+    "wasOfflineRefresh": true,
+    "songsMissingAddedDate": 7
+  }
+  """
+
+  /// The whole point of the V1.5 Codable work: a build-83 blob sitting in a
+  /// shipped user's `UserDefaults` must still load, as a top-level `.all`
+  /// container of bare rules — same rules, same order, same frozen result.
+  func testDecodesVersion1FlatQueryBlob() throws {
+    defaults.set(
+      Data(Self.version1StateBlob.utf8),
+      forKey: "amperfy.fork.smartPlaylists.currentState"
+    )
+
+    let loaded = try XCTUnwrap(store.loadCurrentState())
+    XCTAssertEqual(loaded.query.combinator, .all)
+    XCTAssertEqual(loaded.query.items.count, 6)
+    XCTAssertEqual(loaded.query.allRules, [
+      .addedWithinDays(14),
+      .played(.notInLastDays(90)),
+      .played(.never),
+      .playlistCount(comparison: .fewerThan, count: 2),
+      .notInPlaylist(playlistId: "pl-done", name: "Done"),
+      .inPlaylist(playlistId: "pl-inbox", name: "Inbox"),
+    ])
+    // Every item is a bare rule — the migration never invents a group.
+    XCTAssertTrue(loaded.query.items.allSatisfy { $0.asRule != nil })
+    XCTAssertEqual(loaded.frozenSongIds, ["a", "b", "c"])
+    XCTAssertEqual(loaded.refreshedAt, refreshInstant)
+    XCTAssertTrue(loaded.wasOfflineRefresh)
+    XCTAssertEqual(loaded.songsMissingAddedDate, 7)
+  }
+
+  /// A V1 blob with an empty rule list is the "All songs" query, not a decode
+  /// failure.
+  func testDecodesVersion1BlobWithNoRules() throws {
+    let emptyRulesBlob = """
+    {"query": {"rules": []}, "frozenSongIds": [], "refreshedAt": "2025-06-15T15:06:40Z", \
+    "wasOfflineRefresh": false, "songsMissingAddedDate": 0}
+    """
+    defaults.set(
+      Data(emptyRulesBlob.utf8),
+      forKey: "amperfy.fork.smartPlaylists.currentState"
+    )
+
+    let loaded = try XCTUnwrap(store.loadCurrentState())
+    XCTAssertTrue(loaded.query.isEmpty)
+    XCTAssertEqual(loaded.query.summaryText, "All songs")
+  }
+
+  /// Re-saving a migrated state writes the NEW shape, so the upgrade is a
+  /// one-way door taken on the user's next refresh.
+  func testResavingAMigratedStateWritesTheGroupedFormat() throws {
+    defaults.set(
+      Data(Self.version1StateBlob.utf8),
+      forKey: "amperfy.fork.smartPlaylists.currentState"
+    )
+    let migrated = try XCTUnwrap(store.loadCurrentState())
+    store.save(migrated)
+
+    let rewritten = try XCTUnwrap(defaults.data(forKey: "amperfy.fork.smartPlaylists.currentState"))
+    let rewrittenJson = try XCTUnwrap(String(data: rewritten, encoding: .utf8))
+    XCTAssertTrue(rewrittenJson.contains("\"items\""))
+    XCTAssertTrue(rewrittenJson.contains("\"combinator\""))
+    XCTAssertEqual(store.loadCurrentState(), migrated)
+  }
+
+  /// A grouped query survives the round trip intact, groups and combinators
+  /// included.
+  func testGroupedQueryRoundTrips() throws {
+    let groupedQuery = SmartPlaylistQuery(
+      combinator: .all,
+      items: [
+        .rule(.addedWithinDays(30)),
+        .group(SmartPlaylistRuleGroup(combinator: .any, rules: [
+          .played(.never),
+          .completeAlbum(isComplete: true),
+        ])),
+      ]
+    )
+    let state = SmartPlaylistState(
+      query: groupedQuery,
+      frozenSongIds: ["x"],
+      refreshedAt: refreshInstant,
+      wasOfflineRefresh: false,
+      songsMissingAddedDate: 0
+    )
+    store.save(state)
+
+    XCTAssertEqual(SmartPlaylistStore(defaults: defaults).loadCurrentState(), state)
+  }
+
   // MARK: - Rehydration
 
   func testResolveSongsReturnsSongsInStoredOrder() {
@@ -202,8 +317,9 @@ class SmartPlaylistStoreTest: XCTestCase {
 
   // MARK: - Query model
 
-  /// The summary line the results header renders.
-  func testQuerySummaryTextListsEveryRule() {
+  /// The summary line the results header renders — a flat AND query reads as a
+  /// plain "and" list.
+  func testQuerySummaryTextJoinsRulesWithTheTopLevelConjunction() {
     let query = SmartPlaylistQuery(rules: [
       .addedWithinDays(30),
       .played(.never),
@@ -211,12 +327,86 @@ class SmartPlaylistStoreTest: XCTestCase {
     ])
     XCTAssertEqual(
       query.summaryText,
-      "Added in the last 30 days · Never played · Not in \"Done\""
+      "Added in the last 30 days and Never played and Not in \"Done\""
     )
+  }
+
+  /// The addendum's worked example: groups are parenthesised, the top level
+  /// keeps its own conjunction.
+  func testQuerySummaryTextParenthesisesGroups() {
+    let query = SmartPlaylistQuery(items: [
+      .rule(.addedWithinDays(30)),
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [
+        .played(.never),
+        .playlistCount(comparison: .fewerThan, count: 2),
+      ])),
+    ])
+    XCTAssertEqual(
+      query.summaryText,
+      "Added in the last 30 days and (Never played or In fewer than 2 playlists)"
+    )
+  }
+
+  /// An `.any` top level says "or" between its items.
+  func testQuerySummaryTextUsesOrForAnyTopLevel() {
+    let query = SmartPlaylistQuery(
+      combinator: .any,
+      items: [.rule(.played(.never)), .rule(.completeAlbum(isComplete: false))]
+    )
+    XCTAssertEqual(query.summaryText, "Never played or Not part of a complete album")
+  }
+
+  /// Parentheses around one condition carry no information, so a one-rule group
+  /// reads as the bare rule. Empty groups say nothing and are skipped.
+  func testQuerySummaryTextSkipsParensForSingleRuleGroupsAndDropsEmptyOnes() {
+    let singleRuleGroupQuery = SmartPlaylistQuery(items: [
+      .rule(.played(.never)),
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [.completeAlbum(isComplete: true)])),
+    ])
+    XCTAssertEqual(
+      singleRuleGroupQuery.summaryText,
+      "Never played and Part of a complete album"
+    )
+
+    let emptyGroupQuery = SmartPlaylistQuery(items: [
+      .rule(.played(.never)),
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [])),
+    ])
+    XCTAssertEqual(emptyGroupQuery.summaryText, "Never played")
   }
 
   func testEmptyQuerySummaryReadsAsAllSongs() {
     XCTAssertEqual(SmartPlaylistQuery().summaryText, "All songs")
+  }
+
+  /// The builder drops groups the user emptied before the query is persisted.
+  func testRemoveEmptyGroupsDropsOnlyEmptyGroups() {
+    var query = SmartPlaylistQuery(items: [
+      .rule(.played(.never)),
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [])),
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [.completeAlbum(isComplete: true)])),
+    ])
+    query.removeEmptyGroups()
+    XCTAssertEqual(query.items.count, 2)
+    XCTAssertEqual(query.allRules, [.played(.never), .completeAlbum(isComplete: true)])
+  }
+
+  /// The flat `rules` view reaches into groups, so anything reading it sees the
+  /// whole query rather than only its top level.
+  func testFlatRulesViewIncludesGroupedRules() {
+    let query = SmartPlaylistQuery(items: [
+      .rule(.addedWithinDays(30)),
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [
+        .played(.never),
+        .completeAlbum(isComplete: true),
+      ])),
+    ])
+    XCTAssertEqual(query.rules, [
+      .addedWithinDays(30),
+      .played(.never),
+      .completeAlbum(isComplete: true),
+    ])
+    XCTAssertFalse(query.isEmpty)
   }
 
   /// The refresher reads this to decide whether a newest-albums backfill is
@@ -252,7 +442,33 @@ class SmartPlaylistStoreTest: XCTestCase {
     ])
     XCTAssertFalse(query.canAddRule(ofKind: .addedWithinDays))
     XCTAssertTrue(query.canAddRule(ofKind: .played))
+    XCTAssertTrue(query.canAddRule(ofKind: .completeAlbum))
     XCTAssertTrue(query.canAddRule(ofKind: .inPlaylist))
     XCTAssertTrue(query.canAddRule(ofKind: .notInPlaylist))
+  }
+
+  /// Repeatability is decided PER CONTAINER, which is what keeps
+  /// "is complete OR added recently" expressible: a group may hold its own
+  /// instance of a kind the top level has already used.
+  func testRuleRepeatabilityIsScopedToItsContainer() {
+    let query = SmartPlaylistQuery(items: [
+      .rule(.completeAlbum(isComplete: true)),
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [.played(.never)])),
+    ])
+    XCTAssertFalse(query.canAddRule(ofKind: .completeAlbum))
+    XCTAssertTrue(query.canAddRule(ofKind: .completeAlbum, toGroupAt: 1))
+    XCTAssertFalse(query.canAddRule(ofKind: .played, toGroupAt: 1))
+    // Index 0 is a bare rule, not a group.
+    XCTAssertFalse(query.canAddRule(ofKind: .played, toGroupAt: 0))
+  }
+
+  /// `requiresAlbumData` gates the candidate fetch's `album` prefetch.
+  func testRequiresAlbumDataOnlyForCompleteAlbumRules() {
+    XCTAssertFalse(SmartPlaylistQuery(rules: [.played(.never)]).requiresAlbumData)
+    XCTAssertTrue(
+      SmartPlaylistQuery(items: [
+        .group(SmartPlaylistRuleGroup(rules: [.completeAlbum(isComplete: true)])),
+      ]).requiresAlbumData
+    )
   }
 }

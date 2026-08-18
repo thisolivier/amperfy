@@ -184,3 +184,74 @@ After successful local delete: **pop the VC** immediately (the FRC is bound to t
 - Do NOT run git commit/stage — the session orchestrator handles commits.
 - Update module README if one exists for touched areas; add
   `AmperfyKit/SmartPlaylists/README.md` (brief architecture note).
+
+---
+
+# V1.5 addendum — grouped AND/OR queries, complete-album rule, backfill fix (2026-08-17)
+
+Shipped V1 = build 83. This round ships as build 84.
+
+## 1. Grouped boolean queries
+
+New query model: a top-level list of items, each item = a rule OR a group of rules
+(one nesting level only — groups cannot contain groups). Every container (top level and
+each group) has a single combinator: `.all` (AND) or `.any` (OR).
+
+UX (user-selected, audience-builder style): an and/or connector chip renders BETWEEN every
+pair of adjacent items at a level. Tapping any chip at a level flips ALL chips at that level
+together (uniform per level — a level is always pure AND or pure OR; mixing is expressed via
+groups). Groups render as visually inset cards with their own internal chips, a delete
+affordance, and their own "+ Add rule" row. Top level gains "+ Add group" beside "+ Add rule".
+An empty group is removed on save. A group with one rule is legal (chip appears when a second
+rule is added). Default combinator everywhere: `.all` (preserves V1 behaviour).
+
+Codable migration: V1 stored a flat `rules: [SmartPlaylistRule]` (implicit AND). The new
+`SmartPlaylistQuery` must decode old blobs into a top-level `.all` container of bare rules —
+existing users' persisted queries and frozen results must survive the upgrade untouched.
+
+Evaluation: with OR in play, per-rule fetch predicates can no longer be ANDed and the
+playlistCount in-Swift pass can no longer be a post-filter. New strategy: one fetch of the
+account's candidate songs with only the base guards (account scope +
+excludeServerDeleteUncachedSongsFetchPredicate), plus one PlaylistItemMO fetch to build
+(a) the distinct-playlist-count map and (b) per-referenced-playlist member-id sets; then
+evaluate the boolean tree per song in Swift. All rules become cheap in-memory checks.
+`songsMissingAddedDate` redefinition for trees: count of nil-addedDate songs that would match
+the tree if every addedWithinDays rule were treated as satisfied, but do not match as-is.
+Ordering unchanged (addedDate desc, nil last, then title).
+
+`summaryText` must parenthesise groups, e.g.
+"Added in the last 30 days and (Never played or In fewer than 2 playlists)".
+
+## 2. New rule: is / is not part of a complete album
+
+`completeAlbum(isComplete: Bool)` — song qualifies iff its parent album is "whole" per the
+existing `WholeAlbumPredicates` definition with `minSongCount = 3` (the Albums-view
+"complete albums only" toggle definition): album not release-tagged "single" AND
+`remoteSongCount >= 3`. Evaluate in Swift off the song's album relationship, mirroring the
+predicate's NULL-safety semantics exactly (nil releaseType → classified purely by count;
+nil album → NOT whole). Non-repeatable rule kind per container (allow one per group so
+"is complete" OR-branches remain expressible). Display: "Part of a complete album" /
+"Not part of a complete album".
+
+## 3. Backfill fix — song-level recency, not album-level
+
+Bug: backfill walks `getAlbumList2 type=newest`, keyed on ALBUM created — new songs added to
+old albums are invisible to it (real case: album "Joshua" created 2026-03-22, songs added
+2026-07-10). Fix: detect recent SONGS server-side. Preferred: Subsonic `search3` (or the
+existing search API surface) requesting songs sorted/filtered by created where supported;
+if the API cannot sort songs by created, fall back to paging `getAlbumList2 type=newest`
+BUT treating each returned album's song sync as the recency source (sync first, then decide
+stop from max(song addedDate) — partially present already) AND additionally union
+`type=recentlyAdded`-equivalent coverage if distinct. Investigate what our Navidrome fork's
+Subsonic surface actually supports (repo at server/navidrome) and pick the cheapest correct
+primitive; document the choice in the README. Keep the existing hard caps and the
+skip-already-synced optimisation. The stop condition must be driven by song-level created
+dates so a fresh install backfills "Joshua"-shaped albums.
+
+## Constraints
+
+- Engine public API may evolve, but SmartPlaylistStore key/format compatibility on decode is
+  mandatory (see migration above).
+- All V1 guardrails still apply (no CoreData schema changes, verbose names, tests via
+  scripts/test.sh, SwiftFormat, 4-entry pbxproj wiring for any new file).
+- Release notes entry id: 84 required before ship.

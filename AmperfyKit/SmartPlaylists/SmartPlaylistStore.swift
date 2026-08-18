@@ -41,7 +41,7 @@ public struct SmartPlaylistState: Codable, Equatable, Sendable {
   /// be missing recently-added songs the device has not seen yet.
   public var wasOfflineRefresh: Bool
   /// Footer note input: songs excluded solely because their added-date is
-  /// unknown. See `SmartPlaylistQueryEngine.countSongsMissingAddedDate`.
+  /// unknown. See `SmartPlaylistEvaluation.songsMissingAddedDate`.
   public var songsMissingAddedDate: Int
 
   public init(

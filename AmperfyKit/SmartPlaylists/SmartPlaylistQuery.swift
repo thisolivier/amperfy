@@ -2,7 +2,8 @@
 //  SmartPlaylistQuery.swift
 //  AmperfyKit
 //
-//  Rule model for the on-device Smart Playlists feature (V1 spec, 2026-08-17).
+//  The grouped boolean query model for Smart Playlists
+//  (V1 spec 2026-08-17, V1.5 addendum §1: one level of AND/OR groups).
 //  Copyright (c) 2026 Olivier Butler. All rights reserved.
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -21,201 +22,271 @@
 
 import Foundation
 
-// MARK: - SmartPlaylistPlayedRule
+// MARK: - SmartPlaylistCombinator
 
-/// The "play data" dimension of a smart playlist query.
+/// How the items of one container (the top level, or one group) are combined.
 ///
-/// Play data is the *merged* view: the server's `playCount`/`played` values are
-/// folded into the local `playCount`/`lastPlayedDate` fields at parse time
-/// (`SsSongParserDelegate`), so a rule here sees both local offline plays and
-/// plays that happened on other clients.
-public enum SmartPlaylistPlayedRule: Codable, Equatable, Sendable {
-  /// Never played on any client (`playCount == 0`).
-  case never
-  /// Not played within the last N days — includes songs never played at all
-  /// (`lastPlayedDate == nil`).
-  case notInLastDays(Int)
-  /// Played within the last N days.
-  case inLastDays(Int)
+/// A level is always *uniform*: pure AND or pure OR. Mixing is expressed by
+/// nesting a group, which is why the builder flips every connector chip at a
+/// level together.
+public enum SmartPlaylistCombinator: String, Codable, Equatable, Sendable, CaseIterable {
+  /// Every item must match (AND). The default everywhere, so a query built
+  /// without touching a connector behaves exactly like a V1 query.
+  case all
+  /// At least one item must match (OR).
+  case any
 
-  public var displayText: String {
+  /// The word on the connector chip between two items, and the joiner used by
+  /// `summaryText`.
+  public var conjunctionText: String {
     switch self {
-    case .never:
-      return "Never played"
-    case let .notInLastDays(days):
-      return "Not played in the last \(days) \(SmartPlaylistQuery.dayWord(days))"
-    case let .inLastDays(days):
-      return "Played in the last \(days) \(SmartPlaylistQuery.dayWord(days))"
+    case .all: return "and"
+    case .any: return "or"
     }
+  }
+
+  /// The word for a "Match ALL / ANY of the following" header.
+  public var quantifierText: String {
+    switch self {
+    case .all: return "ALL"
+    case .any: return "ANY"
+    }
+  }
+
+  /// The other combinator — tapping a chip flips the whole level.
+  public var toggled: SmartPlaylistCombinator {
+    self == .all ? .any : .all
   }
 }
 
-// MARK: - SmartPlaylistCountComparison
+// MARK: - SmartPlaylistRuleGroup
 
-/// How a playlist-membership count is compared against a threshold.
-public enum SmartPlaylistCountComparison: String, Codable, Equatable, Sendable, CaseIterable {
-  case fewerThan
-  case moreThan
+/// A parenthesised sub-expression: a flat list of rules with its own
+/// combinator. Groups never contain groups — one nesting level is the whole
+/// model, which keeps both the builder UI and the evaluator honest.
+public struct SmartPlaylistRuleGroup: Codable, Equatable, Sendable {
+  public var combinator: SmartPlaylistCombinator
+  public var rules: [SmartPlaylistRule]
 
-  public var displayText: String {
-    switch self {
-    case .fewerThan: return "fewer than"
-    case .moreThan: return "more than"
-    }
+  public init(combinator: SmartPlaylistCombinator = .all, rules: [SmartPlaylistRule] = []) {
+    self.combinator = combinator
+    self.rules = rules
+  }
+
+  /// An empty group carries no meaning and is removed on save.
+  public var isEmpty: Bool { rules.isEmpty }
+
+  /// Repeatability is decided *per container*, so a group may hold its own
+  /// single instance of a non-repeatable kind.
+  public func canAddRule(ofKind kind: SmartPlaylistRule.Kind) -> Bool {
+    kind.isRepeatable || !rules.contains { $0.kind == kind }
+  }
+
+  /// The group's rules joined by its combinator, without the surrounding
+  /// parentheses (`SmartPlaylistQuery.summaryText` adds those).
+  public var summaryText: String {
+    rules.map { $0.displayText }.joined(separator: " \(combinator.conjunctionText) ")
   }
 }
 
-// MARK: - SmartPlaylistRule
+// MARK: - SmartPlaylistQueryItem
 
-/// One AND-combined rule of a smart playlist query.
-///
-/// Playlist rules carry the playlist's *display name* alongside its id so the
-/// builder and the query summary render correctly offline. The name is a
-/// snapshot for display only — evaluation always resolves by id, and a rule
-/// whose playlist has vanished is dropped at evaluation time (and reported back
-/// so the UI can flag it).
-public enum SmartPlaylistRule: Codable, Equatable, Sendable {
-  /// Song was added to the library within the last N days. Songs whose
-  /// `addedDate` is unknown (`nil`) never match — the count of those is
-  /// surfaced separately so the user understands the gap.
-  case addedWithinDays(Int)
-  /// Play-data rule, see `SmartPlaylistPlayedRule`.
-  case played(SmartPlaylistPlayedRule)
-  /// The song sits in fewer/more than N real user playlists.
-  case playlistCount(comparison: SmartPlaylistCountComparison, count: Int)
-  /// The song is absent from the named playlist.
-  case notInPlaylist(playlistId: String, name: String)
-  /// The song is present in the named playlist.
-  case inPlaylist(playlistId: String, name: String)
+/// One entry at the top level: either a bare rule or a group of rules.
+public enum SmartPlaylistQueryItem: Codable, Equatable, Sendable {
+  case rule(SmartPlaylistRule)
+  case group(SmartPlaylistRuleGroup)
 
-  /// A stable identity for the *kind* of rule, used by the builder to decide
-  /// which rule types may appear more than once (only the playlist-membership
-  /// ones may) and to replace a rule in place when the user edits it.
-  public enum Kind: String, Codable, Equatable, Sendable, CaseIterable {
-    case addedWithinDays
-    case played
-    case playlistCount
-    case notInPlaylist
-    case inPlaylist
+  public var asRule: SmartPlaylistRule? {
+    guard case let .rule(rule) = self else { return nil }
+    return rule
+  }
 
-    /// Rule kinds that may legitimately appear several times in one query.
-    /// The others are single-instance: a second `addedWithinDays` rule could
-    /// only ever narrow or contradict the first.
-    public var isRepeatable: Bool {
-      switch self {
-      case .inPlaylist, .notInPlaylist: return true
-      case .addedWithinDays, .played, .playlistCount: return false
-      }
-    }
+  public var asGroup: SmartPlaylistRuleGroup? {
+    guard case let .group(group) = self else { return nil }
+    return group
+  }
 
-    public var displayName: String {
-      switch self {
-      case .addedWithinDays: return "Added to library"
-      case .played: return "Play history"
-      case .playlistCount: return "Playlist count"
-      case .notInPlaylist: return "Not in playlist"
-      case .inPlaylist: return "In playlist"
-      }
+  /// Every rule this item contributes, in order.
+  public var rules: [SmartPlaylistRule] {
+    switch self {
+    case let .rule(rule): return [rule]
+    case let .group(group): return group.rules
     }
   }
 
-  public var kind: Kind {
-    switch self {
-    case .addedWithinDays: return .addedWithinDays
-    case .played: return .played
-    case .playlistCount: return .playlistCount
-    case .notInPlaylist: return .notInPlaylist
-    case .inPlaylist: return .inPlaylist
-    }
-  }
-
-  /// The playlist this rule targets, if it is a playlist-membership rule.
-  public var referencedPlaylistId: String? {
-    switch self {
-    case let .inPlaylist(playlistId, _), let .notInPlaylist(playlistId, _):
-      return playlistId
-    case .addedWithinDays, .played, .playlistCount:
-      return nil
-    }
-  }
-
-  /// One-line human-readable rendering, used in the builder rows and in the
-  /// query summary on the results screen.
-  public var displayText: String {
-    switch self {
-    case let .addedWithinDays(days):
-      return "Added in the last \(days) \(SmartPlaylistQuery.dayWord(days))"
-    case let .played(playedRule):
-      return playedRule.displayText
-    case let .playlistCount(comparison, count):
-      return "In \(comparison.displayText) \(count) \(count == 1 ? "playlist" : "playlists")"
-    case let .notInPlaylist(_, name):
-      return "Not in \"\(name)\""
-    case let .inPlaylist(_, name):
-      return "In \"\(name)\""
-    }
+  /// True only for a group with no rules — the one shape that is dropped on
+  /// save because it says nothing.
+  public var isEmpty: Bool {
+    guard case let .group(group) = self else { return false }
+    return group.isEmpty
   }
 }
 
 // MARK: - SmartPlaylistQuery
 
-/// An AND-combined list of rules. V1 has no OR / nesting — "Match ALL of the
-/// following" is the whole model, mirroring the simplest Apple Music smart
-/// playlist form. Codable so the whole query round-trips through
-/// `SmartPlaylistStore`.
+/// A smart playlist query: a top-level container of items, each item a rule or
+/// a one-level group, all combined by `combinator`.
+///
+/// # Codable / persistence
+///
+/// The encoded form is `{"combinator": "all", "items": [...]}`. V1 persisted a
+/// flat `{"rules": [...]}` with an implicit AND, and those blobs are still in
+/// shipped users' `UserDefaults` (build 83), so `init(from:)` decodes them into
+/// a top-level `.all` container of bare rules. See
+/// `SmartPlaylistStoreTest.testDecodesVersion1FlatQueryBlob` for the captured
+/// raw-blob proof.
 public struct SmartPlaylistQuery: Codable, Equatable, Sendable {
-  public var rules: [SmartPlaylistRule]
+  /// How the top-level items combine.
+  public var combinator: SmartPlaylistCombinator
+  /// The top-level items, in display order.
+  public var items: [SmartPlaylistQueryItem]
 
-  public init(rules: [SmartPlaylistRule] = []) {
-    self.rules = rules
+  public init(
+    combinator: SmartPlaylistCombinator = .all,
+    items: [SmartPlaylistQueryItem] = []
+  ) {
+    self.combinator = combinator
+    self.items = items
   }
 
-  public var isEmpty: Bool { rules.isEmpty }
+  /// Convenience for the V1 shape: a flat AND list of bare rules. Deliberately
+  /// has no default argument so `SmartPlaylistQuery()` stays unambiguous.
+  public init(rules: [SmartPlaylistRule]) {
+    self.init(combinator: .all, items: rules.map { .rule($0) })
+  }
+
+  // MARK: - Flat view
+
+  /// Every rule in the query, top-level rules and group rules alike, in order.
+  public var allRules: [SmartPlaylistRule] {
+    items.flatMap { $0.rules }
+  }
+
+  /// Flat V1-compatible view of the query.
+  ///
+  /// Reading yields `allRules`. **Writing replaces the entire top level with
+  /// bare rules**, so any group is lost — it exists so pre-group call sites keep
+  /// working during the UI migration, not as a supported editing API. Build the
+  /// tree through `items` instead.
+  public var rules: [SmartPlaylistRule] {
+    get { allRules }
+    set { items = newValue.map { .rule($0) } }
+  }
+
+  /// No rules anywhere — reads as "All songs".
+  public var isEmpty: Bool { items.allSatisfy { $0.rules.isEmpty } }
+
+  // MARK: - Refresher inputs
 
   /// The active added-within-days window, if any. The refresher uses this to
-  /// decide whether a newest-albums backfill is needed and where to stop
-  /// paging. If several such rules somehow exist, the *widest* window wins so
-  /// the backfill covers everything the query could possibly match.
+  /// decide whether a recent-songs backfill is needed and where to stop paging.
+  /// If several such rules exist (one per container is allowed), the *widest*
+  /// window wins so the backfill covers everything the query could match.
   public var addedWithinDays: Int? {
-    let windows = rules.compactMap { rule -> Int? in
+    allRules.compactMap { rule -> Int? in
       guard case let .addedWithinDays(days) = rule else { return nil }
       return days
-    }
-    return windows.max()
+    }.max()
   }
 
   /// Whether any rule depends on playlist membership. Drives the
   /// "sync unsynced playlists first" step of an online refresh, because
   /// `PlaylistItemMO` rows only exist for individually fetched playlists.
   public var requiresPlaylistItems: Bool {
-    rules.contains { rule in
-      switch rule {
-      case .inPlaylist, .notInPlaylist, .playlistCount: return true
-      case .addedWithinDays, .played: return false
-      }
-    }
+    allRules.contains { $0.requiresPlaylistItems }
+  }
+
+  /// Whether evaluation will read the song's `album` relationship, so the
+  /// candidate fetch prefetches it only when it pays for itself.
+  public var requiresAlbumData: Bool {
+    allRules.contains { $0.requiresAlbumData }
   }
 
   /// The ids of every playlist referenced by a membership rule.
   public var referencedPlaylistIds: [String] {
-    rules.compactMap { $0.referencedPlaylistId }
+    allRules.compactMap { $0.referencedPlaylistId }
   }
 
-  /// Whether a rule of this kind can still be added (single-instance kinds are
-  /// offered only while absent).
+  // MARK: - Builder support
+
+  /// Whether a rule of this kind can still be added **to the top level**
+  /// (single-instance kinds are offered only while absent from that container).
+  /// Groups answer for themselves via `SmartPlaylistRuleGroup.canAddRule`.
   public func canAddRule(ofKind kind: SmartPlaylistRule.Kind) -> Bool {
-    kind.isRepeatable || !rules.contains { $0.kind == kind }
+    kind.isRepeatable || !items.contains { $0.asRule?.kind == kind }
   }
 
-  /// Multi-line-free summary used under the results header, e.g.
-  /// `"Added in the last 30 days · Never played"`. Empty queries read as
-  /// "All songs" because an empty rule list matches the whole library.
+  /// Whether a rule of this kind can be added to the group at `groupIndex`.
+  /// Returns `false` when the index is not a group.
+  public func canAddRule(ofKind kind: SmartPlaylistRule.Kind, toGroupAt groupIndex: Int) -> Bool {
+    guard items.indices.contains(groupIndex),
+          let group = items[groupIndex].asGroup else { return false }
+    return group.canAddRule(ofKind: kind)
+  }
+
+  /// Drops groups that hold no rules — call before persisting a user edit.
+  public mutating func removeEmptyGroups() {
+    items.removeAll { $0.isEmpty }
+  }
+
+  // MARK: - Display
+
+  /// One-line rendering for the results header and the builder footer, with
+  /// groups parenthesised, e.g.
+  /// `"Added in the last 30 days and (Never played or In fewer than 2 playlists)"`.
+  ///
+  /// A one-rule group reads as the bare rule: parentheses around a single
+  /// condition carry no information and only add noise. Empty groups are
+  /// skipped entirely.
   public var summaryText: String {
-    guard !rules.isEmpty else { return "All songs" }
-    return rules.map { $0.displayText }.joined(separator: " · ")
+    let parts = items.compactMap { item -> String? in
+      switch item {
+      case let .rule(rule):
+        return rule.displayText
+      case let .group(group):
+        guard !group.rules.isEmpty else { return nil }
+        return group.rules.count == 1 ? group.summaryText : "(\(group.summaryText))"
+      }
+    }
+    guard !parts.isEmpty else { return "All songs" }
+    return parts.joined(separator: " \(combinator.conjunctionText) ")
   }
 
   static func dayWord(_ days: Int) -> String {
     days == 1 ? "day" : "days"
+  }
+
+  // MARK: - Codable (with V1 flat-format migration)
+
+  enum CodingKeys: String, CodingKey {
+    case combinator
+    case items
+    /// V1 only. Never written any more, always read when `items` is absent.
+    case rules
+  }
+
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    if container.contains(.items) {
+      self.combinator = try container.decodeIfPresent(
+        SmartPlaylistCombinator.self,
+        forKey: .combinator
+      ) ?? .all
+      self.items = try container.decode([SmartPlaylistQueryItem].self, forKey: .items)
+    } else {
+      // V1 (build 83) blob: a flat `rules` array with an implicit AND.
+      self.combinator = .all
+      let legacyRules = try container.decodeIfPresent(
+        [SmartPlaylistRule].self,
+        forKey: .rules
+      ) ?? []
+      self.items = legacyRules.map { .rule($0) }
+    }
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(combinator, forKey: .combinator)
+    try container.encode(items, forKey: .items)
   }
 }

@@ -108,17 +108,51 @@ class SmartPlaylistQueryEngineTest: XCTestCase {
     return playlist
   }
 
+  /// A song hung off a specific album — `nil` means "no album at all", which
+  /// also needs a cached file path to survive
+  /// `excludeServerDeleteUncachedSongsFetchPredicate` (that guard reads the
+  /// ALBUM's remote status, so an album-less song is only visible when cached).
+  @discardableResult
+  private func makeSong(id: String, inAlbum album: Album?) -> Song {
+    let song = library.createSong(account: account)
+    song.id = id
+    song.title = id
+    song.size = 1024
+    song.album = album
+    if album == nil {
+      song.relFilePath = URL(string: "cached/\(id).mp3")
+    }
+    return song
+  }
+
+  @discardableResult
+  private func makeAlbum(id: String, releaseType: String?, remoteSongCount: Int) -> Album {
+    let album = library.createAlbum(account: account)
+    album.id = id
+    album.releaseType = releaseType
+    album.remoteSongCount = remoteSongCount
+    return album
+  }
+
   private func evaluate(_ rules: [SmartPlaylistRule]) -> SmartPlaylistEvaluation {
+    evaluate(SmartPlaylistQuery(rules: rules))
+  }
+
+  private func matchedIds(_ rules: [SmartPlaylistRule]) -> [String] {
+    evaluate(rules).songs.map { $0.id }
+  }
+
+  private func evaluate(_ query: SmartPlaylistQuery) -> SmartPlaylistEvaluation {
     SmartPlaylistQueryEngine.evaluate(
-      query: SmartPlaylistQuery(rules: rules),
+      query: query,
       context: testContext,
       account: account,
       now: nowReference
     )
   }
 
-  private func matchedIds(_ rules: [SmartPlaylistRule]) -> [String] {
-    evaluate(rules).songs.map { $0.id }
+  private func matchedIds(_ query: SmartPlaylistQuery) -> [String] {
+    evaluate(query).songs.map { $0.id }
   }
 
   // MARK: - Rule: addedWithinDays
@@ -463,6 +497,253 @@ class SmartPlaylistQueryEngineTest: XCTestCase {
     library.saveContext()
 
     XCTAssertEqual(matchedIds([.addedWithinDays(30)]), ["s-mine"])
+  }
+
+  // MARK: - Rule: completeAlbum
+
+  /// The truth table of `WholeAlbumPredicates.wholeAlbum(minSongCount: 3)`,
+  /// re-asserted through the Swift mirror the engine uses. `"single"` vetoes
+  /// however many tracks the release carries.
+  func testCompleteAlbumSingleTaggedWithManyTracksIsNotComplete() {
+    let singleWithManyTracks = makeAlbum(
+      id: "al-single",
+      releaseType: "single",
+      remoteSongCount: 10
+    )
+    makeSong(id: "s-single", inAlbum: singleWithManyTracks)
+    library.saveContext()
+
+    XCTAssertEqual(matchedIds([.completeAlbum(isComplete: true)]), [])
+    XCTAssertEqual(matchedIds([.completeAlbum(isComplete: false)]), ["s-single"])
+  }
+
+  /// Nil metadata is classified purely by count — `getAlbumList2` usually omits
+  /// `releaseTypes`, so "no metadata" must never mean "excluded".
+  func testCompleteAlbumUntaggedSingleTrackIsNotComplete() {
+    let untaggedOneTrack = makeAlbum(id: "al-nil-1", releaseType: nil, remoteSongCount: 1)
+    makeSong(id: "s-nil-1", inAlbum: untaggedOneTrack)
+    library.saveContext()
+
+    XCTAssertEqual(matchedIds([.completeAlbum(isComplete: true)]), [])
+    XCTAssertEqual(matchedIds([.completeAlbum(isComplete: false)]), ["s-nil-1"])
+  }
+
+  func testCompleteAlbumUntaggedThreeTrackIsComplete() {
+    let untaggedThreeTracks = makeAlbum(id: "al-nil-3", releaseType: nil, remoteSongCount: 3)
+    makeSong(id: "s-nil-3", inAlbum: untaggedThreeTracks)
+    library.saveContext()
+
+    XCTAssertEqual(matchedIds([.completeAlbum(isComplete: true)]), ["s-nil-3"])
+    XCTAssertEqual(matchedIds([.completeAlbum(isComplete: false)]), [])
+  }
+
+  /// A song with no album at all is NOT part of a complete album — the one
+  /// place the Swift mirror must state what the Core Data predicate could only
+  /// imply through NULL propagation.
+  func testCompleteAlbumSongWithoutAlbumIsNotComplete() {
+    makeSong(id: "s-orphan", inAlbum: nil)
+    library.saveContext()
+
+    XCTAssertEqual(matchedIds([.completeAlbum(isComplete: true)]), [])
+    XCTAssertEqual(matchedIds([.completeAlbum(isComplete: false)]), ["s-orphan"])
+  }
+
+  /// A metadata value that merely CONTAINS "single" still vetoes, matching the
+  /// predicate's `CONTAINS[c]` semantics, and the check is case-insensitive.
+  func testCompleteAlbumReleaseTypeContainingSingleVetoesCaseInsensitively() {
+    let compilationOfSingles = makeAlbum(
+      id: "al-mixed",
+      releaseType: "Album, Single",
+      remoteSongCount: 12
+    )
+    makeSong(id: "s-mixed", inAlbum: compilationOfSingles)
+    library.saveContext()
+
+    XCTAssertEqual(matchedIds([.completeAlbum(isComplete: true)]), [])
+  }
+
+  /// A non-"single" tag is ignored for positive matching: the count decides.
+  func testCompleteAlbumCompilationIsCompleteViaCount() {
+    let compilation = makeAlbum(id: "al-comp", releaseType: "compilation", remoteSongCount: 6)
+    makeSong(id: "s-comp", inAlbum: compilation)
+    library.saveContext()
+
+    XCTAssertEqual(matchedIds([.completeAlbum(isComplete: true)]), ["s-comp"])
+  }
+
+  // MARK: - Boolean trees
+
+  /// An `.any` top level is a plain OR across its items.
+  func testTopLevelAnyCombinatorUnionsItsRules() {
+    makeSong(id: "s-fresh", addedDaysAgo: 1, playCount: 9)
+    makeSong(id: "s-unplayed", addedDaysAgo: 90, playCount: 0)
+    makeSong(id: "s-neither", addedDaysAgo: 90, playCount: 9)
+    library.saveContext()
+
+    let query = SmartPlaylistQuery(
+      combinator: .any,
+      items: [.rule(.addedWithinDays(7)), .rule(.played(.never))]
+    )
+    XCTAssertEqual(Set(matchedIds(query)), ["s-fresh", "s-unplayed"])
+  }
+
+  /// The shape the addendum's summary example describes:
+  /// `A and (B or C)` — an AND top level holding one OR group.
+  func testAndTopLevelWithOrGroup() {
+    let freshUnplayed = makeSong(id: "s-fresh-unplayed", addedDaysAgo: 1, playCount: 0)
+    let freshFiled = makeSong(id: "s-fresh-filed", addedDaysAgo: 1, playCount: 9)
+    makeSong(id: "s-fresh-neither", addedDaysAgo: 1, playCount: 9)
+    makeSong(id: "s-stale-unplayed", addedDaysAgo: 90, playCount: 0)
+    makePlaylist(id: "pl-target", name: "Target").append(playable: freshFiled)
+    library.saveContext()
+    XCTAssertNotNil(freshUnplayed)
+
+    let query = SmartPlaylistQuery(items: [
+      .rule(.addedWithinDays(7)),
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [
+        .played(.never),
+        .inPlaylist(playlistId: "pl-target", name: "Target"),
+      ])),
+    ])
+    XCTAssertEqual(Set(matchedIds(query)), ["s-fresh-unplayed", "s-fresh-filed"])
+  }
+
+  /// A group of one rule is legal and behaves exactly like the bare rule —
+  /// the builder creates one the moment the user taps "+ Add group".
+  func testGroupOfOneBehavesLikeABareRule() {
+    makeSong(id: "s-never", playCount: 0)
+    makeSong(id: "s-played", playCount: 3)
+    library.saveContext()
+
+    let groupedQuery = SmartPlaylistQuery(items: [
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [.played(.never)])),
+    ])
+    XCTAssertEqual(matchedIds(groupedQuery), ["s-never"])
+    XCTAssertEqual(matchedIds(groupedQuery), matchedIds([.played(.never)]))
+  }
+
+  /// An empty top level means "all songs", whatever the combinator says — an
+  /// `.any` container with nothing in it must not evaluate to "nothing".
+  func testEmptyTopLevelMatchesEverythingUnderBothCombinators() {
+    makeSong(id: "s-a", addedDaysAgo: 1)
+    makeSong(id: "s-b", addedDaysAgo: 2)
+    library.saveContext()
+
+    XCTAssertEqual(matchedIds(SmartPlaylistQuery(combinator: .all, items: [])), ["s-a", "s-b"])
+    XCTAssertEqual(matchedIds(SmartPlaylistQuery(combinator: .any, items: [])), ["s-a", "s-b"])
+  }
+
+  /// The three rule kinds that are answered from precomputed maps rather than
+  /// from the song's own columns, all ORed together in one group.
+  func testOrAcrossMembershipPlaylistCountAndCompleteAlbum() {
+    let completeAlbum = makeAlbum(id: "al-whole", releaseType: nil, remoteSongCount: 8)
+    let member = makeSong(id: "s-member", inAlbum: hostAlbum)
+    let heavilyFiled = makeSong(id: "s-filed", inAlbum: hostAlbum)
+    makeSong(id: "s-complete", inAlbum: completeAlbum)
+    makeSong(id: "s-none", inAlbum: hostAlbum)
+    makePlaylist(id: "pl-target", name: "Target").append(playable: member)
+    makePlaylist(id: "pl-x", name: "X").append(playable: heavilyFiled)
+    makePlaylist(id: "pl-y", name: "Y").append(playable: heavilyFiled)
+    library.saveContext()
+
+    let query = SmartPlaylistQuery(
+      combinator: .any,
+      items: [
+        .rule(.inPlaylist(playlistId: "pl-target", name: "Target")),
+        .rule(.playlistCount(comparison: .moreThan, count: 1)),
+        .rule(.completeAlbum(isComplete: true)),
+      ]
+    )
+    XCTAssertEqual(Set(matchedIds(query)), ["s-member", "s-filed", "s-complete"])
+  }
+
+  /// Nesting is one level deep, so `(A or B) and (C or D)` is the widest shape
+  /// the model expresses — and it must actually intersect the two groups.
+  func testTwoOrGroupsAreIntersectedByTheAndTopLevel() {
+    makeSong(id: "s-both", addedDaysAgo: 1, playCount: 0)
+    makeSong(id: "s-first-only", addedDaysAgo: 1, playCount: 5, lastPlayedDaysAgo: 1)
+    makeSong(id: "s-second-only", addedDaysAgo: 200, playCount: 0)
+    library.saveContext()
+
+    let query = SmartPlaylistQuery(items: [
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [
+        .addedWithinDays(7),
+        .addedWithinDays(14),
+      ])),
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [
+        .played(.never),
+        .played(.notInLastDays(30)),
+      ])),
+    ])
+    XCTAssertEqual(matchedIds(query), ["s-both"])
+  }
+
+  /// A vanished playlist inside an OR group must LOOSEN the query: the rule is
+  /// dropped and, if that empties the group, the group goes too — an empty OR
+  /// group would otherwise blank the entire result.
+  func testVanishedPlaylistRuleInsideGroupIsDroppedWithoutEmptyingTheQuery() {
+    makeSong(id: "s-a", addedDaysAgo: 1)
+    makeSong(id: "s-b", addedDaysAgo: 2)
+    library.saveContext()
+
+    let query = SmartPlaylistQuery(items: [
+      .rule(.addedWithinDays(30)),
+      .group(SmartPlaylistRuleGroup(combinator: .any, rules: [
+        .inPlaylist(playlistId: "pl-gone", name: "Deleted Mix"),
+      ])),
+    ])
+    let evaluation = evaluate(query)
+    XCTAssertEqual(Set(evaluation.songs.map { $0.id }), ["s-a", "s-b"])
+    XCTAssertEqual(evaluation.droppedPlaylistRules.count, 1)
+    XCTAssertEqual(evaluation.droppedPlaylistRules.first?.referencedPlaylistId, "pl-gone")
+  }
+
+  // MARK: - Tree-aware missing-added-date count
+
+  /// The count is "would match if every added-within rule were satisfied, but
+  /// does not match as things stand". A nil-date song that already qualifies
+  /// through an OR branch IS in the results, so it is NOT part of the count —
+  /// nothing is being hidden from the user in its case.
+  func testMissingAddedDateCountExcludesSongsQualifyingViaAnOrBranch() {
+    makeSong(id: "s-nil-unplayed", playCount: 0)
+    makeSong(id: "s-nil-played", playCount: 7)
+    library.saveContext()
+
+    let query = SmartPlaylistQuery(
+      combinator: .any,
+      items: [.rule(.addedWithinDays(7)), .rule(.played(.never))]
+    )
+    let evaluation = evaluate(query)
+    XCTAssertEqual(evaluation.songs.map { $0.id }, ["s-nil-unplayed"])
+    // Only the played song is kept out purely by the unknown added-date.
+    XCTAssertEqual(evaluation.songsMissingAddedDate, 1)
+  }
+
+  /// Inside a group the same rule holds: the count respects the whole tree, not
+  /// just the top level.
+  func testMissingAddedDateCountHonoursRulesInsideGroups() {
+    makeSong(id: "s-nil-unplayed", playCount: 0)
+    makeSong(id: "s-nil-played", playCount: 7)
+    library.saveContext()
+
+    let query = SmartPlaylistQuery(items: [
+      .group(SmartPlaylistRuleGroup(combinator: .all, rules: [
+        .addedWithinDays(7),
+        .played(.never),
+      ])),
+    ])
+    let evaluation = evaluate(query)
+    XCTAssertTrue(evaluation.songs.isEmpty)
+    XCTAssertEqual(evaluation.songsMissingAddedDate, 1)
+  }
+
+  /// A song with a KNOWN added-date that simply falls outside the window is not
+  /// "missing a date" — it is a plain non-match.
+  func testMissingAddedDateCountIgnoresSongsWithKnownDates() {
+    makeSong(id: "s-old", addedDaysAgo: 400, playCount: 0)
+    library.saveContext()
+
+    XCTAssertEqual(evaluate([.addedWithinDays(7)]).songsMissingAddedDate, 0)
   }
 
   // MARK: - Ordering

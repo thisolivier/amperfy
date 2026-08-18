@@ -608,16 +608,23 @@
 		A5B0610000000000000050A0 /* WholeAlbumPredicatesTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0620000000000000050A0 /* WholeAlbumPredicatesTest.swift */; };
 		A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0720000000000000050A0 /* RecentTracksQuery.swift */; };
 		5A47B1010000000000000001 /* SmartPlaylistQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B1010000000000000002 /* SmartPlaylistQuery.swift */; };
+		5A47B3010000000000000001 /* SmartPlaylistRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B3010000000000000002 /* SmartPlaylistRule.swift */; };
+		5A47B3020000000000000001 /* SmartPlaylistTreeEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B3020000000000000002 /* SmartPlaylistTreeEvaluator.swift */; };
 		5A47B2010000000000000001 /* SmartPlaylistDetailVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B2010000000000000002 /* SmartPlaylistDetailVC.swift */; };
 		5A47B2020000000000000001 /* SmartPlaylistDetailHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B2020000000000000002 /* SmartPlaylistDetailHeaderView.swift */; };
 		5A47B2030000000000000001 /* SmartPlaylistBuilderVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B2030000000000000002 /* SmartPlaylistBuilderVC.swift */; };
 		5A47B2040000000000000001 /* SmartPlaylistRuleMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B2040000000000000002 /* SmartPlaylistRuleMenuBuilder.swift */; };
 		5A47B2050000000000000001 /* SmartPlaylistPlaylistPickerVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B2050000000000000002 /* SmartPlaylistPlaylistPickerVC.swift */; };
+		5A47B4010000000000000001 /* SmartPlaylistBuilderRowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B4010000000000000002 /* SmartPlaylistBuilderRowLayout.swift */; };
+		5A47B4020000000000000001 /* SmartPlaylistQuery+BuilderEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B4020000000000000002 /* SmartPlaylistQuery+BuilderEditing.swift */; };
+		5A47B4030000000000000001 /* SmartPlaylistBuilderCells.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B4030000000000000002 /* SmartPlaylistBuilderCells.swift */; };
+		5A47B4040000000000000001 /* SmartPlaylistConnectorChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B4040000000000000002 /* SmartPlaylistConnectorChip.swift */; };
 		5A47B2060000000000000001 /* LibraryDisplaySettingsSmartPlaylistsMigrationTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B2060000000000000002 /* LibraryDisplaySettingsSmartPlaylistsMigrationTest.swift */; };
 		5A47B1020000000000000001 /* SmartPlaylistQueryEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B1020000000000000002 /* SmartPlaylistQueryEngine.swift */; };
 		5A47B1030000000000000001 /* SmartPlaylistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B1030000000000000002 /* SmartPlaylistStore.swift */; };
 		5A47B1040000000000000001 /* SmartPlaylistRefresher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B1040000000000000002 /* SmartPlaylistRefresher.swift */; };
 		5A47B1060000000000000001 /* SmartPlaylistQueryEngineTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B1060000000000000002 /* SmartPlaylistQueryEngineTest.swift */; };
+		5A47B3030000000000000001 /* SmartPlaylistRefresherTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B3030000000000000002 /* SmartPlaylistRefresherTest.swift */; };
 		5A47B1070000000000000001 /* SmartPlaylistStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B1070000000000000002 /* SmartPlaylistStoreTest.swift */; };
 		5A47B1080000000000000001 /* SsSongPlayDataParserTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B1080000000000000002 /* SsSongPlayDataParserTest.swift */; };
 		A5B0730000000000000050A0 /* RecentTracksPlaybackResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0740000000000000050A0 /* RecentTracksPlaybackResolver.swift */; };
@@ -1436,16 +1443,23 @@
 		A5B0620000000000000050A0 /* WholeAlbumPredicatesTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholeAlbumPredicatesTest.swift; sourceTree = "<group>"; };
 		A5B0720000000000000050A0 /* RecentTracksQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksQuery.swift; sourceTree = "<group>"; };
 		5A47B1010000000000000002 /* SmartPlaylistQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistQuery.swift; sourceTree = "<group>"; };
+		5A47B3010000000000000002 /* SmartPlaylistRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistRule.swift; sourceTree = "<group>"; };
+		5A47B3020000000000000002 /* SmartPlaylistTreeEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistTreeEvaluator.swift; sourceTree = "<group>"; };
 		5A47B2010000000000000002 /* SmartPlaylistDetailVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistDetailVC.swift; sourceTree = "<group>"; };
 		5A47B2020000000000000002 /* SmartPlaylistDetailHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistDetailHeaderView.swift; sourceTree = "<group>"; };
 		5A47B2030000000000000002 /* SmartPlaylistBuilderVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistBuilderVC.swift; sourceTree = "<group>"; };
 		5A47B2040000000000000002 /* SmartPlaylistRuleMenuBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistRuleMenuBuilder.swift; sourceTree = "<group>"; };
 		5A47B2050000000000000002 /* SmartPlaylistPlaylistPickerVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistPlaylistPickerVC.swift; sourceTree = "<group>"; };
+		5A47B4010000000000000002 /* SmartPlaylistBuilderRowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SmartPlaylistBuilderRowLayout.swift"; sourceTree = "<group>"; };
+		5A47B4020000000000000002 /* SmartPlaylistQuery+BuilderEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SmartPlaylistQuery+BuilderEditing.swift"; sourceTree = "<group>"; };
+		5A47B4030000000000000002 /* SmartPlaylistBuilderCells.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SmartPlaylistBuilderCells.swift"; sourceTree = "<group>"; };
+		5A47B4040000000000000002 /* SmartPlaylistConnectorChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SmartPlaylistConnectorChip.swift"; sourceTree = "<group>"; };
 		5A47B2060000000000000002 /* LibraryDisplaySettingsSmartPlaylistsMigrationTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryDisplaySettingsSmartPlaylistsMigrationTest.swift; sourceTree = "<group>"; };
 		5A47B1020000000000000002 /* SmartPlaylistQueryEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistQueryEngine.swift; sourceTree = "<group>"; };
 		5A47B1030000000000000002 /* SmartPlaylistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistStore.swift; sourceTree = "<group>"; };
 		5A47B1040000000000000002 /* SmartPlaylistRefresher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistRefresher.swift; sourceTree = "<group>"; };
 		5A47B1060000000000000002 /* SmartPlaylistQueryEngineTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistQueryEngineTest.swift; sourceTree = "<group>"; };
+		5A47B3030000000000000002 /* SmartPlaylistRefresherTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistRefresherTest.swift; sourceTree = "<group>"; };
 		5A47B1070000000000000002 /* SmartPlaylistStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistStoreTest.swift; sourceTree = "<group>"; };
 		5A47B1080000000000000002 /* SsSongPlayDataParserTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SsSongPlayDataParserTest.swift; sourceTree = "<group>"; };
 		A5B0740000000000000050A0 /* RecentTracksPlaybackResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksPlaybackResolver.swift; sourceTree = "<group>"; };
@@ -2927,6 +2941,10 @@
 				5A47B2030000000000000002 /* SmartPlaylistBuilderVC.swift */,
 				5A47B2040000000000000002 /* SmartPlaylistRuleMenuBuilder.swift */,
 				5A47B2050000000000000002 /* SmartPlaylistPlaylistPickerVC.swift */,
+				5A47B4010000000000000002 /* SmartPlaylistBuilderRowLayout.swift */,
+				5A47B4020000000000000002 /* SmartPlaylistQuery+BuilderEditing.swift */,
+				5A47B4030000000000000002 /* SmartPlaylistBuilderCells.swift */,
+				5A47B4040000000000000002 /* SmartPlaylistConnectorChip.swift */,
 			);
 			name = SmartPlaylists;
 			path = SmartPlaylists;
@@ -2936,6 +2954,8 @@
 			isa = PBXGroup;
 			children = (
 				5A47B1010000000000000002 /* SmartPlaylistQuery.swift */,
+				5A47B3010000000000000002 /* SmartPlaylistRule.swift */,
+				5A47B3020000000000000002 /* SmartPlaylistTreeEvaluator.swift */,
 				5A47B1020000000000000002 /* SmartPlaylistQueryEngine.swift */,
 				5A47B1030000000000000002 /* SmartPlaylistStore.swift */,
 				5A47B1040000000000000002 /* SmartPlaylistRefresher.swift */,
@@ -2948,6 +2968,7 @@
 			isa = PBXGroup;
 			children = (
 				5A47B1060000000000000002 /* SmartPlaylistQueryEngineTest.swift */,
+				5A47B3030000000000000002 /* SmartPlaylistRefresherTest.swift */,
 				5A47B1070000000000000002 /* SmartPlaylistStoreTest.swift */,
 				5A47B1080000000000000002 /* SsSongPlayDataParserTest.swift */,
 			);
@@ -3432,6 +3453,10 @@
 				5A47B2030000000000000001 /* SmartPlaylistBuilderVC.swift in Sources */,
 				5A47B2040000000000000001 /* SmartPlaylistRuleMenuBuilder.swift in Sources */,
 				5A47B2050000000000000001 /* SmartPlaylistPlaylistPickerVC.swift in Sources */,
+				5A47B4010000000000000001 /* SmartPlaylistBuilderRowLayout.swift in Sources */,
+				5A47B4020000000000000001 /* SmartPlaylistQuery+BuilderEditing.swift in Sources */,
+				5A47B4030000000000000001 /* SmartPlaylistBuilderCells.swift in Sources */,
+				5A47B4040000000000000001 /* SmartPlaylistConnectorChip.swift in Sources */,
 				50C16C1C21E7051700F086F0 /* AlbumDetailVC.swift in Sources */,
 				50C171502D10718C00C0C53A /* PlaylistAddGenreDetailVC.swift in Sources */,
 				507BA5C92F01CED000B4EA8B /* SetOnlineOfflineModeIntent.swift in Sources */,
@@ -3553,6 +3578,8 @@
 				A5B0510000000000000050A0 /* WholeAlbumPredicates.swift in Sources */,
 				A5B0710000000000000050A0 /* RecentTracksQuery.swift in Sources */,
 				5A47B1010000000000000001 /* SmartPlaylistQuery.swift in Sources */,
+				5A47B3010000000000000001 /* SmartPlaylistRule.swift in Sources */,
+				5A47B3020000000000000001 /* SmartPlaylistTreeEvaluator.swift in Sources */,
 				5A47B1020000000000000001 /* SmartPlaylistQueryEngine.swift in Sources */,
 				5A47B1030000000000000001 /* SmartPlaylistStore.swift in Sources */,
 				5A47B1040000000000000001 /* SmartPlaylistRefresher.swift in Sources */,
@@ -3800,6 +3827,7 @@
 				A5B0610000000000000050A0 /* WholeAlbumPredicatesTest.swift in Sources */,
 				A5B0910000000000000050A0 /* RecentTracksQueryTest.swift in Sources */,
 				5A47B1060000000000000001 /* SmartPlaylistQueryEngineTest.swift in Sources */,
+				5A47B3030000000000000001 /* SmartPlaylistRefresherTest.swift in Sources */,
 				5A47B1070000000000000001 /* SmartPlaylistStoreTest.swift in Sources */,
 				5A47B1080000000000000001 /* SsSongPlayDataParserTest.swift in Sources */,
 				A5B0930000000000000050A0 /* AlbumFetchedResultsControllerTest.swift in Sources */,
