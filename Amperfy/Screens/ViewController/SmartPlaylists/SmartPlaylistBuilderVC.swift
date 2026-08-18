@@ -2,7 +2,8 @@
 //  SmartPlaylistBuilderVC.swift
 //  Amperfy
 //
-//  Rule-row query builder for the Smart Playlists feature (V1 spec, 2026-08-17).
+//  Rule-row query builder for the Smart Playlists feature (V1 spec, 2026-08-17;
+//  grouped AND/OR queries per the V1.5 addendum §1).
 //  Copyright (c) 2026 Olivier Butler. All rights reserved.
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -24,13 +25,30 @@ import UIKit
 
 // MARK: - SmartPlaylistBuilderVC
 
-/// The Apple-Music-style "Match ALL of the following" rule form, presented
-/// modally inside its own navigation controller.
+/// The audience-builder-style query form, presented modally inside its own
+/// navigation controller.
+///
+/// # Shape of the form
+///
+/// The query is a top-level list of items — bare rules and one-level groups —
+/// and each item is its own inset card. Between every pair of adjacent items
+/// sits an and/or **connector chip**. A level is uniform by construction (pure
+/// AND or pure OR; mixing is what groups are for), so every chip at a level
+/// shows the same word and tapping any one of them flips the whole level. A
+/// group card repeats the pattern inside itself with its own chips, its own
+/// "+ Add rule" row and its own ⋯ menu.
+///
+/// # What it does not do
 ///
 /// The builder edits a COPY of the query and hands it back only when the user
 /// taps Run Query — Cancel therefore leaves the stored state, and the frozen
 /// result it produced, completely untouched. Nothing here evaluates anything;
 /// running the query is the results screen's job (one refresh path, always).
+///
+/// Every edit goes through the `SmartPlaylistQuery` builder-editing extension,
+/// which works on `items`. `SmartPlaylistQuery.rules` is deliberately never
+/// assigned anywhere in this screen: its setter flattens the tree and destroys
+/// groups.
 ///
 /// A plain `UIViewController` hosting its own table view rather than a
 /// `UITableViewController`, because the prominent Run Query bar has to be
@@ -39,27 +57,21 @@ import UIKit
 final class SmartPlaylistBuilderVC: UIViewController {
   private static let ruleCellReuseIdentifier = "SmartPlaylistRuleCell"
   private static let addRuleCellReuseIdentifier = "SmartPlaylistAddRuleCell"
+  private static let groupHeaderCellReuseIdentifier = "SmartPlaylistGroupHeaderCell"
+  private static let connectorCellReuseIdentifier = "SmartPlaylistConnectorCell"
+  private static let actionsCellReuseIdentifier = "SmartPlaylistActionsCell"
   private static let runQueryBarHeight: CGFloat = 76.0
 
   // MARK: - State
 
   private let account: Account
   private var editedQuery: SmartPlaylistQuery
+  private var rowLayout: SmartPlaylistBuilderRowLayout
   private let onRunQuery: (SmartPlaylistQuery) -> ()
 
   private let tableView = UITableView(frame: .zero, style: .insetGrouped)
   private let runQueryBar = UIView()
   private let runQueryButton = UIButton(configuration: .filled())
-
-  /// `true` while a rule row is showing the "+ Add rule" affordance, i.e. at
-  /// least one rule kind is still addable.
-  private var canAddAnyRule: Bool {
-    SmartPlaylistRule.Kind.allCases.contains { editedQuery.canAddRule(ofKind: $0) }
-  }
-
-  private var addRuleRowIndex: Int? {
-    canAddAnyRule ? editedQuery.rules.count : nil
-  }
 
   // MARK: - Init
 
@@ -70,6 +82,7 @@ final class SmartPlaylistBuilderVC: UIViewController {
   ) {
     self.account = account
     self.editedQuery = initialQuery
+    self.rowLayout = SmartPlaylistBuilderRowLayout(query: initialQuery)
     self.onRunQuery = onRunQuery
     super.init(nibName: nil, bundle: nil)
   }
@@ -105,6 +118,24 @@ final class SmartPlaylistBuilderVC: UIViewController {
       SmartPlaylistRuleCell.self,
       forCellReuseIdentifier: Self.addRuleCellReuseIdentifier
     )
+    tableView.register(
+      SmartPlaylistGroupHeaderCell.self,
+      forCellReuseIdentifier: Self.groupHeaderCellReuseIdentifier
+    )
+    tableView.register(
+      SmartPlaylistConnectorChipCell.self,
+      forCellReuseIdentifier: Self.connectorCellReuseIdentifier
+    )
+    tableView.register(
+      SmartPlaylistBuilderActionsCell.self,
+      forCellReuseIdentifier: Self.actionsCellReuseIdentifier
+    )
+    tableView.register(
+      SmartPlaylistConnectorChipHeaderView.self,
+      forHeaderFooterViewReuseIdentifier: SmartPlaylistConnectorChipHeaderView.reuseIdentifier
+    )
+    tableView.estimatedSectionHeaderHeight = 44
+    tableView.estimatedSectionFooterHeight = 24
     tableView.contentInset.bottom = Self.runQueryBarHeight
     view.addSubview(tableView)
 
@@ -161,53 +192,142 @@ final class SmartPlaylistBuilderVC: UIViewController {
 
   @objc
   private func handleRunQueryTapped() {
-    let queryToRun = editedQuery
+    var queryToRun = editedQuery
+    // A group whose rules were all deleted mid-edit says nothing, and an empty
+    // OR branch would blank the whole result — drop them before running.
+    queryToRun.removeEmptyGroups()
     dismiss(animated: true) { [weak self] in
       self?.onRunQuery(queryToRun)
     }
   }
 
-  private func reloadRules() {
+  // MARK: - Query mutation
+
+  /// The single funnel for every edit. Rebuilding the layout and reloading
+  /// wholesale is deliberate: an edit can change the section count, the row
+  /// count of two containers and every chip on screen at once, so incremental
+  /// updates would be bookkeeping with no user-visible payoff.
+  private func mutateQuery(
+    scrollToBottomAfterwards: Bool = false,
+    _ mutation: (inout SmartPlaylistQuery) -> ()
+  ) {
+    mutation(&editedQuery)
+    rowLayout = SmartPlaylistBuilderRowLayout(query: editedQuery)
     tableView.reloadData()
+    if scrollToBottomAfterwards {
+      scrollNewestItemIntoView()
+    }
   }
 
-  // MARK: - Rule mutation
+  private func scrollNewestItemIntoView() {
+    let actionsSectionIndex = rowLayout.actionsSectionIndex
+    guard rowLayout.numberOfRows(inSection: actionsSectionIndex) > 0 else { return }
+    tableView.scrollToRow(
+      at: IndexPath(row: 0, section: actionsSectionIndex),
+      at: .bottom,
+      animated: true
+    )
+  }
 
-  private func addRule(ofKind ruleKind: SmartPlaylistRule.Kind) {
-    switch ruleKind {
-    case .addedWithinDays:
-      editedQuery.rules.append(.addedWithinDays(30))
-      reloadRules()
-    case .played:
-      editedQuery.rules.append(.played(.never))
-      reloadRules()
-    case .playlistCount:
-      editedQuery.rules.append(.playlistCount(comparison: .fewerThan, count: 1))
-      reloadRules()
-    case .inPlaylist, .notInPlaylist:
+  // MARK: - Adding rules
+
+  /// Adds a rule to a container: the top level when `groupItemIndex` is `nil`,
+  /// otherwise that group.
+  fileprivate func addRule(
+    ofKind ruleKind: SmartPlaylistRule.Kind,
+    toGroupAt groupItemIndex: Int?
+  ) {
+    guard let newRule = ruleKind.defaultRule else {
       // A membership rule is meaningless without a playlist, so the rule is
       // only appended once one has actually been chosen.
       pushPlaylistPicker { [weak self] playlistChoice in
         guard let self else { return }
-        editedQuery.rules.append(makeMembershipRule(ofKind: ruleKind, choice: playlistChoice))
-        reloadRules()
+        let membershipRule = Self.makeMembershipRule(ofKind: ruleKind, choice: playlistChoice)
+        append(rule: membershipRule, toGroupAt: groupItemIndex)
+      }
+      return
+    }
+    append(rule: newRule, toGroupAt: groupItemIndex)
+  }
+
+  private func append(rule newRule: SmartPlaylistRule, toGroupAt groupItemIndex: Int?) {
+    mutateQuery(scrollToBottomAfterwards: true) { query in
+      if let groupItemIndex {
+        query.appendRule(newRule, toGroupAt: groupItemIndex)
+      } else {
+        query.appendTopLevelRule(newRule)
       }
     }
   }
 
-  private func replaceRule(at ruleIndex: Int, with newRule: SmartPlaylistRule) {
-    guard editedQuery.rules.indices.contains(ruleIndex) else { return }
-    editedQuery.rules[ruleIndex] = newRule
-    reloadRules()
+  /// Creates a group around its first rule — see
+  /// `SmartPlaylistRuleMenuBuilder.makeAddGroupMenu` for why the rule comes
+  /// first.
+  fileprivate func addGroup(withFirstRuleOfKind ruleKind: SmartPlaylistRule.Kind) {
+    guard let firstRule = ruleKind.defaultRule else {
+      pushPlaylistPicker { [weak self] playlistChoice in
+        guard let self else { return }
+        let membershipRule = Self.makeMembershipRule(ofKind: ruleKind, choice: playlistChoice)
+        mutateQuery(scrollToBottomAfterwards: true) { $0.appendGroup(withFirstRule: membershipRule)
+        }
+      }
+      return
+    }
+    mutateQuery(scrollToBottomAfterwards: true) { $0.appendGroup(withFirstRule: firstRule) }
   }
 
-  private func deleteRule(at ruleIndex: Int) {
-    guard editedQuery.rules.indices.contains(ruleIndex) else { return }
-    editedQuery.rules.remove(at: ruleIndex)
-    reloadRules()
+  // MARK: - Editing and deleting
+
+  fileprivate func replaceRule(
+    at location: SmartPlaylistBuilderRuleLocation,
+    with newRule: SmartPlaylistRule
+  ) {
+    mutateQuery { $0.replaceRule(at: location, with: newRule) }
   }
 
-  private func makeMembershipRule(
+  fileprivate func deleteRule(at location: SmartPlaylistBuilderRuleLocation) {
+    mutateQuery { $0.removeRule(at: location) }
+  }
+
+  /// Removing a group takes its rules with it, so anything beyond a single rule
+  /// is confirmed first. A one-rule group is no more costly to lose than the
+  /// rule row it holds, which is deleted without ceremony.
+  fileprivate func requestDeleteGroup(at itemIndex: Int) {
+    guard let group = editedQuery.group(at: itemIndex) else { return }
+    guard group.rules.count >= 2 else {
+      mutateQuery { $0.removeGroup(at: itemIndex) }
+      return
+    }
+    let alert = UIAlertController(
+      title: "Delete Group?",
+      message: "This removes the group and all \(group.rules.count) rules inside it.",
+      preferredStyle: .alert
+    )
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+      self?.mutateQuery { $0.removeGroup(at: itemIndex) }
+    })
+    present(alert, animated: true)
+  }
+
+  fileprivate func setCombinator(
+    _ newCombinator: SmartPlaylistCombinator,
+    ofGroupAt itemIndex: Int
+  ) {
+    mutateQuery { $0.setCombinator(newCombinator, ofGroupAt: itemIndex) }
+  }
+
+  fileprivate func toggleTopLevelCombinator() {
+    mutateQuery { $0.toggleTopLevelCombinator() }
+  }
+
+  fileprivate func toggleCombinator(ofGroupAt itemIndex: Int) {
+    mutateQuery { $0.toggleCombinator(ofGroupAt: itemIndex) }
+  }
+
+  // MARK: - Value pickers
+
+  private static func makeMembershipRule(
     ofKind ruleKind: SmartPlaylistRule.Kind,
     choice: SmartPlaylistPlaylistChoice
   )
@@ -217,7 +337,7 @@ final class SmartPlaylistBuilderVC: UIViewController {
       : .notInPlaylist(playlistId: choice.playlistId, name: choice.name)
   }
 
-  private func pushPlaylistPicker(
+  fileprivate func pushPlaylistPicker(
     onPlaylistChosen: @escaping (SmartPlaylistPlaylistChoice) -> ()
   ) {
     let pickerVC = SmartPlaylistPlaylistPickerVC(
@@ -229,8 +349,8 @@ final class SmartPlaylistBuilderVC: UIViewController {
 
   /// The one place a rule value is typed rather than picked, for day counts
   /// outside the preset ladder.
-  private func promptForCustomDayCount(
-    ruleIndex: Int,
+  fileprivate func promptForCustomDayCount(
+    at location: SmartPlaylistBuilderRuleLocation,
     templateRule: SmartPlaylistRule
   ) {
     let alert = UIAlertController(
@@ -251,7 +371,7 @@ final class SmartPlaylistBuilderVC: UIViewController {
             enteredDays > 0
       else { return }
       replaceRule(
-        at: ruleIndex,
+        at: location,
         with: Self.rule(templateRule, withDayCount: enteredDays)
       )
     })
@@ -263,7 +383,8 @@ final class SmartPlaylistBuilderVC: UIViewController {
     case let .addedWithinDays(days): return days
     case let .played(.notInLastDays(days)): return days
     case let .played(.inLastDays(days)): return days
-    case .inPlaylist, .notInPlaylist, .played(.never), .playlistCount: return nil
+    case .completeAlbum, .inPlaylist, .notInPlaylist, .played(.never), .playlistCount:
+      return nil
     }
   }
 
@@ -276,64 +397,41 @@ final class SmartPlaylistBuilderVC: UIViewController {
     case .addedWithinDays: return .addedWithinDays(days)
     case .played(.notInLastDays): return .played(.notInLastDays(days))
     case .played(.inLastDays): return .played(.inLastDays(days))
-    case .inPlaylist, .notInPlaylist, .played(.never), .playlistCount: return templateRule
+    case .completeAlbum, .inPlaylist, .notInPlaylist, .played(.never), .playlistCount:
+      return templateRule
     }
   }
 }
 
-// MARK: UITableViewDataSource
+// MARK: - Cell configuration
 
-extension SmartPlaylistBuilderVC: UITableViewDataSource {
-  func numberOfSections(in tableView: UITableView) -> Int { 1 }
-
-  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    editedQuery.rules.count + (canAddAnyRule ? 1 : 0)
-  }
-
-  func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-    "Match ALL of the following"
-  }
-
-  func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-    editedQuery.rules.isEmpty
-      ? "With no rules the query matches every song in your library."
-      : editedQuery.summaryText
-  }
-
-  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-    if indexPath.row == addRuleRowIndex {
-      let cell = tableView.dequeueReusableCell(
-        withIdentifier: Self.addRuleCellReuseIdentifier,
-        for: indexPath
-      ) as! SmartPlaylistRuleCell
-      cell.configureAsAddRuleRow(
-        menu: SmartPlaylistRuleMenuBuilder.makeAddRuleMenu(
-          for: editedQuery,
-          onAddRuleOfKind: { [weak self] ruleKind in self?.addRule(ofKind: ruleKind) }
-        )
-      )
-      return cell
-    }
-
+extension SmartPlaylistBuilderVC {
+  fileprivate func makeRuleCell(
+    for tableView: UITableView,
+    at indexPath: IndexPath,
+    location: SmartPlaylistBuilderRuleLocation,
+    contentIndent: CGFloat
+  )
+    -> UITableViewCell {
     let cell = tableView.dequeueReusableCell(
       withIdentifier: Self.ruleCellReuseIdentifier,
       for: indexPath
     ) as! SmartPlaylistRuleCell
-    let ruleIndex = indexPath.row
-    let rule = editedQuery.rules[ruleIndex]
+    guard let rule = editedQuery.rule(at: location) else { return cell }
     let editMenu = SmartPlaylistRuleMenuBuilder.makeEditMenu(
       for: rule,
       onRuleEdited: { [weak self] editedRule in
-        self?.replaceRule(at: ruleIndex, with: editedRule)
+        self?.replaceRule(at: location, with: editedRule)
       },
       onCustomDayCountRequested: { [weak self] templateRule in
-        self?.promptForCustomDayCount(ruleIndex: ruleIndex, templateRule: templateRule)
+        self?.promptForCustomDayCount(at: location, templateRule: templateRule)
       }
     )
     cell.configureAsRuleRow(
       title: rule.kind.displayName,
       subtitle: rule.displayText,
       menu: editMenu,
+      contentIndent: contentIndent,
       // Membership rules have no menu — their value is a playlist, picked in a
       // pushed list.
       tapAction: editMenu == nil ? { [weak self] in
@@ -341,11 +439,164 @@ extension SmartPlaylistBuilderVC: UITableViewDataSource {
         pushPlaylistPicker { [weak self] playlistChoice in
           guard let self else { return }
           replaceRule(
-            at: ruleIndex,
-            with: makeMembershipRule(ofKind: rule.kind, choice: playlistChoice)
+            at: location,
+            with: Self.makeMembershipRule(ofKind: rule.kind, choice: playlistChoice)
           )
         }
       } : nil
+    )
+    return cell
+  }
+
+  fileprivate func makeAddRuleCell(
+    for tableView: UITableView,
+    at indexPath: IndexPath,
+    groupItemIndex: Int
+  )
+    -> UITableViewCell {
+    let cell = tableView.dequeueReusableCell(
+      withIdentifier: Self.addRuleCellReuseIdentifier,
+      for: indexPath
+    ) as! SmartPlaylistRuleCell
+    cell.configureAsAddRuleRow(
+      menu: SmartPlaylistRuleMenuBuilder.makeAddRuleMenu(
+        title: "Add Rule to Group",
+        addableKinds: editedQuery.addableRuleKinds(forGroupAt: groupItemIndex),
+        onAddRuleOfKind: { [weak self] ruleKind in
+          self?.addRule(ofKind: ruleKind, toGroupAt: groupItemIndex)
+        }
+      ),
+      contentIndent: SmartPlaylistBuilderStyle.groupContentIndent
+    )
+    return cell
+  }
+
+  fileprivate func makeGroupHeaderCell(
+    for tableView: UITableView,
+    at indexPath: IndexPath,
+    groupItemIndex: Int
+  )
+    -> UITableViewCell {
+    let cell = tableView.dequeueReusableCell(
+      withIdentifier: Self.groupHeaderCellReuseIdentifier,
+      for: indexPath
+    ) as! SmartPlaylistGroupHeaderCell
+    let combinator = editedQuery.group(at: groupItemIndex)?.combinator ?? .all
+    cell.configure(
+      combinator: combinator,
+      optionsMenu: SmartPlaylistRuleMenuBuilder.makeGroupOptionsMenu(
+        combinator: combinator,
+        onCombinatorChosen: { [weak self] newCombinator in
+          self?.setCombinator(newCombinator, ofGroupAt: groupItemIndex)
+        },
+        onDeleteGroupRequested: { [weak self] in
+          self?.requestDeleteGroup(at: groupItemIndex)
+        }
+      )
+    )
+    return cell
+  }
+
+  fileprivate func makeGroupConnectorCell(
+    for tableView: UITableView,
+    at indexPath: IndexPath,
+    groupItemIndex: Int
+  )
+    -> UITableViewCell {
+    let cell = tableView.dequeueReusableCell(
+      withIdentifier: Self.connectorCellReuseIdentifier,
+      for: indexPath
+    ) as! SmartPlaylistConnectorChipCell
+    cell.configure(
+      combinator: editedQuery.group(at: groupItemIndex)?.combinator ?? .all,
+      onToggle: { [weak self] in
+        self?.toggleCombinator(ofGroupAt: groupItemIndex)
+      }
+    )
+    return cell
+  }
+
+  fileprivate func makeActionsCell(
+    for tableView: UITableView,
+    at indexPath: IndexPath
+  )
+    -> UITableViewCell {
+    let cell = tableView.dequeueReusableCell(
+      withIdentifier: Self.actionsCellReuseIdentifier,
+      for: indexPath
+    ) as! SmartPlaylistBuilderActionsCell
+    cell.configure(
+      addRuleMenu: SmartPlaylistRuleMenuBuilder.makeAddRuleMenu(
+        title: "Add Rule",
+        addableKinds: editedQuery.addableRuleKinds(forGroupAt: nil),
+        onAddRuleOfKind: { [weak self] ruleKind in
+          self?.addRule(ofKind: ruleKind, toGroupAt: nil)
+        }
+      ),
+      addGroupMenu: SmartPlaylistRuleMenuBuilder.makeAddGroupMenu(
+        onAddFirstRuleOfKind: { [weak self] ruleKind in
+          self?.addGroup(withFirstRuleOfKind: ruleKind)
+        }
+      )
+    )
+    return cell
+  }
+}
+
+// MARK: UITableViewDataSource
+
+extension SmartPlaylistBuilderVC: UITableViewDataSource {
+  func numberOfSections(in tableView: UITableView) -> Int {
+    rowLayout.numberOfSections
+  }
+
+  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    rowLayout.numberOfRows(inSection: section)
+  }
+
+  func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+    // The connector chips carry the combinator now, so the title stays neutral
+    // — "Match ALL of the following" would contradict an OR level.
+    rowLayout.header(forSection: section) == .title ? "Match songs where" : nil
+  }
+
+  func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+    guard section == rowLayout.actionsSectionIndex else { return nil }
+    return editedQuery.isEmpty
+      ? "With no rules the query matches every song in your library."
+      : editedQuery.summaryText
+  }
+
+  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    guard let row = rowLayout.row(at: indexPath) else { return UITableViewCell() }
+    let cell: UITableViewCell
+    switch row {
+    case .actions:
+      cell = makeActionsCell(for: tableView, at: indexPath)
+    case let .groupAddRule(itemIndex):
+      cell = makeAddRuleCell(for: tableView, at: indexPath, groupItemIndex: itemIndex)
+    case let .groupConnector(itemIndex, _):
+      cell = makeGroupConnectorCell(for: tableView, at: indexPath, groupItemIndex: itemIndex)
+    case let .groupHeader(itemIndex):
+      cell = makeGroupHeaderCell(for: tableView, at: indexPath, groupItemIndex: itemIndex)
+    case let .groupRule(itemIndex, ruleIndex):
+      cell = makeRuleCell(
+        for: tableView,
+        at: indexPath,
+        location: .group(itemIndex: itemIndex, ruleIndex: ruleIndex),
+        contentIndent: SmartPlaylistBuilderStyle.groupContentIndent
+      )
+    case let .topLevelRule(itemIndex):
+      cell = makeRuleCell(
+        for: tableView,
+        at: indexPath,
+        location: .topLevel(itemIndex: itemIndex),
+        contentIndent: 0
+      )
+    }
+    SmartPlaylistBuilderStyle.applyCardBackground(
+      to: cell,
+      isInsideGroupCard: row.isInsideGroupCard
     )
     return cell
   }
@@ -354,8 +605,39 @@ extension SmartPlaylistBuilderVC: UITableViewDataSource {
 // MARK: UITableViewDelegate
 
 extension SmartPlaylistBuilderVC: UITableViewDelegate {
+  func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+    guard rowLayout.header(forSection: section) == .connector else { return nil }
+    let headerView = tableView.dequeueReusableHeaderFooterView(
+      withIdentifier: SmartPlaylistConnectorChipHeaderView.reuseIdentifier
+    ) as! SmartPlaylistConnectorChipHeaderView
+    headerView.configure(combinator: editedQuery.combinator) { [weak self] in
+      self?.toggleTopLevelCombinator()
+    }
+    return headerView
+  }
+
+  func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+    // The spacing header still needs a gap, or the trailing actions card butts
+    // straight up against the last rule card.
+    rowLayout.header(forSection: section) == .spacing
+      ? 20
+      : UITableView.automaticDimension
+  }
+
+  func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+    // Only the trailing section carries text (the live query summary); the rest
+    // rely on the next section's header for their spacing.
+    section == rowLayout.actionsSectionIndex
+      ? UITableView.automaticDimension
+      : .leastNormalMagnitude
+  }
+
   func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-    indexPath.row != addRuleRowIndex
+    guard let row = rowLayout.row(at: indexPath) else { return false }
+    switch row {
+    case .actions, .groupAddRule, .groupConnector: return false
+    case .groupHeader, .groupRule, .topLevelRule: return true
+    }
   }
 
   func tableView(
@@ -363,90 +645,27 @@ extension SmartPlaylistBuilderVC: UITableViewDelegate {
     trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
   )
     -> UISwipeActionsConfiguration? {
-    guard indexPath.row != addRuleRowIndex else { return nil }
+    guard let row = rowLayout.row(at: indexPath) else { return nil }
+    // Swiping the group's header row removes the whole group; swiping a rule
+    // row removes just that rule, inside a group card exactly as outside one.
+    if case let .groupHeader(itemIndex) = row {
+      let deleteGroupAction = UIContextualAction(
+        style: .destructive,
+        title: "Delete Group"
+      ) { [weak self] _, _, completionHandler in
+        self?.requestDeleteGroup(at: itemIndex)
+        completionHandler(true)
+      }
+      return UISwipeActionsConfiguration(actions: [deleteGroupAction])
+    }
+    guard let location = row.ruleLocation else { return nil }
     let deleteAction = UIContextualAction(
       style: .destructive,
       title: "Delete"
     ) { [weak self] _, _, completionHandler in
-      self?.deleteRule(at: indexPath.row)
+      self?.deleteRule(at: location)
       completionHandler(true)
     }
     return UISwipeActionsConfiguration(actions: [deleteAction])
-  }
-}
-
-// MARK: - SmartPlaylistRuleCell
-
-/// A rule row rendered as one full-width button so the whole row opens its
-/// value menu — the same feel as a pop-up-button form row, and it keeps the
-/// cell's swipe-to-delete intact.
-private final class SmartPlaylistRuleCell: UITableViewCell {
-  private let rowButton = UIButton(configuration: .plain())
-  private var tapAction: (() -> ())?
-
-  override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-    super.init(style: style, reuseIdentifier: reuseIdentifier)
-    selectionStyle = .none
-    backgroundColor = .clear
-    rowButton.translatesAutoresizingMaskIntoConstraints = false
-    rowButton.contentHorizontalAlignment = .leading
-    rowButton.addTarget(self, action: #selector(handleRowButtonTapped), for: .touchUpInside)
-    contentView.addSubview(rowButton)
-    NSLayoutConstraint.activate([
-      rowButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
-      rowButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
-      rowButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-      rowButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-    ])
-  }
-
-  @available(*, unavailable)
-  required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-  func configureAsRuleRow(
-    title: String,
-    subtitle: String,
-    menu: UIMenu?,
-    tapAction: (() -> ())?
-  ) {
-    var buttonConfiguration = UIButton.Configuration.plain()
-    buttonConfiguration.title = title
-    buttonConfiguration.subtitle = subtitle
-    buttonConfiguration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer {
-      var attributes = $0
-      attributes.font = .preferredFont(forTextStyle: .footnote)
-      attributes.foregroundColor = UIColor.secondaryLabel
-      return attributes
-    }
-    buttonConfiguration.subtitleTextAttributesTransformer =
-      UIConfigurationTextAttributesTransformer {
-        var attributes = $0
-        attributes.font = .preferredFont(forTextStyle: .body)
-        attributes.foregroundColor = UIColor.label
-        return attributes
-      }
-    buttonConfiguration.image = UIImage(systemName: "chevron.up.chevron.down")
-    buttonConfiguration.imagePlacement = .trailing
-    buttonConfiguration.imagePadding = 8
-    rowButton.configuration = buttonConfiguration
-    rowButton.menu = menu
-    rowButton.showsMenuAsPrimaryAction = (menu != nil)
-    self.tapAction = tapAction
-  }
-
-  func configureAsAddRuleRow(menu: UIMenu) {
-    var buttonConfiguration = UIButton.Configuration.plain()
-    buttonConfiguration.title = "Add Rule"
-    buttonConfiguration.image = UIImage(systemName: "plus.circle.fill")
-    buttonConfiguration.imagePadding = 8
-    rowButton.configuration = buttonConfiguration
-    rowButton.menu = menu
-    rowButton.showsMenuAsPrimaryAction = true
-    tapAction = nil
-  }
-
-  @objc
-  private func handleRowButtonTapped() {
-    tapAction?()
   }
 }

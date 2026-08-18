@@ -40,20 +40,70 @@ enum SmartPlaylistRuleMenuBuilder {
   /// Thresholds offered for the playlist-count rule.
   static let playlistCountPresets = [1, 2, 3, 5, 10]
 
-  /// The "+ Add rule" menu: every kind the query can still take, per
-  /// `SmartPlaylistQuery.canAddRule(ofKind:)` (only the playlist-membership
-  /// kinds repeat).
+  /// The "+ Add rule" menu for one container.
+  ///
+  /// Repeatability is decided per container — the top level and every group
+  /// each get their own single instance of the non-repeatable kinds — so the
+  /// caller passes the kinds it has already filtered through
+  /// `SmartPlaylistQuery.addableRuleKinds(forGroupAt:)`. Returns `nil` when
+  /// nothing is left to add, which the calling row renders as a disabled
+  /// affordance.
   static func makeAddRuleMenu(
-    for query: SmartPlaylistQuery,
+    title: String,
+    addableKinds: [SmartPlaylistRule.Kind],
     onAddRuleOfKind: @escaping (SmartPlaylistRule.Kind) -> ()
   )
+    -> UIMenu? {
+    guard !addableKinds.isEmpty else { return nil }
+    let actions = addableKinds.map { ruleKind in
+      UIAction(title: ruleKind.displayName) { _ in onAddRuleOfKind(ruleKind) }
+    }
+    return UIMenu(title: title, children: actions)
+  }
+
+  /// The "+ Add group" menu.
+  ///
+  /// A new group is empty, and an empty group says nothing — so rather than
+  /// dropping an empty card on screen and cleaning it up afterwards, the button
+  /// asks for the group's FIRST RULE straight away and creates the group around
+  /// the answer. Dismissing the menu therefore leaves nothing behind. An empty
+  /// container accepts every rule kind, so no filtering applies here.
+  static func makeAddGroupMenu(
+    onAddFirstRuleOfKind: @escaping (SmartPlaylistRule.Kind) -> ()
+  )
     -> UIMenu {
-    let actions = SmartPlaylistRule.Kind.allCases
-      .filter { query.canAddRule(ofKind: $0) }
-      .map { ruleKind in
-        UIAction(title: ruleKind.displayName) { _ in onAddRuleOfKind(ruleKind) }
+    let actions = SmartPlaylistRule.Kind.allCases.map { ruleKind in
+      UIAction(title: ruleKind.displayName) { _ in onAddFirstRuleOfKind(ruleKind) }
+    }
+    return UIMenu(title: "New Group — First Rule", children: actions)
+  }
+
+  /// The group card's ⋯ menu: the combinator (reachable even for a one-rule
+  /// group, which shows no chips) and the destructive removal.
+  static func makeGroupOptionsMenu(
+    combinator: SmartPlaylistCombinator,
+    onCombinatorChosen: @escaping (SmartPlaylistCombinator) -> (),
+    onDeleteGroupRequested: @escaping () -> ()
+  )
+    -> UIMenu {
+    let combinatorActions = SmartPlaylistCombinator.allCases.map { candidate in
+      UIAction(
+        title: candidate == .all ? "Match all of these" : "Match any of these",
+        state: candidate == combinator ? .on : .off
+      ) { _ in
+        onCombinatorChosen(candidate)
       }
-    return UIMenu(title: "Add Rule", children: actions)
+    }
+    let combinatorMenu = UIMenu(title: "", options: .displayInline, children: combinatorActions)
+    let deleteAction = UIAction(
+      title: "Delete Group",
+      image: UIImage(systemName: "trash"),
+      attributes: .destructive
+    ) { _ in
+      onDeleteGroupRequested()
+    }
+    let deleteMenu = UIMenu(title: "", options: .displayInline, children: [deleteAction])
+    return UIMenu(title: "Group", children: [combinatorMenu, deleteMenu])
   }
 
   /// The edit menu for a value-carrying rule, or `nil` for the playlist rules
@@ -83,9 +133,29 @@ enum SmartPlaylistRuleMenuBuilder {
         currentCount: currentCount,
         onRuleEdited: onRuleEdited
       )
+    case let .completeAlbum(isComplete):
+      return makeCompleteAlbumMenu(isComplete: isComplete, onRuleEdited: onRuleEdited)
     case .inPlaylist, .notInPlaylist:
       return nil
     }
+  }
+
+  // MARK: - Complete album
+
+  private static func makeCompleteAlbumMenu(
+    isComplete: Bool,
+    onRuleEdited: @escaping (SmartPlaylistRule) -> ()
+  )
+    -> UIMenu {
+    let actions = [true, false].map { isCompleteChoice in
+      UIAction(
+        title: SmartPlaylistRule.completeAlbum(isComplete: isCompleteChoice).displayText,
+        state: isCompleteChoice == isComplete ? .on : .off
+      ) { _ in
+        onRuleEdited(.completeAlbum(isComplete: isCompleteChoice))
+      }
+    }
+    return UIMenu(title: "Complete album", children: actions)
   }
 
   // MARK: - Added-within-days
