@@ -37,6 +37,23 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 84,
+      date: "2026-08-18",
+      title: "Build 84 — Smart Playlists: groups, and/or, complete albums",
+      whatsNew: [
+        "Smart playlist rules can now be combined with 'and' OR 'or', and grouped one level deep — so queries like 'added recently AND (never played OR in fewer than 2 playlists)' are expressible. Tap the connector chip between rules to flip a level between and/or; groups carry their own chips.",
+        "New rule: 'Part of a complete album' / 'Not part of a complete album' — using the same definition as the Albums view's complete-albums toggle (not a single, at least 3 tracks on the server).",
+        "Your existing smart playlist query and its frozen results carry over unchanged.",
+        "Refresh now also catches new songs added to albums you already had — previously an old album gaining new tracks could be invisible to 'added in the last X days'.",
+      ],
+      testingFocus: [
+        "Build a grouped query: add a rule, then + Add Group with two rules inside, and set the group to 'or' via its chip or ⋯ menu. Run it and sanity-check the results.",
+        "Tap an and/or chip between top-level rules — every chip at that level should flip together; the group's own chip should not move.",
+        "Add 'Not part of a complete album' to a query and confirm the results are loose tracks and singles, not full albums.",
+        "If you had a query from the last build, open Smart Playlists first thing and confirm it loaded intact without refreshing.",
+      ]
+    ),
+    ReleaseNote(
       id: 83,
       date: "2026-08-17",
       title: "Build 83 — Smart Playlists",
