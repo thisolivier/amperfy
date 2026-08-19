@@ -37,6 +37,23 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 85,
+      date: "2026-08-19",
+      title: "Build 85 — Flag wrong versions from the player",
+      whatsNew: [
+        "Heard a track that's the wrong version — a live cut, a remix, a bad rip that slipped through? Tap the new flag button next to the heart on the full-screen player (both display styles) to mark it for replacement.",
+        "You can add a short optional note with the flag ('this is the radio edit', 'clipping at 2:10'). Flags are fire-and-forget: they go straight to the server worklist and NaviAdmin picks them up from there — nothing changes in Amperfy.",
+        "Flagging the same song again just updates your note; it never creates duplicates.",
+        "The flag button only appears when a song is playing and you're online — it stays out of the way for radio, podcasts and offline listening.",
+      ],
+      testingFocus: [
+        "Play a song, open the full player, tap the flag next to the heart, add a note, and confirm the 'Flagged' banner appears.",
+        "Flag a song you're playing from a playlist and check (in NaviAdmin, next build) that the playlist name came through with it.",
+        "Switch the player display style in Settings and confirm the flag button is in both layouts.",
+        "Toggle offline mode and confirm the flag button disappears.",
+      ]
+    ),
+    ReleaseNote(
       id: 84,
       date: "2026-08-18",
       title: "Build 84 — Smart Playlists: groups, and/or, complete albums",
