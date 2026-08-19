@@ -154,6 +154,7 @@ public struct AmperfyImage: Sendable {
   public static let equalizer = Self("chart.bar.xaxis")
   public static let exclamation = Self("exclamationmark")
   public static let filter = Self("line.3.horizontal.decrease")
+  public static let flag = Self("flag")
   public static let followLink = Self("arrowshape.turn.up.forward.fill")
   public static let folder = Self("folder.fill")
   public static let forwardFill = Self("forward.fill")

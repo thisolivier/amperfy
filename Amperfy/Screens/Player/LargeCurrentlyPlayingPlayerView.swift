@@ -149,6 +149,9 @@ class LargeCurrentlyPlayingPlayerView: UIView, UIGestureRecognizerDelegate {
   weak var artistLabel: MarqueeLabel!
   @IBOutlet
   weak var favoriteButton: UIButton!
+  /// "Wrong version" flag — sits between the labels and the heart.
+  @IBOutlet
+  weak var flagButton: UIButton!
   @IBOutlet
   weak var optionsButton: UIButton!
 
@@ -210,6 +213,9 @@ class LargeCurrentlyPlayingPlayerView: UIView, UIGestureRecognizerDelegate {
   @objc
   private func refreshOfflineMode() {
     refreshRating()
+    // The wrong-version flag is online-only, so it has to react to the toggle
+    // while the player is already on screen.
+    rootView?.refreshFlagButton(button: flagButton)
   }
 
   private func setupRatingView() {
@@ -435,6 +441,7 @@ class LargeCurrentlyPlayingPlayerView: UIView, UIGestureRecognizerDelegate {
       albumContainerView: albumContainerView
     )
     rootView?.refreshFavoriteButton(button: favoriteButton)
+    rootView?.refreshFlagButton(button: flagButton)
     rootView?.refreshOptionButton(button: optionsButton, rootView: rootView)
     refreshRating()
     display(element: displayElement)
@@ -486,6 +493,11 @@ class LargeCurrentlyPlayingPlayerView: UIView, UIGestureRecognizerDelegate {
   func favoritePressed(_ sender: Any) {
     rootView?.favoritePressed()
     rootView?.refreshFavoriteButton(button: favoriteButton)
+  }
+
+  @IBAction
+  func flagPressed(_ sender: Any) {
+    rootView?.flagPressed()
   }
 }
 

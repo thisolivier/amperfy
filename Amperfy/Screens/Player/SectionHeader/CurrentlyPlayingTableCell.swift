@@ -36,6 +36,9 @@ class CurrentlyPlayingTableCell: BasicTableCell {
   weak var artistLabel: MarqueeLabel!
   @IBOutlet
   weak var favoriteButton: UIButton!
+  /// "Wrong version" flag — compact-player twin of the large player's button.
+  @IBOutlet
+  weak var flagButton: UIButton!
   @IBOutlet
   weak var optionsButton: UIButton!
 
@@ -57,6 +60,7 @@ class CurrentlyPlayingTableCell: BasicTableCell {
       artistLabel: artistLabel
     )
     rootView?.refreshFavoriteButton(button: favoriteButton)
+    rootView?.refreshFlagButton(button: flagButton)
     rootView?.refreshOptionButton(button: optionsButton, rootView: rootView)
   }
 
@@ -85,5 +89,10 @@ class CurrentlyPlayingTableCell: BasicTableCell {
   func favoritePressed(_ sender: Any) {
     rootView?.favoritePressed()
     rootView?.refreshFavoriteButton(button: favoriteButton)
+  }
+
+  @IBAction
+  func flagPressed(_ sender: Any) {
+    rootView?.flagPressed()
   }
 }

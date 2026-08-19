@@ -103,6 +103,7 @@ extension UIImage {
   public static let equalizer = UIImage.create(systemName: AmperfyImage.equalizer.systemName)
   public static let exclamation = UIImage.create(systemName: AmperfyImage.exclamation.systemName)
   public static let filter = UIImage.create(systemName: AmperfyImage.filter.systemName)
+  public static let flag = UIImage.create(systemName: AmperfyImage.flag.systemName)
   public static let followLink = UIImage.create(systemName: AmperfyImage.followLink.systemName)
   public static let folder = UIImage.create(systemName: AmperfyImage.folder.systemName)
   public static let forwardFill = UIImage.create(systemName: AmperfyImage.forwardFill.systemName)

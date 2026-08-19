@@ -627,6 +627,9 @@
 		5A47B3030000000000000001 /* SmartPlaylistRefresherTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B3030000000000000002 /* SmartPlaylistRefresherTest.swift */; };
 		5A47B1070000000000000001 /* SmartPlaylistStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B1070000000000000002 /* SmartPlaylistStoreTest.swift */; };
 		5A47B1080000000000000001 /* SsSongPlayDataParserTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B1080000000000000002 /* SsSongPlayDataParserTest.swift */; };
+		5A47B5010000000000000001 /* WrongVersionFlagService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B5010000000000000002 /* WrongVersionFlagService.swift */; };
+		5A47B5020000000000000001 /* WrongVersionFlagServiceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B5020000000000000002 /* WrongVersionFlagServiceTest.swift */; };
+		5A47B6010000000000000001 /* PlayerToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A47B6010000000000000002 /* PlayerToast.swift */; };
 		A5B0730000000000000050A0 /* RecentTracksPlaybackResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0740000000000000050A0 /* RecentTracksPlaybackResolver.swift */; };
 		A5B0810000000000000050A0 /* RecentTracksDetailVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0820000000000000050A0 /* RecentTracksDetailVC.swift */; };
 		A5B0910000000000000050A0 /* RecentTracksQueryTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B0920000000000000050A0 /* RecentTracksQueryTest.swift */; };
@@ -1462,6 +1465,9 @@
 		5A47B3030000000000000002 /* SmartPlaylistRefresherTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistRefresherTest.swift; sourceTree = "<group>"; };
 		5A47B1070000000000000002 /* SmartPlaylistStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPlaylistStoreTest.swift; sourceTree = "<group>"; };
 		5A47B1080000000000000002 /* SsSongPlayDataParserTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SsSongPlayDataParserTest.swift; sourceTree = "<group>"; };
+		5A47B5010000000000000002 /* WrongVersionFlagService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrongVersionFlagService.swift; sourceTree = "<group>"; };
+		5A47B6010000000000000002 /* PlayerToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerToast.swift; sourceTree = "<group>"; };
+		5A47B5020000000000000002 /* WrongVersionFlagServiceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrongVersionFlagServiceTest.swift; sourceTree = "<group>"; };
 		A5B0740000000000000050A0 /* RecentTracksPlaybackResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksPlaybackResolver.swift; sourceTree = "<group>"; };
 		A5B0820000000000000050A0 /* RecentTracksDetailVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksDetailVC.swift; sourceTree = "<group>"; };
 		A5B0920000000000000050A0 /* RecentTracksQueryTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTracksQueryTest.swift; sourceTree = "<group>"; };
@@ -1799,6 +1805,7 @@
 				50A30E4E2B73DDC800722894 /* PlayerControlView.xib */,
 				50A30E4D2B73DDC800722894 /* PlayerControlView.swift */,
 				50FA36522F560D670058AB56 /* SeekableTimeSlider.swift */,
+				5A47B6010000000000000002 /* PlayerToast.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -2446,6 +2453,7 @@
 				50C9D608284FA847007F18D0 /* AmperfyKit.docc */,
 				D82360C23C32FC384CBD6AE5 /* Discovery */,
 				D5BE193ACABE70A06767F2E1 /* Gigs */,
+				5A47B5030000000000000001 /* Flags */,
 				5A47B1050000000000000001 /* SmartPlaylists */,
 			);
 			path = AmperfyKit;
@@ -2661,6 +2669,7 @@
 				A5F0F120000000000000090A0 /* EntityImageViewTest.swift */,
 				90BF3DB6220365B91946CF9C /* Discovery */,
 				DF6A6016D6EDA5D5F01081F7 /* Gigs */,
+				5A47B5040000000000000001 /* Flags */,
 				5A47B1090000000000000001 /* SmartPlaylists */,
 			);
 			path = Cases;
@@ -2876,6 +2885,24 @@
 			);
 			name = Discovery;
 			path = Discovery;
+			sourceTree = "<group>";
+		};
+		5A47B5030000000000000001 /* Flags */ = {
+			isa = PBXGroup;
+			children = (
+				5A47B5010000000000000002 /* WrongVersionFlagService.swift */,
+			);
+			name = Flags;
+			path = Flags;
+			sourceTree = "<group>";
+		};
+		5A47B5040000000000000001 /* Flags */ = {
+			isa = PBXGroup;
+			children = (
+				5A47B5020000000000000002 /* WrongVersionFlagServiceTest.swift */,
+			);
+			name = Flags;
+			path = Flags;
 			sourceTree = "<group>";
 		};
 		D5BE193ACABE70A06767F2E1 /* Gigs */ = {
@@ -3361,6 +3388,7 @@
 				5047B7082E3CB90C00D5090C /* PlayerUIHandler.swift in Sources */,
 				504B442228D8EBB20033982C /* MailView.swift in Sources */,
 				5058709021DEBBCA0043896F /* PopupPlayerVC.swift in Sources */,
+				5A47B6010000000000000001 /* PlayerToast.swift in Sources */,
 				50E936DB2F100C7800C1C504 /* RatingAppEnum.swift in Sources */,
 				50E936D92F0FF9F200C1C504 /* AmperfyAppShortcuts.swift in Sources */,
 				50CFB59A28D5009200A47D44 /* ArtworkDownloadSettingsView.swift in Sources */,
@@ -3793,6 +3821,7 @@
 				28E14B7CC4576B74D8E23B92 /* GigsSettings.swift in Sources */,
 				820116EAAD6B70D7EFED54D1 /* GigsService.swift in Sources */,
 				A01EA392A2025BBDB48330B7 /* GigsWeekGrouper.swift in Sources */,
+				5A47B5010000000000000001 /* WrongVersionFlagService.swift in Sources */,
 				8D38143FA6DB5072615741F6 /* PopupExplorationNavigationResolver.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3898,6 +3927,7 @@
 				50BE5D942850F51E00156FC6 /* UnitTestHelper.swift in Sources */,
 				50AE79B82C1F68090085CBB3 /* SsLyricsBySongId2ParserTest.swift in Sources */,
 				102E05769BFF825739DC8487 /* AdjacencySidecarClientTest.swift in Sources */,
+				5A47B5020000000000000001 /* WrongVersionFlagServiceTest.swift in Sources */,
 				795F083AEE4DAE91A5422E99 /* DiscoveryTelemetryTest.swift in Sources */,
 				F2F8AAFD25B944821E9AAC24 /* AdjacencySidecarSettingsTest.swift in Sources */,
 				7A11FACE0005BEEF00000005 /* AdjacencyGatewayRouteTest.swift in Sources */,

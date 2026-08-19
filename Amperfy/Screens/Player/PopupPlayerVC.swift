@@ -258,6 +258,92 @@ class PopupPlayerVC: UIViewController, UIScrollViewDelegate {
     }
   }
 
+  /// "Wrong version" flag (docs/WRONG_VERSION_FLAGS_SPEC.md, Build 1).
+  /// Presents a confirmation alert with an OPTIONAL note, then fires one POST
+  /// at soulseek-navi-server and forgets about it — nothing is read back, and
+  /// a failure is reported rather than queued for retry.
+  func flagPressed() {
+    guard let song = player.currentlyPlaying?.asSong else { return }
+
+    let alert = UIAlertController(
+      title: "Flag Wrong Version",
+      message: "Mark \"\(song.title)\" for replacement. Add a note if it helps.",
+      preferredStyle: .alert
+    )
+    alert.addTextField { $0.placeholder = "Optional note" }
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(UIAlertAction(title: "Flag", style: .destructive) { [weak self] _ in
+      guard let self else { return }
+      let enteredNote = (alert.textFields?.first?.text ?? "")
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+      submitWrongVersionFlag(song: song, note: enteredNote.isEmpty ? nil : enteredNote)
+    })
+    present(alert, animated: true)
+  }
+
+  private func submitWrongVersionFlag(song: Song, note: String?) {
+    let service = WrongVersionFlagService()
+
+    // Fail fast when there is nowhere to send the flag: no POST is attempted,
+    // but the user still gets the same visible failure feedback as a network
+    // error would produce.
+    guard service.isConfigured else {
+      reportWrongVersionFlagFailure(error: WrongVersionFlagError.notConfigured)
+      return
+    }
+
+    let payload = WrongVersionFlagPayload(
+      songId: song.id,
+      title: song.title,
+      artist: song.creatorName,
+      album: song.album?.name,
+      note: note,
+      contextName: player.contextName
+    )
+    Task { @MainActor in
+      do {
+        try await service.submitFlag(payload)
+        Haptics.success.vibrate(
+          isHapticsEnabled: self.appDelegate.storage.settings.user.isHapticsEnabled
+        )
+        // The event log still gets the entry (it shows up in the in-app event
+        // history), but it cannot be relied on for *visible* feedback here:
+        // eventLogger banners are suppressed while a view controller is
+        // presented, and this player is itself a presented sheet. Hence the
+        // in-player toast below — see PlayerToast.swift.
+        self.appDelegate.eventLogger.info(
+          topic: "Wrong Version",
+          message: Self.wrongVersionFlagSuccessMessage,
+          displayPopup: true
+        )
+        self.showPlayerToast(
+          message: Self.wrongVersionFlagSuccessMessage,
+          style: .success
+        )
+      } catch {
+        self.reportWrongVersionFlagFailure(error: error)
+      }
+    }
+  }
+
+  private static let wrongVersionFlagSuccessMessage = "Flagged — visible in NaviAdmin"
+
+  /// Failure path for the wrong-version flag: nothing is queued or retried,
+  /// so the user MUST see that the flag was lost. The event log entry is kept
+  /// for the history, the toast is what is actually visible.
+  private func reportWrongVersionFlagFailure(error: Error) {
+    appDelegate.eventLogger.report(topic: "Wrong Version", error: error)
+    let reason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+    showPlayerToast(message: reason, style: .failure)
+  }
+
+  /// Shows a transient capsule inside the player. Works in both display
+  /// styles because it is attached to this VC's root view, which hosts the
+  /// large and the compact layout alike.
+  func showPlayerToast(message: String, style: PlayerToast.Style) {
+    PlayerToast.show(message: message, style: style, in: view)
+  }
+
   func displayArtistDetail() {
     if let song = player.currentlyPlaying?.asSong, let artist = song.artist,
        let account = artist.account {

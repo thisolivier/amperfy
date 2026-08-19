@@ -52,6 +52,22 @@
                         <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="syN-Kp-zH0" userLabel="Details View">
                             <rect key="frame" x="0.0" y="547" width="375" height="100"/>
                             <subviews>
+                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" preferredBehavioralStyle="pad" translatesAutoresizingMaskIntoConstraints="NO" id="Fl9-Vr-8Qm" userLabel="Flag Wrong Version">
+                                    <rect key="frame" x="249" y="35" width="30" height="30"/>
+                                    <constraints>
+                                        <constraint firstAttribute="width" constant="30" id="Fw1-Kb-2Zt"/>
+                                        <constraint firstAttribute="width" secondItem="Fl9-Vr-8Qm" secondAttribute="height" multiplier="1:1" id="Fa2-Nc-7Yd"/>
+                                    </constraints>
+                                    <color key="tintColor" systemColor="labelColor"/>
+                                    <state key="normal" title="Button"/>
+                                    <buttonConfiguration key="configuration" style="gray" buttonSize="small">
+                                        <imageReference key="image" image="flag" catalog="system" symbolScale="medium"/>
+                                        <backgroundConfiguration key="background"/>
+                                    </buttonConfiguration>
+                                    <connections>
+                                        <action selector="flagPressed:" destination="iN0-l3-epB" eventType="touchUpInside" id="Fp3-Qe-4Rk"/>
+                                    </connections>
+                                </button>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" preferredBehavioralStyle="pad" translatesAutoresizingMaskIntoConstraints="NO" id="5ux-aQ-e6U" userLabel="Favorite">
                                     <rect key="frame" x="289" y="35" width="30" height="30"/>
                                     <constraints>
@@ -189,7 +205,9 @@
                                 <constraint firstItem="cYG-VG-BvQ" firstAttribute="centerY" secondItem="5ux-aQ-e6U" secondAttribute="centerY" id="PmX-Eh-5p1"/>
                                 <constraint firstItem="b5r-cU-1SI" firstAttribute="centerY" secondItem="syN-Kp-zH0" secondAttribute="centerY" id="QYi-fb-3rA"/>
                                 <constraint firstAttribute="trailing" secondItem="cYG-VG-BvQ" secondAttribute="trailing" constant="16" id="Sp1-PC-4dC"/>
-                                <constraint firstItem="5ux-aQ-e6U" firstAttribute="leading" secondItem="b5r-cU-1SI" secondAttribute="trailing" constant="8" id="cGH-3U-IaS"/>
+                                <constraint firstItem="Fl9-Vr-8Qm" firstAttribute="leading" secondItem="b5r-cU-1SI" secondAttribute="trailing" constant="8" id="cGH-3U-IaS"/>
+                                <constraint firstItem="5ux-aQ-e6U" firstAttribute="leading" secondItem="Fl9-Vr-8Qm" secondAttribute="trailing" constant="10" id="Fc6-Jn-5Wc"/>
+                                <constraint firstItem="Fl9-Vr-8Qm" firstAttribute="centerY" secondItem="5ux-aQ-e6U" secondAttribute="centerY" id="Fc7-Kp-6Xd"/>
                                 <constraint firstItem="b5r-cU-1SI" firstAttribute="leading" secondItem="syN-Kp-zH0" secondAttribute="leading" constant="16" id="o4c-mq-T4g"/>
                                 <constraint firstAttribute="height" constant="100" id="rMT-3W-9ox"/>
                             </constraints>
@@ -212,6 +230,7 @@
                 <outlet property="artworkImage" destination="4sr-YU-gYi" id="Ln2-PH-VFz"/>
                 <outlet property="detailsContainer" destination="syN-Kp-zH0" id="ZIp-y8-gCh"/>
                 <outlet property="favoriteButton" destination="5ux-aQ-e6U" id="DB3-56-C7w"/>
+                <outlet property="flagButton" destination="Fl9-Vr-8Qm" id="Fo4-Tz-9Ln"/>
                 <outlet property="optionsButton" destination="cYG-VG-BvQ" id="074-0X-dKf"/>
                 <outlet property="titleLabel" destination="B6V-RA-yV3" id="yUd-j1-8AA"/>
                 <outlet property="upperContainerView" destination="ia9-ph-a9C" id="EdU-TJ-xZh"/>
@@ -221,6 +240,7 @@
     </objects>
     <resources>
         <image name="ellipsis" catalog="system" width="128" height="37"/>
+        <image name="flag" catalog="system" width="128" height="113"/>
         <image name="heart" catalog="system" width="128" height="107"/>
         <systemColor name="labelColor">
             <color white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>

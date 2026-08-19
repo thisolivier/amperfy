@@ -105,6 +105,24 @@ extension PopupPlayerVC {
     button.configuration = config
   }
 
+  /// "Wrong version" flag button (spec: docs/WRONG_VERSION_FLAGS_SPEC.md).
+  /// Songs only, online only: the flag is a server round-trip about a library
+  /// file, so radio, podcast episodes and offline mode all hide it rather than
+  /// offering a tap that could not do anything. Same visibility rule in both
+  /// display styles (large player + compact currently-playing cell).
+  func refreshFlagButton(button: UIButton) {
+    var config = UIButton.Configuration.playerRound()
+    config.image = .flag
+    config.baseForegroundColor = .label
+    button.configuration = config
+
+    let isSongPlaying = player.playerMode == .music &&
+      (player.currentlyPlaying?.isSong ?? false)
+    let isAvailable = isSongPlaying && appDelegate.storage.settings.user.isOnlineMode
+    button.isHidden = !isAvailable
+    button.isEnabled = isAvailable
+  }
+
   func refreshBackgroundItemArtwork() {
     var artwork: UIImage?
     var themePreference: ThemePreference = appDelegate.storage.settings.accounts.activeSetting.read
