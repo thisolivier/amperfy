@@ -1,6 +1,6 @@
 > **Fork notice** — this is a personal fork of [BLeeEZ/amperfy](https://github.com/BLeeEZ/amperfy), carrying custom features for a self-hosted Navidrome setup. Upstream's README follows unchanged below.
 >
-> Part of the musicLibrary workshop: **amperfy** · [shazam-soulseek-server](https://github.com/thisolivier/shazam-soulseek-server) · [musiclibrary-gateway](https://github.com/thisolivier/musiclibrary-gateway) · [naviadmin](https://github.com/thisolivier/naviadmin) · [musiclibrary-docs](https://github.com/thisolivier/musiclibrary-docs)
+> Part of the musicLibrary workshop: **amperfy** · [shazam-soulseek-server](https://github.com/thisolivier/shazam-soulseek-server) · [musiclibrary-gateway](https://github.com/thisolivier/musiclibrary-gateway) · [naviadmin](https://github.com/thisolivier/naviadmin) · [musiclibrary-docs](https://github.com/thisolivier/musiclibrary-docs) · [musiclibrary-claude](https://github.com/thisolivier/musiclibrary-claude) · [musiclibrary-metadata-sidecar](https://github.com/thisolivier/musiclibrary-metadata-sidecar) · [musiclibrary-iosnative](https://github.com/thisolivier/musiclibrary-iosnative)
 
 # ![Logo](.github/Icon-40.png) Amperfy
 
