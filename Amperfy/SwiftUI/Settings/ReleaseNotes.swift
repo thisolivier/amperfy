@@ -37,6 +37,20 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 87,
+      date: "2026-08-24",
+      title: "Build 87 — Playlist membership shows up on its own",
+      whatsNew: [
+        "Fixed: songs now show which playlists they're in without you having to open each playlist first. The background playlist sync was timing out while it waited behind the album scan, so it never actually ran.",
+        "Playlist syncing also resumes automatically when you come back to the app, so a sync that ran out of time picks up where it left off instead of starting from nothing.",
+      ],
+      testingFocus: [
+        "On a fresh login, leave the app open for a few minutes, then open a song you haven't visited — its 'in playlists' information should already be filled in.",
+        "Background the app mid-sync and return to it; playlist syncing should carry on rather than stall.",
+        "Open a playlist directly and pull to refresh — its contents should still load as before.",
+      ]
+    ),
+    ReleaseNote(
       id: 86,
       date: "2026-08-24",
       title: "Build 86 — Select Tracks checkboxes actually select",
