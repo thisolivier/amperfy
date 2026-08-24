@@ -399,10 +399,10 @@ class PlayableTableCell: BasicTableCell {
     #if targetEnvironment(macCatalyst) // ok
       hoverGestureRecognizer.isEnabled = (displayMode == .normal)
       isHovered = false
-      doubleTapGestureRecognizer.isEnabled = (displayMode == .normal)
+      doubleTapGestureRecognizer.isEnabled = (displayMode == .normal) && !isEditing
       register()
     #else
-      singleTapGestureRecognizer.isEnabled = (displayMode == .normal)
+      singleTapGestureRecognizer.isEnabled = (displayMode == .normal) && !isEditing
     #endif
     backgroundColor = ThemeStore.shared.dynamicBackground ?? .systemBackground
     registerForDownloadFinishIfNeeded()
@@ -746,6 +746,19 @@ class PlayableTableCell: BasicTableCell {
     }
   }
 
+  /// Tap-to-play must yield to the table's Edit mode: while editing, a row tap
+  /// has to reach UIKit's selection path (multi-select checkmarks, swipe-delete
+  /// dismissal) instead of being swallowed by the cell's own play gesture. The
+  /// table calls this on visible cells whenever its editing state flips.
+  override func setEditing(_ editing: Bool, animated: Bool) {
+    super.setEditing(editing, animated: animated)
+    #if targetEnvironment(macCatalyst) // ok
+      doubleTapGestureRecognizer.isEnabled = (displayMode == .normal) && !editing
+    #else
+      singleTapGestureRecognizer.isEnabled = (displayMode == .normal) && !editing
+    #endif
+  }
+
   override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
     playIndicator?.applyStyle()
   }
@@ -852,7 +865,9 @@ class PlayableTableCell: BasicTableCell {
     func doubleTap(sender: UITapGestureRecognizer) {
       switch sender.state {
       case .ended:
-        if displayMode == .normal {
+        // isEditing backstop: the recognizer is disabled while editing, but a
+        // cell configured mid-reload can briefly race that state.
+        if displayMode == .normal, !isEditing {
           playThisSong()
         }
       default:
@@ -884,7 +899,9 @@ class PlayableTableCell: BasicTableCell {
     func singleTap(sender: UITapGestureRecognizer) {
       switch sender.state {
       case .ended:
-        if displayMode == .normal {
+        // isEditing backstop: the recognizer is disabled while editing, but a
+        // cell configured mid-reload can briefly race that state.
+        if displayMode == .normal, !isEditing {
           playThisSong()
         }
       default:

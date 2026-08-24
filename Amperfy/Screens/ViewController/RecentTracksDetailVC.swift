@@ -523,6 +523,13 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
     if !editing {
       selection.clear()
     }
+    // Already-visible cells: flip selectionStyle so the multi-select checkmarks
+    // can render (UIKit skips them on `.none`); restore `.none` on exit to keep
+    // the tap-to-play cells unhighlighted. Newly dequeued cells are covered in
+    // cellForRowAt.
+    for case let playableCell as PlayableTableCell in tableView.visibleCells {
+      playableCell.selectionStyle = editing ? .default : .none
+    }
     editActionBar.isHidden = !editing
     tableView.contentInset.bottom = editing ? Self.editActionBarHeight : 0
     // The options menu's "Select Tracks"/"Done" label depends on isEditing;
@@ -577,6 +584,11 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
   )
     -> UITableViewCell {
     let cell: PlayableTableCell = dequeueCell(for: tableView, at: indexPath)
+    // UIKit only renders the Edit-mode multi-select checkmark when the cell's
+    // selectionStyle is not `.none` (which PlayableTableCell hardcodes for its
+    // tap-to-play look). Covers cells configured while Edit mode is active;
+    // setEditing(_:animated:) below handles the already-visible ones.
+    cell.selectionStyle = isEditing ? .default : .none
     if let song = songs.element(at: indexPath.row) {
       cell.display(
         playable: song,

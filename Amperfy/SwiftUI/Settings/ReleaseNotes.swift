@@ -37,6 +37,20 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 86,
+      date: "2026-08-24",
+      title: "Build 86 — Select Tracks checkboxes actually select",
+      whatsNew: [
+        "Fixed: in Recently Added Tracks, tapping a checkbox in 'Select Tracks' mode now toggles selection instead of starting playback. The row's tap-to-play was swallowing the tap, so you'd get music playing and nothing ticked.",
+        "The selection checkmarks now render properly while you're in Select Tracks mode, so you can see what you've picked before filing it.",
+      ],
+      testingFocus: [
+        "Open Recently Added Tracks, tap options → 'Select Tracks', then tap a few rows. Each should tick a checkmark and nothing should start playing.",
+        "Use 'Select All', then 'Add to Playlist…' and confirm the tracks you ticked are the ones that get filed.",
+        "Tap Done to leave Select Tracks mode, then tap a row — it should play the song as usual, with no leftover selection highlight.",
+      ]
+    ),
+    ReleaseNote(
       id: 85,
       date: "2026-08-19",
       title: "Build 85 — Flag wrong versions from the player",
