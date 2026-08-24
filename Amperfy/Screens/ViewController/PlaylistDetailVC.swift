@@ -282,11 +282,26 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
           playableDownloadManager: self.appDelegate.getMeta(self.account.info)
             .playableDownloadManager
         )
+        self.recordItemsSynced()
       } catch {
         self.appDelegate.eventLogger.report(topic: "Playlist Sync", error: error)
       }
       self.detailOperationsView?.refresh()
     }
+  }
+
+  /// Opening a playlist fetches its items, which is exactly what
+  /// `PlaylistSyncWorker` does in the background. Tell the tracker, so the
+  /// background pass skips this playlist and the "Show in Playlists"
+  /// completeness signal counts the work this screen already did.
+  @MainActor
+  private func recordItemsSynced() {
+    guard !playlist.isSmartPlaylist else { return }
+    PlaylistItemsSyncTracker.shared.markSyncedIfFetchLanded(
+      playlist.id,
+      localItemCount: playlist.localItemCount,
+      remoteSongCount: playlist.remoteSongCount
+    )
   }
 
   func refreshBarButtons() {
@@ -345,6 +360,7 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
       do {
         try await self.appDelegate.getMeta(self.account.info).librarySyncer
           .syncDown(playlist: playlist)
+        self.recordItemsSynced()
       } catch {
         self.appDelegate.eventLogger.report(topic: "Playlist Sync", error: error)
       }

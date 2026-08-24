@@ -229,4 +229,56 @@ class PlaylistItemsSyncTrackerTest: XCTestCase {
       "New baseline recorded → no further invalidation"
     )
   }
+
+  // MARK: - markSyncedIfFetchLanded — the silent-offline-no-op fix
+
+  /// `syncDown(playlist:)` opens with `guard isSyncAllowed else { return }`, so
+  /// a connectivity blip returns successfully having fetched nothing. Marking
+  /// the playlist synced then records a lie that `reconcile` can never detect
+  /// (there is no remote-count CHANGE to spot), permanently hiding the
+  /// playlist's membership.
+  func testMarkSyncedIfFetchLandedDoesNotMarkWhenNoItemsWereFetched() {
+    let wasMarked = tracker.markSyncedIfFetchLanded(
+      "pl-offline",
+      localItemCount: 0,
+      remoteSongCount: 12
+    )
+    XCTAssertFalse(wasMarked, "A sync that fetched nothing must not report success")
+    XCTAssertFalse(
+      tracker.isSynced("pl-offline"),
+      "Silently skipped sync must leave the playlist unsynced so it is retried"
+    )
+  }
+
+  func testMarkSyncedIfFetchLandedMarksWhenItemsArrived() {
+    let wasMarked = tracker.markSyncedIfFetchLanded(
+      "pl-fetched",
+      localItemCount: 12,
+      remoteSongCount: 12
+    )
+    XCTAssertTrue(wasMarked)
+    XCTAssertTrue(tracker.isSynced("pl-fetched"))
+  }
+
+  /// A genuinely empty playlist has nothing to fetch, so zero local items is
+  /// the correct outcome rather than evidence of a skipped sync.
+  func testMarkSyncedIfFetchLandedMarksGenuinelyEmptyPlaylist() {
+    let wasMarked = tracker.markSyncedIfFetchLanded(
+      "pl-empty",
+      localItemCount: 0,
+      remoteSongCount: 0
+    )
+    XCTAssertTrue(wasMarked)
+    XCTAssertTrue(tracker.isSynced("pl-empty"))
+  }
+
+  /// The recorded baseline must still be written, so a later server edit is
+  /// detectable exactly as it is via `markSynced(_:remoteSongCount:)`.
+  func testMarkSyncedIfFetchLandedRecordsRemoteBaseline() {
+    tracker.markSyncedIfFetchLanded("pl-baseline", localItemCount: 5, remoteSongCount: 5)
+    XCTAssertTrue(
+      tracker.reconcile(playlistId: "pl-baseline", remoteSongCount: 9),
+      "Baseline recorded at mark time → a later count change invalidates"
+    )
+  }
 }

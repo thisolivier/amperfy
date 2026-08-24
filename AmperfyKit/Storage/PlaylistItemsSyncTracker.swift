@@ -93,6 +93,31 @@ public final class PlaylistItemsSyncTracker: @unchecked Sendable {
     lastSyncedRemoteCounts = counts
   }
 
+  /// Marks a playlist synced only when there is evidence the item fetch actually
+  /// landed. Returns `true` if the playlist was marked.
+  ///
+  /// The syncers open `syncDown(playlist:)` with `guard isSyncAllowed else
+  /// { return }`, so a connectivity blip or a flip into offline mode makes the
+  /// call succeed while fetching nothing at all. An unconditional `markSynced`
+  /// after that records a lie the tracker never revisits — `reconcile` only
+  /// invalidates on a CHANGE in the remote count, and a playlist we never
+  /// fetched has no such change to detect — which is exactly how "Show in
+  /// Playlists" ends up asserting a confident, wrong "not in any playlists".
+  ///
+  /// Evidence is either local items present, or a server that genuinely
+  /// advertises an empty playlist (nothing to fetch, so nothing to prove).
+  @discardableResult
+  public func markSyncedIfFetchLanded(
+    _ playlistId: String,
+    localItemCount: Int,
+    remoteSongCount: Int
+  )
+    -> Bool {
+    guard localItemCount > 0 || remoteSongCount == 0 else { return false }
+    markSynced(playlistId, remoteSongCount: remoteSongCount)
+    return true
+  }
+
   public func markSynced(_ playlistIds: [String]) {
     var current = syncedIds
     playlistIds.forEach { current.insert($0) }

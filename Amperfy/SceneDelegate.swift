@@ -204,6 +204,21 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     // Use this method to undo the changes made on entering the background.
     os_log("sceneWillEnterForeground", log: self.log, type: .info)
     appDelegate.setForegroundState(true)
+    resumePlaylistItemSyncIfNeeded()
+  }
+
+  /// A playlist item sync that hit its watchdog, was cancelled, or was cut short
+  /// by the app being backgrounded only loses the tail — every playlist it did
+  /// reach stays marked synced. Re-enqueueing on each foreground picks up the
+  /// remainder instead of waiting for the next full library sync. The runner's
+  /// idempotence guard makes this a no-op while a sync is already in flight.
+  private func resumePlaylistItemSyncIfNeeded() {
+    guard appDelegate.isNormalInteraction else { return }
+    guard BackgroundTaskRunner.shared.hasRegisteredWorker(for: .playlistItemSync)
+    else { return }
+    BackgroundTaskRunner.shared.enqueue(
+      TaskDescriptor(kind: .playlistItemSync, triggerReason: .scheduled)
+    )
   }
 
   func sceneDidEnterBackground(_ scene: UIScene) {

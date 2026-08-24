@@ -188,8 +188,22 @@ public final class PlaylistSyncWorker: BackgroundTaskWorker, @unchecked Sendable
       try await librarySyncer.syncDown(playlist: playlist)
       // Record the remote count at sync time so a later reconcile can detect a
       // genuine server edit (count change) rather than churning on the
-      // permanent podcast/unavailable local-vs-remote gap.
-      tracker.markSynced(playlistId, remoteSongCount: playlist.remoteSongCount)
+      // permanent podcast/unavailable local-vs-remote gap. Guarded because
+      // `syncDown` silently no-ops when the syncer is not allowed to sync — see
+      // `markSyncedIfFetchLanded`.
+      let wasMarkedSynced = tracker.markSyncedIfFetchLanded(
+        playlistId,
+        localItemCount: playlist.localItemCount,
+        remoteSongCount: playlist.remoteSongCount
+      )
+      if !wasMarkedSynced {
+        os_log(
+          "PlaylistSyncWorker: playlist \"%s\" fetched no items, leaving it unsynced",
+          log: log,
+          type: .info,
+          playlist.name
+        )
+      }
     } catch {
       eventLogger.report(
         topic: "Playlist Items Background Sync",
