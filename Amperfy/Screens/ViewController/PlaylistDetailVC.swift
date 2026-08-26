@@ -327,6 +327,11 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
       account: account,
       playlist: playlist
     )
+    // open the edit modal pre-scrolled to where the user is in this list
+    if let firstVisibleRow = tableView.indexPathsForVisibleRows?.first?.row,
+       firstVisibleRow > 0 {
+      playlistDetailVC.initialScrollRowIndex = firstVisibleRow
+    }
     let playlistDetailNav = UINavigationController(rootViewController: playlistDetailVC)
     playlistDetailVC.onDoneCB = {
       self.detailOperationsView?.refresh()

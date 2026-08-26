@@ -39,6 +39,8 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
 
   let playlist: Playlist
   var onDoneCB: VoidFunctionCallback?
+  /// row to pre-scroll to on first layout, mirroring the presenting list's position
+  var initialScrollRowIndex: Int?
 
   private var doneButton: UIBarButtonItem!
   private var selectBarButton: UIBarButtonItem!
@@ -207,6 +209,26 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
   override func viewIsAppearing(_ animated: Bool) {
     super.viewIsAppearing(animated)
     extendSafeAreaToAccountForMiniPlayer()
+  }
+
+  override func viewDidLayoutSubviews() {
+    super.viewDidLayoutSubviews()
+    scrollToInitialRowIfNeeded()
+  }
+
+  /// One-shot: runs on the first layout pass in which the rows exist, so the
+  /// modal appears already scrolled instead of visibly jumping.
+  private func scrollToInitialRowIfNeeded() {
+    guard let rowIndex = initialScrollRowIndex,
+          tableView.numberOfSections > 0 else { return }
+    let rowCount = tableView.numberOfRows(inSection: 0)
+    guard rowCount > 0 else { return }
+    initialScrollRowIndex = nil
+    tableView.scrollToRow(
+      at: IndexPath(row: min(rowIndex, rowCount - 1), section: 0),
+      at: .top,
+      animated: false
+    )
   }
 
   override func viewDidDisappear(_ animated: Bool) {

@@ -37,6 +37,20 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 90,
+      date: "2026-08-26",
+      title: "Build 90 — Edit opens where you were",
+      whatsNew: [
+        "Opening the playlist editor now starts scrolled to wherever you were in the playlist, instead of jumping back to the top. Editing something 200 songs down no longer means scrolling there twice.",
+        "If you were at the top of the playlist, the editor opens at the top as before, header and all.",
+      ],
+      testingFocus: [
+        "Scroll deep into a long playlist, open … → Edit — the editor should open at the same songs, with no visible jump.",
+        "Open Edit while at the very top — the editor should show the header and the first songs as before.",
+        "Closing the editor should leave the original playlist view's scroll position untouched.",
+      ]
+    ),
+    ReleaseNote(
       id: 89,
       date: "2026-08-25",
       title: "Build 89 — Drag-down reorder lands where you drop it",
