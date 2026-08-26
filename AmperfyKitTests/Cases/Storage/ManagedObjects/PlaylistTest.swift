@@ -76,6 +76,16 @@ class PlaylistTest: XCTestCase {
     guard let song = library.getSong(for: account, id: cdHelper.seeder.songs[seedIndex].id)
     else { XCTFail(); return }
     XCTAssertEqual(testPlaylist.playables[playlistIndex].id, song.id)
+    // the relationship order must always agree with the sparse `order` attribute,
+    // because fetched results controllers sort by `order`, not by the relationship
+    checkOrderValuesAreStrictlyIncreasing(in: testPlaylist)
+  }
+
+  func checkOrderValuesAreStrictlyIncreasing(in playlist: Playlist) {
+    let orderValues = playlist.items.map { $0.order }
+    for (previousOrder, nextOrder) in zip(orderValues, orderValues.dropFirst()) {
+      XCTAssertLessThan(previousOrder, nextOrder)
+    }
   }
 
   func testCreation() {
@@ -379,6 +389,7 @@ class PlaylistTest: XCTestCase {
     XCTAssertEqual(defaultPlaylist.items[0].playable.id, cdHelper.seeder.songs[2].id)
     XCTAssertEqual(defaultPlaylist.items[1].playable.id, cdHelper.seeder.songs[0].id)
     XCTAssertEqual(defaultPlaylist.items[2].playable.id, cdHelper.seeder.songs[1].id)
+    checkOrderValuesAreStrictlyIncreasing(in: defaultPlaylist)
   }
 
   func testReorderSecondToLast() {
@@ -386,6 +397,7 @@ class PlaylistTest: XCTestCase {
     XCTAssertEqual(defaultPlaylist.items[0].playable.id, cdHelper.seeder.songs[0].id)
     XCTAssertEqual(defaultPlaylist.items[1].playable.id, cdHelper.seeder.songs[2].id)
     XCTAssertEqual(defaultPlaylist.items[2].playable.id, cdHelper.seeder.songs[1].id)
+    checkOrderValuesAreStrictlyIncreasing(in: defaultPlaylist)
   }
 
   func testReorderNoChange() {
@@ -602,5 +614,21 @@ class PlaylistTest: XCTestCase {
     checkPlaylistIndexEqualSeedIndex(playlistIndex: 2, seedIndex: 3)
     checkPlaylistIndexEqualSeedIndex(playlistIndex: 3, seedIndex: 4)
     checkPlaylistIndexEqualSeedIndex(playlistIndex: 4, seedIndex: 2)
+  }
+
+  /// Regression: a downward move used to compute the sparse `order` value from
+  /// pre-move neighbors, landing the item one row earlier than the relationship
+  /// position once sorted by `order` (visible as drag-down landing one too early).
+  func testMoveDownOrderAttributeMatchesRelationship() {
+    resetTestPlaylist()
+    testPlaylist.movePlaylistItem(fromIndex: 1, to: 3)
+    let relationshipIds = testPlaylist.items.map { $0.playable.id }
+    let orderSortedIds = testPlaylist.items
+      .sorted { $0.order < $1.order }
+      .map { $0.playable.id }
+    XCTAssertEqual(relationshipIds, orderSortedIds)
+    checkPlaylistIndexEqualSeedIndex(playlistIndex: 1, seedIndex: 2)
+    checkPlaylistIndexEqualSeedIndex(playlistIndex: 2, seedIndex: 3)
+    checkPlaylistIndexEqualSeedIndex(playlistIndex: 3, seedIndex: 1)
   }
 }

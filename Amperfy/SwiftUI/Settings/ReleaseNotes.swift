@@ -37,6 +37,20 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 89,
+      date: "2026-08-25",
+      title: "Build 89 — Drag-down reorder lands where you drop it",
+      whatsNew: [
+        "Fixed: dragging a song down in playlist edit used to land it one row above where you dropped it (dragging up was fine). The stored sort position was computed against the wrong neighbours for downward moves.",
+        "This also quietly affected the play queue's reorder — same fix applies there.",
+      ],
+      testingFocus: [
+        "Edit a playlist in the default drag mode and drag a song down several rows — it should land exactly where you dropped it, and stay there after leaving and reopening the playlist.",
+        "Drag a song up as well — unchanged, should still land where dropped.",
+        "Reorder a song downwards in the play queue and check it sticks.",
+      ]
+    ),
+    ReleaseNote(
       id: 88,
       date: "2026-08-25",
       title: "Build 88 — Move selected songs together in playlist edit",

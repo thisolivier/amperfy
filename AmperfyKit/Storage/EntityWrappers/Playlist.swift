@@ -408,7 +408,16 @@ public class Playlist: Identifyable {
           to < managedObject.items.count, fromIndex != to else { return }
 
     let fromItemMO = managedObject.items[fromIndex]
-    let newOrders = getOrdersToInsert(at: to, itemToInsertCount: 1, isMove: true)
+    // `to` is the final index AFTER the move. For a downward move the final
+    // position sits after the pre-move item at `to`, so the order slot is one
+    // further; treating it as a plain insert (isMove: false) lets
+    // `at == items.count` express "after the last item".
+    let isDownwardMove = to > fromIndex
+    let newOrders = getOrdersToInsert(
+      at: isDownwardMove ? to + 1 : to,
+      itemToInsertCount: 1,
+      isMove: !isDownwardMove
+    )
     assert(newOrders == nil || newOrders?.count == 1)
     managedObject.moveInsideItems(fromIndex: fromIndex, to: to)
     if let newOrder = newOrders?.first {
