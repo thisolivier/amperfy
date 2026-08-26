@@ -140,6 +140,8 @@ public struct AmperfyImage: Sendable {
   public static let bell = Self("bell.fill")
   public static let cancleDownloads = Self("xmark.icloud")
   public static let check = Self("checkmark")
+  public static let chevronDown = Self("chevron.down")
+  public static let chevronUp = Self("chevron.up")
   public static let circle = Self("circle")
   public static let clear = Self("clear")
   public static let clipboard = Self("doc.on.doc")

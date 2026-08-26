@@ -88,6 +88,8 @@ extension UIImage {
   public static let cancleDownloads = UIImage
     .create(systemName: AmperfyImage.cancleDownloads.systemName)
   public static let check = UIImage.create(systemName: AmperfyImage.check.systemName)
+  public static let chevronDown = UIImage.create(systemName: AmperfyImage.chevronDown.systemName)
+  public static let chevronUp = UIImage.create(systemName: AmperfyImage.chevronUp.systemName)
   public static let circle = UIImage.create(systemName: AmperfyImage.circle.systemName)
   public static let clear = UIImage.create(systemName: AmperfyImage.clear.systemName)
   public static let clipboard = UIImage.create(systemName: AmperfyImage.clipboard.systemName)

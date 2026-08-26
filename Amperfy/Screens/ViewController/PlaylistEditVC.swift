@@ -44,11 +44,15 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
   private var selectBarButton: UIBarButtonItem!
   private var deleteBarButton: UIBarButtonItem!
   private var addBarButton: UIBarButtonItem!
+  private var moveUpBarButton: UIBarButtonItem!
+  private var moveDownBarButton: UIBarButtonItem!
 
   var detailOperationsView: GenericDetailTableHeader?
 
   private var selectedItems = [PlaylistItem]()
   private var editMode = PlaylistEditMode.reorder
+  private var isOrderSyncUploadPending = false
+  private var orderSyncUploadDebounceWorkItem: DispatchWorkItem?
 
   init(account: Account, playlist: Playlist) {
     self.playlist = playlist
@@ -117,11 +121,6 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
     detailOperationsView?.startEditing()
 
     navigationController?.setToolbarHidden(false, animated: false)
-    let flexible = UIBarButtonItem(
-      barButtonSystemItem: UIBarButtonItem.SystemItem.flexibleSpace,
-      target: self,
-      action: nil
-    )
     selectBarButton = UIBarButtonItem(
       title: "Select",
       style: .plain,
@@ -140,7 +139,20 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
       target: self,
       action: #selector(addBarButtonPressed)
     )
-    toolbarItems = [selectBarButton, flexible, addBarButton, flexible, deleteBarButton]
+    moveUpBarButton = UIBarButtonItem(
+      image: .chevronUp,
+      style: .plain,
+      target: self,
+      action: #selector(moveUpBarButtonPressed)
+    )
+    moveUpBarButton.accessibilityLabel = "Move Up"
+    moveDownBarButton = UIBarButtonItem(
+      image: .chevronDown,
+      style: .plain,
+      target: self,
+      action: #selector(moveDownBarButtonPressed)
+    )
+    moveDownBarButton.accessibilityLabel = "Move Down"
 
     changeEditMode(.reorder)
     refreshBarButtons()
@@ -153,6 +165,43 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
     (diffableDataSource as? PlaylistDetailDiffableDataSource)?.isEditAllowed = true
     selectedItems.removeAll()
     tableView.reloadData()
+    refreshToolbar()
+  }
+
+  private func refreshToolbar() {
+    let flexible = UIBarButtonItem(
+      barButtonSystemItem: UIBarButtonItem.SystemItem.flexibleSpace,
+      target: nil,
+      action: nil
+    )
+    switch editMode {
+    case .reorder:
+      selectBarButton.title = "Select"
+      setToolbarItems([selectBarButton, flexible, addBarButton], animated: false)
+    case .delete:
+      selectBarButton.title = "Single"
+      deleteBarButton.isEnabled = !selectedItems.isEmpty
+      if selectedItems.isEmpty {
+        setToolbarItems(
+          [selectBarButton, flexible, addBarButton, flexible, deleteBarButton],
+          animated: false
+        )
+      } else {
+        refreshMoveButtonsEnabledState()
+        setToolbarItems(
+          [
+            selectBarButton,
+            flexible,
+            moveUpBarButton,
+            UIBarButtonItem.fixedSpace(16),
+            moveDownBarButton,
+            flexible,
+            deleteBarButton,
+          ],
+          animated: false
+        )
+      }
+    }
   }
 
   override func viewIsAppearing(_ animated: Bool) {
@@ -163,6 +212,9 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
   override func viewDidDisappear(_ animated: Bool) {
     super.viewDidDisappear(animated)
     detailOperationsView?.endEditing()
+    Task { @MainActor in
+      await self.flushPendingOrderSyncUpload()
+    }
     onDoneCB?()
   }
 
@@ -174,12 +226,6 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
   @IBAction
   func selectBarButtonPressed(_ sender: Any) {
     changeEditMode((editMode == .reorder) ? .delete : .reorder)
-    selectBarButton.title = (editMode == .reorder) ? "Select" : "Reorder"
-    refreshDeleteButton()
-  }
-
-  func refreshDeleteButton() {
-    deleteBarButton.isEnabled = !selectedItems.isEmpty
   }
 
   @IBAction
@@ -187,6 +233,8 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
     let selectedItemsSorted = selectedItems.sorted(by: { $0.order > $1.order })
 
     Task { @MainActor in
+      // the server delete API is index based: bring the server order up to date first
+      await self.flushPendingOrderSyncUpload()
       do {
         for item in selectedItemsSorted {
           guard let index = self.playlist.getFirstIndex(item: item) else { continue }
@@ -204,7 +252,127 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
     }
 
     selectedItems.removeAll()
-    refreshDeleteButton()
+    // clear the stale checkmark state of the still-visible cells
+    tableView.reloadData()
+    refreshToolbar()
+  }
+
+  @IBAction
+  func moveUpBarButtonPressed(_ sender: Any) {
+    moveSelectedItems(upwards: true)
+  }
+
+  @IBAction
+  func moveDownBarButtonPressed(_ sender: Any) {
+    moveSelectedItems(upwards: false)
+  }
+
+  /// Moves every selected item one step up or down. A non-contiguous selection moves as
+  /// independent contiguous runs: each run shifts by one and runs merge once they touch,
+  /// mirroring desktop list editors with move buttons (a nudge translates, it never gathers).
+  private func moveSelectedItems(upwards: Bool) {
+    guard editMode == .delete, !selectedItems.isEmpty,
+          let dataSource = diffableDataSource else { return }
+    var snapshot = dataSource.snapshot()
+    let orderedItemIds = snapshot.itemIdentifiers
+    let selectedItemIds = Set(selectedItems.map { $0.objectID })
+    let selectedIndices = orderedItemIds.enumerated()
+      .filter { selectedItemIds.contains($0.element) }
+      .map(\.offset)
+
+    // Playlist.movePlaylistItem is only index-consistent for upward moves
+    // (fromIndex > toIndex): for downward moves the ordered relationship and the
+    // sparse `order` attribute disagree by one row. Both nudge directions are
+    // therefore expressed purely as upward moves.
+    var modelMoves = [(fromIndex: Int, toIndex: Int)]()
+    for run in contiguousRuns(ofSortedIndices: selectedIndices) {
+      if upwards {
+        guard run.first > 0 else { continue }
+        // every item of the run swaps with the unselected neighbor above it
+        let neighborItemId = orderedItemIds[run.first - 1]
+        snapshot.deleteItems([neighborItemId])
+        snapshot.insertItems([neighborItemId], afterItem: orderedItemIds[run.last])
+        for index in run.first ... run.last {
+          modelMoves.append((fromIndex: index, toIndex: index - 1))
+        }
+      } else {
+        guard run.last < orderedItemIds.count - 1 else { continue }
+        // the unselected neighbor below the run moves up to just above it
+        let neighborItemId = orderedItemIds[run.last + 1]
+        snapshot.deleteItems([neighborItemId])
+        snapshot.insertItems([neighborItemId], beforeItem: orderedItemIds[run.first])
+        modelMoves.append((fromIndex: run.last + 1, toIndex: run.first))
+      }
+    }
+    guard !modelMoves.isEmpty else { return }
+
+    // Apply the animated snapshot first; the fetched results controller update that
+    // follows the model change applies without animation (see
+    // SingleSnapshotFetchedResultsTableViewController) and must find this state already.
+    dataSource.apply(snapshot, animatingDifferences: true)
+    dataSource.exectueAfterAnimation {
+      for modelMove in modelMoves {
+        self.playlist.movePlaylistItem(fromIndex: modelMove.fromIndex, to: modelMove.toIndex)
+      }
+      self.scheduleOrderSyncUpload()
+    }
+    refreshToolbar()
+  }
+
+  private func contiguousRuns(ofSortedIndices sortedIndices: [Int])
+    -> [(first: Int, last: Int)] {
+    var runs = [(first: Int, last: Int)]()
+    for index in sortedIndices {
+      if let lastRun = runs.last, index == lastRun.last + 1 {
+        runs[runs.count - 1].last = index
+      } else {
+        runs.append((first: index, last: index))
+      }
+    }
+    return runs
+  }
+
+  private func refreshMoveButtonsEnabledState() {
+    guard let dataSource = diffableDataSource else { return }
+    let orderedItemIds = dataSource.snapshot().itemIdentifiers
+    let selectedItemIds = Set(selectedItems.map { $0.objectID })
+    let selectedIndices = orderedItemIds.enumerated()
+      .filter { selectedItemIds.contains($0.element) }
+      .map(\.offset)
+    let totalCount = orderedItemIds.count
+    let selectedCount = selectedIndices.count
+    // Disabled only when the selection is packed against that end of the list
+    moveUpBarButton.isEnabled = selectedIndices.enumerated()
+      .contains { $0.element > $0.offset }
+    moveDownBarButton.isEnabled = selectedIndices.enumerated()
+      .contains { $0.element < totalCount - selectedCount + $0.offset }
+  }
+
+  private func scheduleOrderSyncUpload() {
+    isOrderSyncUploadPending = true
+    orderSyncUploadDebounceWorkItem?.cancel()
+    let workItem = DispatchWorkItem { [weak self] in
+      guard let self = self else { return }
+      Task { @MainActor in
+        await self.flushPendingOrderSyncUpload()
+      }
+    }
+    orderSyncUploadDebounceWorkItem = workItem
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
+  }
+
+  private func flushPendingOrderSyncUpload() async {
+    guard isOrderSyncUploadPending else { return }
+    isOrderSyncUploadPending = false
+    orderSyncUploadDebounceWorkItem?.cancel()
+    orderSyncUploadDebounceWorkItem = nil
+    guard appDelegate.storage.settings.user.isOnlineMode, playlist.songCount > 0 else { return }
+    do {
+      try await appDelegate.getMeta(account.info).librarySyncer
+        .syncUpload(playlistToUpdateOrder: playlist)
+    } catch {
+      appDelegate.eventLogger.report(topic: "Playlist Upload Order Update", error: error)
+    }
   }
 
   @IBAction
@@ -230,7 +398,7 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
       target: self,
       action: #selector(doneBarButtonPressed)
     )
-    refreshDeleteButton()
+    refreshToolbar()
 
     navigationItem.leftItemsSupplementBackButton = true
     navigationItem.rightBarButtonItem = doneButton
@@ -271,7 +439,7 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
       }
       cell.refresh()
     }
-    refreshDeleteButton()
+    refreshToolbar()
   }
 }
 

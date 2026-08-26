@@ -37,6 +37,23 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 88,
+      date: "2026-08-25",
+      title: "Build 88 — Move selected songs together in playlist edit",
+      whatsNew: [
+        "When editing a playlist, selecting songs now shows up/down buttons in the toolbar, so you can move the whole selection one step at a time — no more dragging songs one by one.",
+        "A non-contiguous selection moves as separate blocks that merge once they meet, so nothing ever jumps unexpectedly across the list.",
+        "The delete button now only appears while you're selecting, and the mode toggle reads 'Select' / 'Single' — 'Single' being the classic one-song drag mode.",
+        "Rapid reorder taps are now batched into a single server update instead of one upload per tap.",
+      ],
+      testingFocus: [
+        "Edit a playlist, tap Select, pick a few adjacent songs and tap the up/down chevrons — the block should move one step per tap with animation.",
+        "Select two separated songs and tap up repeatedly — each moves independently, then they merge and travel as one block; at the top the buttons should grey out.",
+        "Delete should be hidden until you enter Select mode, and re-check the classic single-song drag still works in 'Single' mode.",
+        "After reordering, leave the editor and pull-to-refresh the playlist (or check another device) — the new order should have reached the server.",
+      ]
+    ),
+    ReleaseNote(
       id: 87,
       date: "2026-08-24",
       title: "Build 87 — Playlist membership shows up on its own",

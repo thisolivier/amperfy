@@ -102,7 +102,7 @@ public class AddToPlaylistManager {
   var title: String {
     let count = elementsToAdd.count
     if count != 0 {
-      return "Add \(elementsToAdd.count) Songs to \"\(playlist.name)\""
+      return "Add \(count) \(count == 1 ? "Song" : "Songs") to \"\(playlist.name)\""
     } else {
       return "Add Songs to \"\(playlist.name)\""
     }
