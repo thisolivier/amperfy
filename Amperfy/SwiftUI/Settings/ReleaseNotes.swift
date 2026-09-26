@@ -37,6 +37,21 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 91,
+      date: "2026-09-26",
+      title: "Build 91 — Mac launch crash fixed",
+      whatsNew: [
+        "Fixed: the Mac version crashed instantly on every launch. The database was being pointed at a shared folder the Mac build isn't allowed to touch; the app now checks it can actually use that folder and falls back to its normal location when it can't.",
+        "As a safety net, if the database ever fails to open from the shared folder, the app now recovers to its standard location instead of crashing.",
+        "iPhone and iPad behaviour is unchanged — this only affects where the Mac build keeps its database.",
+      ],
+      testingFocus: [
+        "On the Mac: install this build and launch — it should open to the login/library screen instead of crashing.",
+        "Log in, sync the library, quit, and relaunch — everything should still be there.",
+        "On iPhone: launch and confirm your library, playlists, and downloads are exactly as before.",
+      ]
+    ),
+    ReleaseNote(
       id: 90,
       date: "2026-08-26",
       title: "Build 90 — Edit opens where you were",

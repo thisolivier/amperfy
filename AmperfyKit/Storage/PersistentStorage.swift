@@ -21,6 +21,7 @@
 
 import CoreData
 import Foundation
+import os.log
 
 // MARK: - CoreDataCompanion
 
@@ -270,10 +271,82 @@ public class CoreDataPersistentManager: CoreDataManagable {
   nonisolated(unsafe) public static let managedObjectModel: NSManagedObjectModel =
     .mergedModel(from: [Bundle.main])!
 
+  private static let log = OSLog(subsystem: "AmperfyKit", category: "CoreDataPersistentManager")
+
   public let configuration: CoreDataConfiguration
 
   public init(configuration: CoreDataConfiguration = .default) {
     self.configuration = configuration
+  }
+
+  /// Verifies a directory can actually be written to, creating it if needed.
+  ///
+  /// `containerURL(forSecurityApplicationGroupIdentifier:)` returns a non-nil URL on
+  /// macOS even when the app lacks the `application-groups` entitlement — the sandbox
+  /// then denies all access to that path. A real write probe is the only reliable check.
+  static func isDirectoryWritable(at directoryURL: URL) -> Bool {
+    let fileManager = FileManager.default
+    do {
+      try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+    } catch {
+      return false
+    }
+    let probeURL = directoryURL.appendingPathComponent("amperfy-write-probe.tmp")
+    guard fileManager.createFile(atPath: probeURL.path, contents: Data()) else {
+      return false
+    }
+    try? fileManager.removeItem(at: probeURL)
+    return true
+  }
+
+  /// The shared-container store URL, or nil when the shared container is not usable.
+  /// Read-only consumers (other apps with their own entitlements) skip the write probe.
+  private func usableSharedStoreURL() -> URL? {
+    guard let sharedContainerURL = configuration.sharedContainerURL,
+          let sharedStoreURL = configuration.sharedStoreURL else { return nil }
+    if configuration.readOnly { return sharedStoreURL }
+    guard Self.isDirectoryWritable(at: sharedContainerURL) else {
+      os_log(
+        "Shared container is not writable (missing entitlement?) — using default store location",
+        log: Self.log, type: .error
+      )
+      return nil
+    }
+    return sharedStoreURL
+  }
+
+  private static func makeStoreDescription(url: URL, readOnly: Bool)
+    -> NSPersistentStoreDescription {
+    let storeDescription = NSPersistentStoreDescription(url: url)
+    storeDescription.type = NSSQLiteStoreType
+    storeDescription.shouldInferMappingModelAutomatically = false
+    storeDescription.shouldMigrateStoreAutomatically = false
+    if readOnly {
+      storeDescription.setOption(true as NSNumber, forKey: NSReadOnlyPersistentStoreOption)
+    }
+    return storeDescription
+  }
+
+  private static var defaultStoreURL: URL {
+    NSPersistentContainer.defaultDirectoryURL().appendingPathComponent("Amperfy.sqlite")
+  }
+
+  /// Runs the custom step-wise migration when the store at `storeURL` needs it.
+  private func migrateIfNeeded(at storeURL: URL) {
+    guard !configuration.readOnly else { return }
+    let migrator = CoreDataMigrator()
+    if migrator.requiresMigration(at: storeURL, toVersion: CoreDataMigrationVersion.current) {
+      migrator.migrateStore(at: storeURL, toVersion: CoreDataMigrationVersion.current)
+    }
+  }
+
+  /// Loads the store for the container's current description; returns the error if any.
+  private func loadStore(into container: NSPersistentContainer) -> NSError? {
+    var storeLoadError: NSError?
+    container.loadPersistentStores(completionHandler: { _, error in
+      storeLoadError = error as NSError?
+    })
+    return storeLoadError
   }
 
   lazy var persistentContainer: NSPersistentContainer = {
@@ -282,47 +355,32 @@ public class CoreDataPersistentManager: CoreDataManagable {
       managedObjectModel: Self.managedObjectModel
     )
 
-    // Use shared container URL if an App Group is configured
-    if let sharedStoreURL = configuration.sharedStoreURL {
-      let storeDescription = NSPersistentStoreDescription(url: sharedStoreURL)
-      storeDescription.type = NSSQLiteStoreType
+    let sharedStoreURL = usableSharedStoreURL()
+    let storeURL = sharedStoreURL ?? Self.defaultStoreURL
+    container.persistentStoreDescriptions = [
+      Self.makeStoreDescription(url: storeURL, readOnly: configuration.readOnly),
+    ]
 
-      if configuration.readOnly {
-        storeDescription.setOption(true as NSNumber, forKey: NSReadOnlyPersistentStoreOption)
-        // Read-only consumers should never migrate the store
-        storeDescription.shouldInferMappingModelAutomatically = false
-        storeDescription.shouldMigrateStoreAutomatically = false
-      } else {
-        storeDescription.shouldInferMappingModelAutomatically = false
-        storeDescription.shouldMigrateStoreAutomatically = false
-      }
+    migrateIfNeeded(at: storeURL)
+    var storeLoadError = loadStore(into: container)
 
-      container.persistentStoreDescriptions = [storeDescription]
-    } else {
-      // Default location — configure existing description
-      let description = container.persistentStoreDescriptions.first
-      description?.shouldInferMappingModelAutomatically = false
-      description?.shouldMigrateStoreAutomatically = false
-      description?.type = NSSQLiteStoreType
+    // The shared container passed the probe but the store still failed to load —
+    // fall back to the default app-container location rather than crashing.
+    if storeLoadError != nil, sharedStoreURL != nil, !configuration.readOnly {
+      os_log(
+        "Failed to load store from shared container: %{public}@ — falling back to default location",
+        log: Self.log, type: .error, storeLoadError?.localizedDescription ?? "unknown"
+      )
+      container.persistentStoreDescriptions = [
+        Self.makeStoreDescription(url: Self.defaultStoreURL, readOnly: false),
+      ]
+      migrateIfNeeded(at: Self.defaultStoreURL)
+      storeLoadError = loadStore(into: container)
     }
 
-    guard let storeURL = container.persistentStoreDescriptions.first?.url else {
-      fatalError("persistentContainer was not set up properly")
+    if let storeLoadError {
+      fatalError("Unresolved error \(storeLoadError), \(storeLoadError.userInfo)")
     }
-
-    // Only run migration for read-write mode
-    if !configuration.readOnly {
-      let migrator = CoreDataMigrator()
-      if migrator.requiresMigration(at: storeURL, toVersion: CoreDataMigrationVersion.current) {
-        migrator.migrateStore(at: storeURL, toVersion: CoreDataMigrationVersion.current)
-      }
-    }
-
-    container.loadPersistentStores(completionHandler: { storeDescription, error in
-      if let error = error as NSError? {
-        fatalError("Unresolved error \(error), \(error.userInfo)")
-      }
-    })
 
     return container
   }()
