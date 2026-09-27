@@ -37,6 +37,21 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 93,
+      date: "2026-09-26",
+      title: "Build 93 — Folders on first login, sturdier playlist sync memory",
+      whatsNew: [
+        "Fixed: on a brand-new install (like the Mac after its reinstall), playlist folders didn't appear at all and folder-filed playlists showed at the root until you quit and relaunched. The folder system is now wired up during the first login, so folders arrive with the initial sync.",
+        "The 'which playlists have their songs downloaded locally' bookkeeping moved from app preferences into the database itself. It now can't get out of step with your library after a resync, account cleanup, or reinstall — the cause of playlists sometimes opening empty offline.",
+        "Song contents for all playlists now start downloading immediately after the initial sync finishes, shrinking the window where a fresh install opened playlists empty when offline.",
+      ],
+      testingFocus: [
+        "Fresh-install test (Mac or a wiped iPhone): log in, let it sync — folders should appear in Playlists on that very first session, with filed playlists inside them, no relaunch needed.",
+        "After the initial sync, go offline and open a playlist you never opened — its songs should be listed.",
+        "Sanity-check 'Show in Playlists' on a song you know is playlisted — it should list them, or say it's still syncing rather than claiming none.",
+      ]
+    ),
+    ReleaseNote(
       id: 92,
       date: "2026-09-26",
       title: "Build 92 — Folders always sit above playlists",
