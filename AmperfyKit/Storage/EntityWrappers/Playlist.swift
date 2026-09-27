@@ -35,7 +35,7 @@ public class Playlist: Identifyable {
   static let artworkItemMaxLookCount = 20
 
   let managedObject: PlaylistMO
-  private let library: LibraryStorage
+  let library: LibraryStorage
 
   public init(library: LibraryStorage, managedObject: PlaylistMO) {
     self.library = library
@@ -117,9 +117,8 @@ public class Playlist: Identifyable {
 
   /// Number of `PlaylistItemMO` rows actually stored locally for this playlist.
   /// Unlike `songCount`, this never falls back to `remoteSongCount`, so it
-  /// reflects only what the per-playlist item sync has populated. Used by
-  /// `PlaylistItemsSyncTracker` to detect server-side edits that happened after
-  /// the last item sync (count mismatch → stale items → needs re-sync).
+  /// reflects only what the per-playlist item sync has populated. Used by the
+  /// items-sync state (see `Playlist+ItemsSyncState`) as fetch-landed evidence.
   public var localItemCount: Int {
     managedObject.items.count
   }

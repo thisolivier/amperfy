@@ -860,10 +860,9 @@ class EntityPreviewActionBuilder {
     // Completeness signal: is every non-smart playlist item-synced? If not, the
     // local membership picture may be missing entries, so don't assert a
     // definitive "not in any playlists" — surface the "still syncing" state.
-    let tracker = PlaylistItemsSyncTracker.shared
     let hasUnsyncedPlaylists = library
       .getPlaylists(for: account)
-      .contains { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
+      .contains { !$0.isSmartPlaylist && !$0.isItemsSynced }
 
     membershipVC.updateWithPlaylists(playlists, wasComplete: !hasUnsyncedPlaylists)
 

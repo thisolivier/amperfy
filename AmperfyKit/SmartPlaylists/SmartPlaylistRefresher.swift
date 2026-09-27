@@ -152,7 +152,6 @@ public final class SmartPlaylistRefresher {
   private let librarySyncer: LibrarySyncer
   private let account: Account
   private let store: SmartPlaylistStore
-  private let playlistItemsSyncTracker: PlaylistItemsSyncTracker
   private let eventLogger: EventLogger?
 
   private let log = OSLog(subsystem: "Amperfy", category: "SmartPlaylistRefresher")
@@ -162,14 +161,12 @@ public final class SmartPlaylistRefresher {
     librarySyncer: LibrarySyncer,
     account: Account,
     store: SmartPlaylistStore = .shared,
-    playlistItemsSyncTracker: PlaylistItemsSyncTracker = .shared,
     eventLogger: EventLogger? = nil
   ) {
     self.storage = storage
     self.librarySyncer = librarySyncer
     self.account = account
     self.store = store
-    self.playlistItemsSyncTracker = playlistItemsSyncTracker
     self.eventLogger = eventLogger
   }
 
@@ -528,7 +525,7 @@ public final class SmartPlaylistRefresher {
 
   // MARK: - Step 3: playlist item drain
 
-  /// Fetches items for every non-smart playlist the tracker reports as
+  /// Fetches items for every non-smart playlist whose row reports items
   /// unsynced. Same filter idiom as `PlaylistSyncWorker.fetchUnsyncedPlaylistInfo`
   /// including the remote-edit reconcile, so a playlist edited server-side
   /// since our last item sync is refetched too.
@@ -541,10 +538,7 @@ public final class SmartPlaylistRefresher {
     for (index, playlist) in unsyncedPlaylists.enumerated() {
       do {
         try await librarySyncer.syncDown(playlist: playlist)
-        playlistItemsSyncTracker.markSynced(
-          playlist.id,
-          remoteSongCount: playlist.remoteSongCount
-        )
+        playlist.markItemsSyncedIfFetchLanded()
       } catch {
         report(error: error, topic: "Smart Playlist Playlist Items Sync")
       }
@@ -558,13 +552,10 @@ public final class SmartPlaylistRefresher {
       areSystemPlaylistsIncluded: false
     )
     for playlist in allPlaylists where !playlist.isSmartPlaylist {
-      playlistItemsSyncTracker.reconcile(
-        playlistId: playlist.id,
-        remoteSongCount: playlist.remoteSongCount
-      )
+      playlist.reconcileItemsSyncState()
     }
     return allPlaylists.filter {
-      !$0.isSmartPlaylist && !playlistItemsSyncTracker.isSynced($0.id)
+      !$0.isSmartPlaylist && !$0.isItemsSynced
     }
   }
 

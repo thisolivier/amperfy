@@ -40,6 +40,16 @@ extension PlaylistMO {
   public var id: String
   @NSManaged
   public var isCached: Bool
+  /// Whether this playlist's items (`items` relationship) have been fetched
+  /// from the server. Lives on the row — not in UserDefaults — so a store wipe
+  /// or account cleanup can never leave stale "synced" claims behind.
+  @NSManaged
+  public var isItemsSynced: Bool
+  /// The server-advertised song count observed when the items were last marked
+  /// synced; `-1` means no baseline recorded. Compared against the current
+  /// remote count to detect a server-side edit (see `Playlist` sync-state API).
+  @NSManaged
+  public var itemsSyncedRemoteCount: Int64
   @NSManaged
   public var lastPlayedDate: Date?
   @NSManaged

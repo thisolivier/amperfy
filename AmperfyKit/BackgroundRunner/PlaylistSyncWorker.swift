@@ -85,7 +85,6 @@ public final class PlaylistSyncWorker: BackgroundTaskWorker, @unchecked Sendable
       return
     }
 
-    let tracker = PlaylistItemsSyncTracker.shared
     let totalPlaylists = unsyncedPlaylistInfo.count
     var completedPlaylists = 0
     context.reportProgress(.progress(done: 0, total: totalPlaylists))
@@ -100,11 +99,7 @@ public final class PlaylistSyncWorker: BackgroundTaskWorker, @unchecked Sendable
         return
       }
 
-      await syncSinglePlaylist(
-        objectID: playlistInfo.objectID,
-        playlistId: playlistInfo.id,
-        tracker: tracker
-      )
+      await syncSinglePlaylist(objectID: playlistInfo.objectID)
 
       completedPlaylists += 1
       context.reportProgress(.progress(done: completedPlaylists, total: totalPlaylists))
@@ -145,7 +140,6 @@ public final class PlaylistSyncWorker: BackgroundTaskWorker, @unchecked Sendable
   /// Fetch all unsynced playlist (id, objectID) pairs from the main context.
   @MainActor
   private func fetchUnsyncedPlaylistInfo() -> [(id: String, objectID: NSManagedObjectID)] {
-    let tracker = PlaylistItemsSyncTracker.shared
     let accountMO = mainStorage.context.object(with: accountObjectID) as! AccountMO
     let account = Account(managedObject: accountMO)
     let allPlaylists = mainStorage.library.getPlaylists(
@@ -158,12 +152,9 @@ public final class PlaylistSyncWorker: BackgroundTaskWorker, @unchecked Sendable
     // skipped — they are derived rules, not membership lists we sync items for
     // (mirrors the on-demand "Show in Playlists" path).
     for playlist in allPlaylists where !playlist.isSmartPlaylist {
-      tracker.reconcile(
-        playlistId: playlist.id,
-        remoteSongCount: playlist.remoteSongCount
-      )
+      playlist.reconcileItemsSyncState()
     }
-    let unsyncedPlaylists = allPlaylists.filter { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
+    let unsyncedPlaylists = allPlaylists.filter { !$0.isSmartPlaylist && !$0.isItemsSynced }
     os_log(
       "PlaylistSyncWorker: %d unsynced of %d total playlists",
       log: log,
@@ -177,11 +168,7 @@ public final class PlaylistSyncWorker: BackgroundTaskWorker, @unchecked Sendable
   /// Sync a single playlist identified by its Core Data object ID.
   /// Resolves the MO on the main context (same pattern as the pre-runner lazy-sync paths).
   @MainActor
-  private func syncSinglePlaylist(
-    objectID: NSManagedObjectID,
-    playlistId: String,
-    tracker: PlaylistItemsSyncTracker
-  ) async {
+  private func syncSinglePlaylist(objectID: NSManagedObjectID) async {
     let playlistMO = mainStorage.context.object(with: objectID) as! PlaylistMO
     let playlist = Playlist(library: mainStorage.library, managedObject: playlistMO)
     do {
@@ -190,12 +177,8 @@ public final class PlaylistSyncWorker: BackgroundTaskWorker, @unchecked Sendable
       // genuine server edit (count change) rather than churning on the
       // permanent podcast/unavailable local-vs-remote gap. Guarded because
       // `syncDown` silently no-ops when the syncer is not allowed to sync — see
-      // `markSyncedIfFetchLanded`.
-      let wasMarkedSynced = tracker.markSyncedIfFetchLanded(
-        playlistId,
-        localItemCount: playlist.localItemCount,
-        remoteSongCount: playlist.remoteSongCount
-      )
+      // `markItemsSyncedIfFetchLanded`.
+      let wasMarkedSynced = playlist.markItemsSyncedIfFetchLanded()
       if !wasMarkedSynced {
         os_log(
           "PlaylistSyncWorker: playlist \"%s\" fetched no items, leaving it unsynced",

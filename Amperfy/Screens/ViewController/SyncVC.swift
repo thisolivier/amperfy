@@ -59,13 +59,16 @@ class SyncVC: UIViewController {
         self.appDelegate.storage.settings.app.isLibrarySynced = false
       }
       self.appDelegate.storage.main.library.cleanStorageOfObsoleteAccountEntries(account: account)
-      // The store wipe above deleted every PlaylistItemMO. The playlist-items
-      // sync tracker is UserDefaults-backed and would otherwise survive that
-      // wipe, still claiming every playlist's items are synced — which makes
-      // "Show in Playlists" report a confident (wrong) empty and starves the
-      // background PlaylistSyncWorker. Clear it so it matches the empty store;
-      // the post-sync worker then re-fetches all playlists' contents.
-      PlaylistItemsSyncTracker.shared.clear()
+      // No tracker to reset alongside the wipe: playlist items-sync state lives
+      // on the PlaylistMO rows themselves (v53), so deleting the rows above
+      // deleted the state with them, and the rows the initial sync re-creates
+      // start out unsynced. The post-sync worker then re-fetches all contents.
+
+      // Wire the account-scoped singletons BEFORE the initial sync. Without
+      // this, a fresh install's first session ran entirely with an
+      // unconfigured playlist folder store — no folders rendered and folder
+      // sync silently no-oped until the app was relaunched.
+      self.appDelegate.configureAccountScopedServices(for: account.info)
 
       do {
         try await self.appDelegate.getMeta(account.info).librarySyncer
@@ -101,6 +104,15 @@ class SyncVC: UIViewController {
     appDelegate.storage.settings.app.isLibrarySynced = true
     appDelegate.startManagerAfterSync()
     appDelegate.getMeta(account.info).startManagerAfterSync(player: appDelegate.player)
+    // Kick the playlist-items sync (Phase 2) right now rather than waiting for
+    // the background syncer's newest-elements fetch to finish first. Playlist
+    // members only exist locally once Phase 2 has fetched them, so every
+    // minute it is delayed is a window where quitting the app leaves playlists
+    // memberless when opened offline. Idempotent: the later enqueue from
+    // BackgroundLibrarySyncer no-ops while this run is still in flight.
+    BackgroundTaskRunner.shared.enqueue(
+      TaskDescriptor(kind: .playlistItemSync, triggerReason: .scheduled)
+    )
     appDelegate.isKeepScreenAlive = false
     appDelegate.eventLogger.supressAlerts = false
 

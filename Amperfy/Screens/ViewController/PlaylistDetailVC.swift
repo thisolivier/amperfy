@@ -291,17 +291,13 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
   }
 
   /// Opening a playlist fetches its items, which is exactly what
-  /// `PlaylistSyncWorker` does in the background. Tell the tracker, so the
+  /// `PlaylistSyncWorker` does in the background. Record it on the row, so the
   /// background pass skips this playlist and the "Show in Playlists"
   /// completeness signal counts the work this screen already did.
   @MainActor
   private func recordItemsSynced() {
     guard !playlist.isSmartPlaylist else { return }
-    PlaylistItemsSyncTracker.shared.markSyncedIfFetchLanded(
-      playlist.id,
-      localItemCount: playlist.localItemCount,
-      remoteSongCount: playlist.remoteSongCount
-    )
+    playlist.markItemsSyncedIfFetchLanded()
   }
 
   func refreshBarButtons() {

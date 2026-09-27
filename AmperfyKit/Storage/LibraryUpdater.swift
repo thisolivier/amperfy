@@ -156,6 +156,45 @@ public class LibraryUpdater {
       storage.settings.user.streamingFormatCellularPreference = storage.legacySettings
         .streamingFormatPreference
     }
+    carryOverLegacyPlaylistItemsSyncStateIfNeeded()
+  }
+
+  /// One-time carry-over of the legacy UserDefaults-backed playlist items-sync
+  /// tracker onto the PlaylistMO rows (model v53 moved the state there).
+  ///
+  /// Self-gating on the legacy key's existence rather than a sync version:
+  /// once carried over the keys are deleted, so this is a cheap no-op on every
+  /// later launch. Without the carry-over an upgrade would re-fetch every
+  /// playlist's items once in the background — correct but wasteful on large
+  /// libraries. The legacy tracker was global (not account-scoped), so the
+  /// flags apply to every playlist row whose id matches, same as before.
+  @MainActor
+  private func carryOverLegacyPlaylistItemsSyncStateIfNeeded() {
+    let defaults = UserDefaults.standard
+    let legacySyncedIdsKey = "amperfy.fork.syncedPlaylistItems"
+    let legacyRemoteCountsKey = "amperfy.fork.syncedPlaylistRemoteCounts"
+    guard let legacySyncedIds = defaults.stringArray(forKey: legacySyncedIdsKey) else { return }
+    let legacyRemoteCounts =
+      (defaults.dictionary(forKey: legacyRemoteCountsKey) as? [String: Int]) ?? [:]
+    let syncedIdSet = Set(legacySyncedIds)
+
+    os_log(
+      "Perform blocking library update (START): carry over %d legacy playlist items-sync flags",
+      log: log, type: .info, syncedIdSet.count
+    )
+    let fetchRequest: NSFetchRequest<PlaylistMO> = PlaylistMO.fetchRequest()
+    let playlistMOs = (try? storage.main.context.fetch(fetchRequest)) ?? []
+    for playlistMO in playlistMOs where syncedIdSet.contains(playlistMO.id) {
+      playlistMO.isItemsSynced = true
+      playlistMO.itemsSyncedRemoteCount = Int64(legacyRemoteCounts[playlistMO.id] ?? -1)
+    }
+    storage.main.library.saveContext()
+    defaults.removeObject(forKey: legacySyncedIdsKey)
+    defaults.removeObject(forKey: legacyRemoteCountsKey)
+    os_log(
+      "Perform blocking library update (DONE): legacy playlist items-sync carry-over",
+      log: log, type: .info
+    )
   }
 
   private var isRunning = true

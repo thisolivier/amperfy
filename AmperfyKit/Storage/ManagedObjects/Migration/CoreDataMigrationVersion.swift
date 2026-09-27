@@ -65,6 +65,8 @@ enum CoreDataMigrationVersion: String, CaseIterable {
   case v51 = "Amperfy v51" // Add PlaylistFolder entity for server-backed folder sync
   case v52 =
     "Amperfy v52" // Playlist folders v2: PlaylistFolder.sortOrder + PlaylistFolderPlacement entity
+  case v53 =
+    "Amperfy v53" // Playlist items-sync state on the row (replaces UserDefaults tracker)
 
   // MARK: - Current
 
@@ -183,6 +185,8 @@ enum CoreDataMigrationVersion: String, CaseIterable {
     case .v51:
       return .v52
     case .v52:
+      return .v53
+    case .v53:
       return nil
     }
   }

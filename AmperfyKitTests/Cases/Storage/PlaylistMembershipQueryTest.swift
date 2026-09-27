@@ -129,14 +129,13 @@ class PlaylistMembershipQueryTest: XCTestCase {
     let song = makeSong(id: "pmq-song-resync")
     let playlist = makePlaylist(id: "pmq-pl-stale", name: "Edited On Server")
     // Server reports the playlist now has this song, but locally its items are
-    // empty (stale after a server-side edit). Simulate the tracker having marked
-    // it synced during an earlier, now-outdated sync.
+    // empty (stale after a server-side edit). Simulate the row having been
+    // marked synced during an earlier, now-outdated sync.
     // Synced earlier when the server advertised 0 songs for this playlist.
     playlist.remoteSongCount = 0
     library.saveContext()
 
-    let tracker = PlaylistItemsSyncTracker(defaults: makeIsolatedDefaults())
-    tracker.markSynced(playlist.id, remoteSongCount: 0)
+    playlist.markItemsSynced(remoteSongCount: 0)
 
     // Before any re-sync, membership is EMPTY — the exact user-visible bug.
     let staleResults = PlaylistMembershipQuery.playlistsContaining(
@@ -152,13 +151,9 @@ class PlaylistMembershipQueryTest: XCTestCase {
     // 0 -> 1. Reconcile detects that CHANGE and invalidates the stale sync flag.
     playlist.remoteSongCount = 1
     library.saveContext()
-    let didInvalidate = tracker.reconcile(
-      playlistId: playlist.id,
-      localItemCount: playlist.localItemCount,
-      remoteSongCount: playlist.remoteSongCount
-    )
+    let didInvalidate = playlist.reconcileItemsSyncState()
     XCTAssertTrue(didInvalidate, "A server-count change must invalidate the synced flag")
-    XCTAssertFalse(tracker.isSynced(playlist.id))
+    XCTAssertFalse(playlist.isItemsSynced)
 
     // Simulate the resulting re-fetch (getPlaylist) repopulating the items.
     playlist.append(playable: song)
@@ -176,33 +171,32 @@ class PlaylistMembershipQueryTest: XCTestCase {
     )
   }
 
-  /// Regression for the 2026-08-02 mistaken-deletion incident: after a FORCED
-  /// full resync, `cleanStorageOfObsoleteAccountEntries` deletes every local
-  /// PlaylistItemMO, but the UserDefaults-backed tracker survives and keeps
-  /// reporting every playlist as items-synced. The membership lookup then reads
-  /// zero items AND the completeness guard (`no unsynced playlists`) reports the
-  /// answer as COMPLETE — a confident, wrong "not in any playlists". The fix is
-  /// `tracker.clear()` on the wipe, which restores the honest "still syncing"
-  /// signal until the background worker re-fetches contents.
-  func testResyncWipeWithoutClearGivesFalseConfidentEmpty() {
-    let song = makeSong(id: "pmq-song-deleted")
-    // Server truth: the song is in this playlist. Locally, its items are empty
-    // (just wiped by the resync). Metadata (name + remote count) survives.
-    let playlist = makePlaylist(id: "pmq-pl-era04", name: "Era 04) Dragon Blood")
-    playlist.remoteSongCount = 17
+  /// Regression for the 2026-08-02 mistaken-deletion incident, restated for the
+  /// on-row sync state (model v53): after a FORCED full resync,
+  /// `cleanStorageOfObsoleteAccountEntries` deletes every PlaylistMO row and the
+  /// initial sync re-creates them from metadata only. Because the synced flag
+  /// now lives ON the row, the re-created rows start unsynced by default — the
+  /// completeness guard reports the honest "still syncing" state with no manual
+  /// `clear()` step to remember. (The original bug: the UserDefaults-backed
+  /// tracker survived the wipe and kept asserting a confident, wrong
+  /// "not in any playlists".)
+  func testResyncWipeLeavesRecreatedRowsHonestlyUnsynced() {
+    _ = makeSong(id: "pmq-song-deleted")
+    let preWipePlaylist = makePlaylist(id: "pmq-pl-era04", name: "Era 04) Dragon Blood")
+    preWipePlaylist.remoteSongCount = 17
+    library.saveContext()
+    // Pre-resync state: a completed sync marked the playlist's items synced.
+    preWipePlaylist.markItemsSynced(remoteSongCount: 17)
+
+    // The resync wipe deletes the row outright, then the initial sync
+    // re-creates it from server metadata (name + remote count, no items).
+    library.deletePlaylist(preWipePlaylist)
+    library.saveContext()
+    let recreatedPlaylist = makePlaylist(id: "pmq-pl-era04", name: "Era 04) Dragon Blood")
+    recreatedPlaylist.remoteSongCount = 17
     library.saveContext()
 
-    let defaults = makeIsolatedDefaults()
-    let tracker = PlaylistItemsSyncTracker(defaults: defaults)
-    // Pre-resync state: EVERY non-smart playlist was marked synced (a completed
-    // pre-resync sync). These flags survive the Core Data wipe because they live
-    // in UserDefaults. Marking them all is what makes the completeness guard see
-    // "nothing unsynced" and assert a confident empty.
-    for existing in library.getPlaylists(for: account) where !existing.isSmartPlaylist {
-      tracker.markSynced(existing.id, remoteSongCount: existing.remoteSongCount)
-    }
-
-    // Membership lookup after the wipe: empty items → no match (the bug).
+    // Membership lookup after the wipe: empty items → no match.
     let results = PlaylistMembershipQuery.playlistsContaining(
       songId: "pmq-song-deleted",
       in: testContext
@@ -210,33 +204,15 @@ class PlaylistMembershipQueryTest: XCTestCase {
     XCTAssertTrue(results.isEmpty, "Wiped items make the reverse lookup miss the song")
 
     // The completeness guard as EntityPreviewVC computes it: is any non-smart
-    // playlist unsynced? With the STALE tracker it answers NO — so the UI would
-    // assert a definitive (wrong) empty. This is the false-confidence bug.
-    let hasUnsyncedBeforeClear = library
+    // playlist unsynced? The re-created row defaults to unsynced, so the guard
+    // answers YES and the UI shows "still syncing" instead of a false empty.
+    let hasUnsyncedPlaylists = library
       .getPlaylists(for: account)
-      .contains { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
-    XCTAssertFalse(
-      hasUnsyncedBeforeClear,
-      "Reproduces the bug: the stale tracker makes the empty answer look complete"
-    )
-
-    // The fix: clearing the tracker on the resync wipe restores the honest
-    // incomplete signal, so the UI shows 'still syncing' instead of a false empty.
-    tracker.clear()
-    let hasUnsyncedAfterClear = library
-      .getPlaylists(for: account)
-      .contains { !$0.isSmartPlaylist && !tracker.isSynced($0.id) }
+      .contains { !$0.isSmartPlaylist && !$0.isItemsSynced }
     XCTAssertTrue(
-      hasUnsyncedAfterClear,
-      "After clear() the still-unsynced playlist is visible, so the empty answer is correctly incomplete"
+      hasUnsyncedPlaylists,
+      "Re-created rows start unsynced, so the empty answer is correctly reported incomplete"
     )
-  }
-
-  private func makeIsolatedDefaults() -> UserDefaults {
-    let suite = "PlaylistMembershipQueryTest.\(UUID().uuidString)"
-    let defaults = UserDefaults(suiteName: suite)!
-    defaults.removePersistentDomain(forName: suite)
-    return defaults
   }
 
   // MARK: - sharedPlaylistCount (Related Tracks reason line)

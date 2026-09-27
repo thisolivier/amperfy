@@ -109,7 +109,6 @@ class SmartPlaylistRefresherTest: XCTestCase {
   var syncer: RECORDING_SmartPlaylistBackfillSyncer!
   var storage: CoreDataCompanion!
   var store: SmartPlaylistStore!
-  var syncTracker: PlaylistItemsSyncTracker!
 
   let nowReference = Date(timeIntervalSince1970: 1_750_000_000)
   let dayInSeconds = 86_400.0
@@ -122,9 +121,6 @@ class SmartPlaylistRefresherTest: XCTestCase {
     storage = CoreDataCompanion(context: testContext)
     store = SmartPlaylistStore(
       defaults: UserDefaults(suiteName: "SmartPlaylistRefresherTest-\(UUID().uuidString)")!
-    )
-    syncTracker = PlaylistItemsSyncTracker(
-      defaults: UserDefaults(suiteName: "SmartPlaylistRefresherTracker-\(UUID().uuidString)")!
     )
     // The shared seeder inserts albums and songs of its own; the backfill picks
     // its candidates from the WHOLE library, so start from an empty one.
@@ -156,8 +152,7 @@ class SmartPlaylistRefresherTest: XCTestCase {
       storage: storage,
       librarySyncer: syncer,
       account: account,
-      store: store,
-      playlistItemsSyncTracker: syncTracker
+      store: store
     )
   }
 
