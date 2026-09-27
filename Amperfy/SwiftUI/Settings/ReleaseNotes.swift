@@ -37,6 +37,20 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 94,
+      date: "2026-09-27",
+      title: "Build 94 — Old tracks stop masquerading as new",
+      whatsNew: [
+        "Fixed: retagging or replacing a track's file on the server made it jump to the top of Recently Added and match 'added within N days' smart playlists. The app now remembers when it first saw each track and never lets a server-side file change move that date forward.",
+        "If the server later reports a truer, older added-date (a server upgrade is planned that does exactly this), the app adopts it.",
+      ],
+      testingFocus: [
+        "Check Recently Added looks right — genuinely new tracks on top, no old friends resurfacing.",
+        "After any tag edit made in NaviAdmin, confirm the edited track does NOT appear in Recently Added.",
+        "Smart playlists with an 'added within X days' rule should stop matching old-but-retagged tracks.",
+      ]
+    ),
+    ReleaseNote(
       id: 93,
       date: "2026-09-26",
       title: "Build 93 — Folders on first login, sturdier playlist sync memory",

@@ -211,4 +211,47 @@ class SongTest: XCTestCase {
     XCTAssertFalse(playlist1.isCached)
     XCTAssertFalse(playlist2.isCached)
   }
+
+  // MARK: - mergeServerAddedDate (AMP-23: first-seen wins)
+
+  func testMergeServerAddedDateSetsWhenUnset() {
+    XCTAssertNil(testSong.addedDate)
+    let serverDate = Date(timeIntervalSince1970: 1_700_000_000)
+    testSong.mergeServerAddedDate(serverDate)
+    XCTAssertEqual(testSong.addedDate, serverDate)
+  }
+
+  /// The bug this guards against: a server-side file rewrite bumps the
+  /// Subsonic `created` attribute, and the next re-parse used to overwrite
+  /// addedDate — surfacing an old track at the top of Recently Added.
+  func testMergeServerAddedDateNeverMovesForward() {
+    let firstSeenDate = Date(timeIntervalSince1970: 1_700_000_000)
+    testSong.addedDate = firstSeenDate
+    let bumpedByFileRewrite = Date(timeIntervalSince1970: 1_800_000_000)
+    testSong.mergeServerAddedDate(bumpedByFileRewrite)
+    XCTAssertEqual(
+      testSong.addedDate, firstSeenDate,
+      "A later server created-date must not move addedDate forward"
+    )
+  }
+
+  /// Moving EARLIER is allowed: if the server starts reporting a truer,
+  /// older first-seen date (e.g. after the v0.63 created_at fix lands),
+  /// we adopt it.
+  func testMergeServerAddedDateAcceptsEarlierDate() {
+    testSong.addedDate = Date(timeIntervalSince1970: 1_800_000_000)
+    let truerOlderDate = Date(timeIntervalSince1970: 1_700_000_000)
+    testSong.mergeServerAddedDate(truerOlderDate)
+    XCTAssertEqual(testSong.addedDate, truerOlderDate)
+  }
+
+  func testMergeServerAddedDateIgnoresNil() {
+    let firstSeenDate = Date(timeIntervalSince1970: 1_700_000_000)
+    testSong.addedDate = firstSeenDate
+    testSong.mergeServerAddedDate(nil)
+    XCTAssertEqual(
+      testSong.addedDate, firstSeenDate,
+      "A failed server date parse must not clear the stored added date"
+    )
+  }
 }

@@ -189,7 +189,10 @@ class SsSongParserDelegate: SsPlayableParserDelegate {
         }
       }
       if let createdTag = attributeDict["created"] {
-        songBuffer?.addedDate = Self.parseServerDate(createdTag)
+        // First-seen wins: never let a re-parse move addedDate forward (a
+        // server-side file rewrite bumps `created` on some server versions) —
+        // see Song.mergeServerAddedDate.
+        songBuffer?.mergeServerAddedDate(Self.parseServerDate(createdTag))
       }
       mergeServerPlayData(from: attributeDict)
     }

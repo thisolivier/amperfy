@@ -85,6 +85,26 @@ public class Song: AbstractPlayable, Identifyable {
     }
   }
 
+  /// Merge the server-reported added date (the Subsonic `created` attribute):
+  /// FIRST-SEEN WINS — once a song has an added date, a later server value can
+  /// only move it EARLIER, never forward.
+  ///
+  /// Why: on Navidrome ≤0.62 (and on any version with RecentlyAddedByModTime
+  /// enabled) `created` tracks the file, so a tag rewrite or file replacement
+  /// bumps it — and since every re-parse (album visit, playlist sync, search,
+  /// player) rewrote `addedDate` unconditionally, an old track would jump to
+  /// the top of Recently Added and match addedWithinDays smart-playlist rules.
+  /// Mirrors the `mergeServerPlayData` philosophy: local knowledge of "when I
+  /// first saw this" is never destroyed by a server-side file event. A nil
+  /// parse is ignored rather than clearing the stored date.
+  public func mergeServerAddedDate(_ serverAddedDate: Date?) {
+    guard let serverAddedDate else { return }
+    if let existingAddedDate = addedDate {
+      guard serverAddedDate < existingAddedDate else { return }
+    }
+    addedDate = serverAddedDate
+  }
+
   public var isOrphaned: Bool {
     guard let album = album else { return true }
     return album.isOrphaned
