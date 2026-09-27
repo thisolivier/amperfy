@@ -443,29 +443,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     MemoryReporter.logMemory(label: "after-start-manager")
     userStatistics.sessionStarted()
-    // Configure adjacency service with Core Data context provider
-    let adjacencyStorage = storage
-    DefaultTrackAdjacencyService.configure(contextProvider: {
-      adjacencyStorage.newBackgroundContext()
-    })
-    // Configure playlist folder sync for Navidrome accounts
-    if let loginCredentials = storage.settings.accounts.getSetting(activeAccountInfo).read
-      .loginCredentials {
-      let folderApi: NavidromeServerApi? = (loginCredentials.backendApi == .subsonic)
-        ? NavidromeServerApi(credentials: loginCredentials) : nil
-      let activeAccount = storage.main.library.getAccount(info: activeAccountInfo)
-      // Accounts persisted before serverUrl/userName were stored on the entity carry
-      // only hashes; the Discovery sidecar client derives its host from
-      // account.serverUrl, so heal existing installs here on launch.
-      if activeAccount.backfillIdentityIfMissing(from: loginCredentials) {
-        storage.main.saveContext()
-      }
-      PlaylistFolderStore.shared.configure(
-        context: storage.main.context,
-        navidromeApi: folderApi,
-        account: activeAccount.accountManagedObject
-      )
-    }
+    configureAccountScopedServices(for: activeAccountInfo)
 
     if storage.settings.app.isLibrarySynced {
       // Adjacency runs through the unified runner (AdjacencyWorker).
@@ -485,6 +463,42 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     return true
+  }
+
+  /// Wires the account-scoped singletons — the playlist folder store and the
+  /// track-adjacency service — for `accountInfo`. Idempotent; call from EVERY
+  /// path on which an account becomes active: app launch with a synced
+  /// library, first login (SyncVC), account switch, and post-logout re-login.
+  ///
+  /// This wiring used to live only in `didFinishLaunching` behind a
+  /// `guard isLibrarySynced` — so on a fresh install's first session (login →
+  /// initial sync → main window, no relaunch) the folder store was never
+  /// configured: no folders rendered, filed playlists appeared at the root,
+  /// and `syncFromServer()` silently no-oped. The Mac was simply the only
+  /// fresh install around when this was found; iPhones with long-lived
+  /// accounts always passed the launch guards.
+  func configureAccountScopedServices(for accountInfo: AccountInfo) {
+    let adjacencyStorage = storage
+    DefaultTrackAdjacencyService.configure(contextProvider: {
+      adjacencyStorage.newBackgroundContext()
+    })
+    // Configure playlist folder sync for Navidrome accounts
+    guard let loginCredentials = storage.settings.accounts.getSetting(accountInfo).read
+      .loginCredentials else { return }
+    let folderApi: NavidromeServerApi? = (loginCredentials.backendApi == .subsonic)
+      ? NavidromeServerApi(credentials: loginCredentials) : nil
+    let activeAccount = storage.main.library.getAccount(info: accountInfo)
+    // Accounts persisted before serverUrl/userName were stored on the entity carry
+    // only hashes; the Discovery sidecar client derives its host from
+    // account.serverUrl, so heal existing installs here.
+    if activeAccount.backfillIdentityIfMissing(from: loginCredentials) {
+      storage.main.saveContext()
+    }
+    PlaylistFolderStore.shared.configure(
+      context: storage.main.context,
+      navidromeApi: folderApi,
+      account: activeAccount.accountManagedObject
+    )
   }
 
   private var isAlreadyRegisteredToPlayer = false
@@ -546,17 +560,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       userInfo: nil
     )
     let account = appDelegate.storage.main.library.getAccount(info: accountInfo)
-    // Reconfigure playlist folder store for new account
-    if let loginCredentials = appDelegate.storage.settings.accounts.getSetting(accountInfo).read
-      .loginCredentials {
-      let folderApi: NavidromeServerApi? = (loginCredentials.backendApi == .subsonic)
-        ? NavidromeServerApi(credentials: loginCredentials) : nil
-      PlaylistFolderStore.shared.configure(
-        context: appDelegate.storage.main.context,
-        navidromeApi: folderApi,
-        account: account.accountManagedObject
-      )
-    }
+    // Reconfigure the account-scoped singletons for the new account
+    configureAccountScopedServices(for: accountInfo)
 
     closeAllButActiveMainTabs()
     setAppTheme(

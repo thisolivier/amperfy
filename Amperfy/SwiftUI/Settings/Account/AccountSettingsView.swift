@@ -91,17 +91,9 @@ struct AccountSettingsView: View {
     appDelegate.player.logout(account: account)
     if let newActiveAccountInfo = appDelegate.storage.settings.accounts.active {
       let newActiveAccount = appDelegate.storage.main.library.getAccount(info: newActiveAccountInfo)
-      // Reconfigure playlist folder store for the account that becomes active after logout
-      if let loginCredentials = appDelegate.storage.settings.accounts
-        .getSetting(newActiveAccountInfo).read.loginCredentials {
-        let folderApi: NavidromeServerApi? = (loginCredentials.backendApi == .subsonic)
-          ? NavidromeServerApi(credentials: loginCredentials) : nil
-        PlaylistFolderStore.shared.configure(
-          context: appDelegate.storage.main.context,
-          navidromeApi: folderApi,
-          account: newActiveAccount.accountManagedObject
-        )
-      }
+      // Reconfigure the account-scoped singletons for the account that becomes
+      // active after logout
+      appDelegate.configureAccountScopedServices(for: newActiveAccountInfo)
       appDelegate.closeAllButActiveMainTabs()
       appDelegate
         .setAppTheme(
