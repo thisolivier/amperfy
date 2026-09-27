@@ -20,8 +20,13 @@ final class NeedleDropLatencyTest: XCTestCase {
   private var spritePlayer: NeedleDropSpritePlayer!
   private var manifest: NeedleDropManifest!
 
-  private static let resultsFilePath =
-    "/private/tmp/claude-501/-Users-olivier-sites-musicLibrary/c27a1d1c-0cd5-4a08-953b-1f849955c017/scratchpad/needle-drop-latency-results.json"
+  /// Results land in the temp directory — never a hardcoded absolute path.
+  /// A previous version pointed at one agent session's scratchpad directory,
+  /// which happened to be writable from the iOS simulator but not from the
+  /// sandboxed Mac Catalyst test runner (NSCocoaErrorDomain 513) — and would
+  /// have failed on any other machine too.
+  private static let resultsFileURL = FileManager.default.temporaryDirectory
+    .appendingPathComponent("needle-drop-latency-results.json")
 
   override func setUp() {
     super.setUp()
@@ -128,7 +133,7 @@ final class NeedleDropLatencyTest: XCTestCase {
   }
 
   private func writeResults(rawLatenciesMs: [Double], summary: LatencySummary) throws {
-    let resultsURL = URL(fileURLWithPath: Self.resultsFilePath)
+    let resultsURL = Self.resultsFileURL
     try FileManager.default.createDirectory(
       at: resultsURL.deletingLastPathComponent(),
       withIntermediateDirectories: true
@@ -146,6 +151,6 @@ final class NeedleDropLatencyTest: XCTestCase {
     let data = try encoder.encode(document)
     try data.write(to: resultsURL, options: .atomic)
 
-    print("NeedleDrop latency results written to \(Self.resultsFilePath)")
+    print("NeedleDrop latency results written to \(Self.resultsFileURL.path)")
   }
 }

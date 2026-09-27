@@ -41,10 +41,17 @@ class TrackAdjacencyScoreTest: XCTestCase {
     storageDirectory = FileManager.default.temporaryDirectory
       .appendingPathComponent("test_adjacency_\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: storageDirectory, withIntermediateDirectories: true)
-    let context = coreDataHelper.persistentContainer.viewContext
+    // The service must get DISPOSABLE contexts, as production does
+    // (AppDelegate hands it `newBackgroundContext()`): the compute path calls
+    // `context.reset()` between batches. Handing it the shared viewContext —
+    // as this test originally did — invalidates every object the test still
+    // holds (account, songs) after the first compute, which surfaced as
+    // "Illegal attempt to establish a relationship 'account' between objects
+    // in different contexts" on the next createPlaylist.
+    let persistentContainer = coreDataHelper.persistentContainer
     service = DefaultTrackAdjacencyService(
       storageDirectory: storageDirectory,
-      contextProvider: { context }
+      contextProvider: { persistentContainer.newBackgroundContext() }
     )
   }
 
@@ -291,10 +298,17 @@ class TrackAdjacencyIntegrationTest: XCTestCase {
     storageDirectory = FileManager.default.temporaryDirectory
       .appendingPathComponent("test_adjacency_\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: storageDirectory, withIntermediateDirectories: true)
-    let context = coreDataHelper.persistentContainer.viewContext
+    // The service must get DISPOSABLE contexts, as production does
+    // (AppDelegate hands it `newBackgroundContext()`): the compute path calls
+    // `context.reset()` between batches. Handing it the shared viewContext —
+    // as this test originally did — invalidates every object the test still
+    // holds (account, songs) after the first compute, which surfaced as
+    // "Illegal attempt to establish a relationship 'account' between objects
+    // in different contexts" on the next createPlaylist.
+    let persistentContainer = coreDataHelper.persistentContainer
     service = DefaultTrackAdjacencyService(
       storageDirectory: storageDirectory,
-      contextProvider: { context }
+      contextProvider: { persistentContainer.newBackgroundContext() }
     )
   }
 
@@ -432,8 +446,14 @@ class TrackAdjacencyIntegrationTest: XCTestCase {
         songs: [songSeed, allSongs[index]]
       )
     }
+    // Two co-membership playlists, not one: a single shared playlist scores
+    // 0.5 (coMembershipWeight) which sits BELOW minimumThreshold (1.0), so
+    // topRelated correctly filters it — that filter is the product behavior
+    // this test originally misread as a bug. Two shared playlists score 1.0
+    // per pair, which qualifies, leaving 14 candidates for the top 10.
     let coMemberSongs = [songSeed] + Array(allSongs[5 ..< 15])
     makePlaylist(id: "t16-comember", name: "Co-member", songs: coMemberSongs)
+    makePlaylist(id: "t16-comember2", name: "Co-member Redux", songs: coMemberSongs)
     library.saveContext()
     service.invalidate()
     service.computeFromScratch()
@@ -487,10 +507,10 @@ class TrackAdjacencyIntegrationTest: XCTestCase {
     let originalScore = service.score(for: "t18-a", "t18-b")!
 
     // Create a fresh service pointing to the same directory
-    let context = coreDataHelper.persistentContainer.viewContext
+    let persistentContainer = coreDataHelper.persistentContainer
     let freshService = DefaultTrackAdjacencyService(
       storageDirectory: storageDirectory,
-      contextProvider: { context }
+      contextProvider: { persistentContainer.newBackgroundContext() }
     )
 
     let loadedScore = freshService.score(for: "t18-a", "t18-b")
