@@ -830,8 +830,8 @@ public final class PlaylistFolderStore: @unchecked Sendable {
     Self.findFolder(id: resolveFolderId(id), in: folders)
   }
 
-  /// The complete ordering space of one parent — subfolders and placed
-  /// playlists interleaved, in display order.
+  /// The complete ordering space of one parent — subfolders first, then placed
+  /// playlists, in display order.
   public func orderedSiblings(inFolder parentFolderId: String?) -> [PlaylistFolderSibling] {
     let parentFolderId = resolveFolderId(parentFolderId)
     guard let context = managedObjectContext else { return [] }

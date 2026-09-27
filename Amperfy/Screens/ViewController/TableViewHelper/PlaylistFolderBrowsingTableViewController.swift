@@ -27,13 +27,14 @@ import UIKit
 
 /// Shared base for the folder-aware playlist browsing tables. Both the main
 /// Playlists screen (`PlaylistFolderContentsVC`) and the "Add to Playlist"
-/// picker (`PlaylistSelectorVC`) present the same single interleaved list —
-/// top-level folders and unfiled playlists at the root, or a folder's subfolders
-/// and its playlists when folder-scoped — with always-on search and sort.
+/// picker (`PlaylistSelectorVC`) present the same single list — top-level
+/// folders and unfiled playlists at the root, or a folder's subfolders and its
+/// playlists when folder-scoped — with always-on search and sort.
 ///
-/// Folders and playlists are one list, not two sections, because they are one
-/// ordering space: a playlist deliberately placed between two folders has to
-/// render between them. `displayedRows` is that merged list.
+/// Folders always render at the top, segregated from the playlists below, in
+/// every sort option. It is still one list (one section, one ordering space per
+/// parent), and `displayedRows` is that list: the folder block followed by the
+/// playlist block.
 ///
 /// This base owns the data loading, the row/cell plumbing, the search
 /// controller, and the folder-change observer. Subclasses override the small
@@ -91,7 +92,8 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
 
   var displayedFolders: [PlaylistFolder] = []
   var displayedPlaylists: [Playlist] = []
-  /// The rendered list: subfolders and playlists interleaved in sibling order.
+  /// The rendered list: the folder block, then the playlist block, each in
+  /// sibling order (or the active attribute sort).
   var displayedRows: [PlaylistFolderBrowseRow] = []
   private var folderObserver: (any NSObjectProtocol)?
   private var folderAdoptionObserver: (any NSObjectProtocol)?
@@ -208,19 +210,21 @@ class PlaylistFolderBrowsingTableViewController: UITableViewController {
       displayedFolders = searchText.isEmpty ? sortFolders(folderStore.folders) : []
       displayedPlaylists = fetchUnfiledPlaylists()
     }
-    displayedRows = buildInterleavedRows()
+    displayedRows = buildDisplayedRows()
     tableView.reloadData()
     updateContentUnavailable()
     didReloadRows()
   }
 
-  /// Merge the fetched folders and playlists into the one list the table shows.
+  /// Merge the fetched folders and playlists into the one list the table shows:
+  /// folders first, playlists after, in every sort option.
   ///
   /// Both inputs are already filtered by search and offline mode, so whatever
-  /// survives is ordered here with the shared sibling comparator. Under an
-  /// attribute sort the two are concatenated instead — sorting a folder by
-  /// duration means nothing — but it is still one list, not two sections.
-  private func buildInterleavedRows() -> [PlaylistFolderBrowseRow] {
+  /// survives is ordered here with the shared sibling comparator (which puts
+  /// folders ahead of playlists). Under an attribute sort the two are
+  /// concatenated instead — sorting a folder by duration means nothing — but it
+  /// is still one list, not two sections.
+  private func buildDisplayedRows() -> [PlaylistFolderBrowseRow] {
     let folderSiblings = displayedFolders.map {
       PlaylistFolderSibling(
         kind: .folder,

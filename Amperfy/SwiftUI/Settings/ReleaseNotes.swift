@@ -37,6 +37,20 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 92,
+      date: "2026-09-26",
+      title: "Build 92 — Folders always sit above playlists",
+      whatsNew: [
+        "Fixed: on a fresh install the Playlists screen mixed folders in alphabetically with playlists, and they only jumped to the top after you reordered something. Folders now always render as a block at the top, separated from the playlists below, in every sort option.",
+        "Reordering still works the same way: drag within the folder block to arrange folders, within the playlist block to arrange playlists, and drop onto a folder to file things into it.",
+      ],
+      testingFocus: [
+        "Open Playlists on a device that has never reordered anything — folders should sit at the top as their own block, not scattered through the alphabet.",
+        "Switch through the sort options (Manual, Name, Last played, Change date, Duration) — folders stay on top in all of them.",
+        "Drag a playlist up past the folders — it should land at the top of the playlist section, never in between folders.",
+      ]
+    ),
+    ReleaseNote(
       id: 91,
       date: "2026-09-26",
       title: "Build 91 — Mac launch crash fixed",

@@ -31,8 +31,9 @@ import UIKit
 /// - past the last row → bring the dragged siblings to this level
 ///
 /// The edge bands matter: without them a folder row would swallow every drag
-/// near it and folders could never be reordered relative to their neighbours,
-/// which in an interleaved list means half the arrangement is unreachable.
+/// near it and folders could never be reordered relative to their neighbouring
+/// folders. (A playlist dropped between two folders is legal too — it simply
+/// lands at the top of the playlist block, since folders always render first.)
 ///
 /// Descending into a folder mid-drag uses UIKit's own spring loading
 /// (`shouldSpringLoadRowAt`), which activates the row after a hover and lands in

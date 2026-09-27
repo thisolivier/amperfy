@@ -22,11 +22,11 @@
 @testable import AmperfyKit
 import XCTest
 
-/// Tests for the interleaved browse list.
+/// Tests for the browse list row order.
 ///
-/// The property under test is the one PR 2 could not express: a playlist and a
-/// folder that sit between each other in the parent's ordering space render
-/// between each other. Two sections could only ever show one after the other.
+/// The property under test: folders render as a block ahead of the playlists in
+/// every sort option, while both kinds keep sharing one sortOrder space per
+/// parent. Within each block the sibling comparator orders as usual.
 class PlaylistFolderBrowseListTest: XCTestCase {
   // MARK: - Helpers
 
@@ -42,17 +42,19 @@ class PlaylistFolderBrowseListTest: XCTestCase {
     identities.map(\.id)
   }
 
-  // MARK: - Interleaving
+  // MARK: - Folder-block-first ordering
 
-  func testFoldersAndPlaylistsInterleaveBySortOrder() {
+  func testFoldersRenderAheadOfPlaylistsWhateverTheSortOrders() {
     let identities = PlaylistFolderBrowseListBuilder.rowIdentities(
       folderSiblings: [folderSibling("Rock", sortOrder: 10), folderSibling("Jazz", sortOrder: 30)],
       playlistSiblings: [playlistSibling("Mix", sortOrder: 20)]
     )
-    XCTAssertEqual(rowIds(identities), ["f-Rock", "p-Mix", "f-Jazz"])
+    // The playlist's sortOrder sits numerically between the folders', but the
+    // folder block still renders first.
+    XCTAssertEqual(rowIds(identities), ["f-Rock", "f-Jazz", "p-Mix"])
   }
 
-  func testUnorderedSiblingsFollowEveryOrderedOne() {
+  func testUnorderedSiblingsFollowOrderedOnesWithinTheirBlock() {
     let identities = PlaylistFolderBrowseListBuilder.rowIdentities(
       folderSiblings: [folderSibling("Zeta", sortOrder: nil)],
       playlistSiblings: [
@@ -60,17 +62,37 @@ class PlaylistFolderBrowseListTest: XCTestCase {
         playlistSibling("Ordered", sortOrder: 10),
       ]
     )
-    // The ordered playlist leads; the two unordered rows follow, name-sorted
-    // against each other regardless of kind.
-    XCTAssertEqual(rowIds(identities), ["p-Ordered", "p-Alpha", "f-Zeta"])
+    // Even unordered, the folder leads; within the playlist block the ordered
+    // playlist precedes the unordered one.
+    XCTAssertEqual(rowIds(identities), ["f-Zeta", "p-Ordered", "p-Alpha"])
   }
 
-  func testTiesOnSortOrderBreakByNameAcrossKinds() {
+  func testAllUnorderedSiblingsSegregateByKindThenName() {
+    // The fresh-install state: nothing has a sortOrder yet. Folders must still
+    // form their own block at the top instead of mixing in alphabetically —
+    // this exact state shipped as the mixed-in-on-first-listing bug.
+    let identities = PlaylistFolderBrowseListBuilder.rowIdentities(
+      folderSiblings: [
+        folderSibling("Zebra Folder", sortOrder: nil),
+        folderSibling("Alpha Folder", sortOrder: nil),
+      ],
+      playlistSiblings: [
+        playlistSibling("Beta Playlist", sortOrder: nil),
+        playlistSibling("Aardvark Playlist", sortOrder: nil),
+      ]
+    )
+    XCTAssertEqual(
+      rowIds(identities),
+      ["f-Alpha Folder", "f-Zebra Folder", "p-Aardvark Playlist", "p-Beta Playlist"]
+    )
+  }
+
+  func testTiesOnSortOrderKeepFoldersFirst() {
     let identities = PlaylistFolderBrowseListBuilder.rowIdentities(
       folderSiblings: [folderSibling("Beta", sortOrder: 10)],
       playlistSiblings: [playlistSibling("Alpha", sortOrder: 10)]
     )
-    XCTAssertEqual(rowIds(identities), ["p-Alpha", "f-Beta"])
+    XCTAssertEqual(rowIds(identities), ["f-Beta", "p-Alpha"])
   }
 
   func testEmptyInputsProduceEmptyList() {

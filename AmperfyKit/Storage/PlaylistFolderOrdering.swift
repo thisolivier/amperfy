@@ -94,12 +94,15 @@ public enum PlaylistFolderSortOrderPlan: Sendable, Equatable {
 /// tested without Core Data or a server.
 ///
 /// ## Ordering
-/// Within one parent, siblings sort by `sortOrder` ascending, ties broken by
-/// name, and siblings without a `sortOrder` come after every ordered one (also
-/// name-sorted among themselves). Folders and playlists interleave — they are
-/// one space, not two. The root is a parent like any other: playlists with an
-/// explicit root placement are ordered, and playlists with no placement at all
-/// are the unordered tail.
+/// Within one parent, folders always sort ahead of playlists — the list renders
+/// as a folder block followed by a playlist block, never mixed. Within each
+/// block, siblings sort by `sortOrder` ascending, ties broken by name, and
+/// siblings without a `sortOrder` come after every ordered one (also
+/// name-sorted among themselves). The two kinds still share one `sortOrder`
+/// space per parent — kind precedence is a display rule layered on top, so
+/// existing sortOrders stay valid. The root is a parent like any other:
+/// playlists with an explicit root placement are ordered, and playlists with
+/// no placement at all are the unordered tail.
 ///
 /// ## Gap numbering
 /// sortOrder values are client-assigned, unnormalized, and duplicates are legal,
@@ -119,6 +122,10 @@ public enum PlaylistFolderOrdering {
     _ rhs: PlaylistFolderSibling
   )
     -> Bool {
+    // Folders always precede playlists, whatever their sortOrders say. The
+    // sortOrder space stays shared, so a playlist numbered between two folders
+    // is legal — it just renders at its position within the playlist block.
+    if lhs.kind != rhs.kind { return lhs.kind == .folder }
     switch (lhs.sortOrder, rhs.sortOrder) {
     case let (leftSortOrder?, rightSortOrder?):
       if leftSortOrder != rightSortOrder { return leftSortOrder < rightSortOrder }

@@ -89,9 +89,9 @@ class PlaylistFolderOrderingTest: XCTestCase {
     XCTAssertEqual(sortedNames(siblings), ["Negative", "Zero", "Unordered"])
   }
 
-  /// Folders and playlists are one ordering space, not two — a playlist can sit
-  /// between two folders.
-  func testFoldersAndPlaylistsInterleaveInOneSpace() {
+  /// Folders always sort ahead of playlists, whatever their sortOrders say —
+  /// the list renders as a folder block then a playlist block, never mixed.
+  func testFoldersAlwaysPrecedePlaylists() {
     let siblings = [
       folderSibling("FolderLate", sortOrder: 30),
       playlistSibling("PlaylistMiddle", sortOrder: 20),
@@ -99,7 +99,20 @@ class PlaylistFolderOrderingTest: XCTestCase {
     ]
     XCTAssertEqual(
       sortedNames(siblings),
-      ["FolderEarly", "PlaylistMiddle", "FolderLate"]
+      ["FolderEarly", "FolderLate", "PlaylistMiddle"]
+    )
+  }
+
+  /// Even an unordered folder precedes every ordered playlist — kind wins
+  /// before sortOrder.
+  func testUnorderedFolderStillPrecedesOrderedPlaylist() {
+    let siblings = [
+      playlistSibling("OrderedPlaylist", sortOrder: 10),
+      folderSibling("UnorderedFolder", sortOrder: nil),
+    ]
+    XCTAssertEqual(
+      sortedNames(siblings),
+      ["UnorderedFolder", "OrderedPlaylist"]
     )
   }
 

@@ -23,8 +23,8 @@ import Foundation
 
 // MARK: - PlaylistFolderBrowseRowIdentity
 
-/// Which sibling a browse-list row stands for. The browse list is one
-/// interleaved list of folders and playlists, so a row index alone says nothing
+/// Which sibling a browse-list row stands for. The browse list is one list of
+/// folders and playlists (folder block first), so a row index alone says nothing
 /// about what kind of thing it is — every selection, drag and drop decision is
 /// carried on this identity instead.
 ///
@@ -68,29 +68,32 @@ public struct PlaylistFolderBrowseRowIdentity: Hashable, Sendable {
 
 // MARK: - PlaylistFolderBrowseListBuilder
 
-/// Turns a parent's folders and playlists into the single interleaved row order
-/// the browse screens render.
+/// Turns a parent's folders and playlists into the single row order the browse
+/// screens render: the folder block first, then the playlist block, under every
+/// sort option.
 ///
-/// PR 2 rendered folders and playlists as two sections that each projected the
-/// shared sibling order onto their own members. That reads correctly per section
-/// but loses the actual arrangement: a playlist deliberately placed between two
-/// folders appeared below both. Interleaving is the whole point of one ordering
-/// space per parent, so the list is built from it directly.
+/// Folders always render ahead of playlists, segregated — never mixed. The two
+/// kinds still share one `sortOrder` space per parent (the server contract),
+/// but the sibling comparator applies kind precedence before sortOrder, so the
+/// blocks fall out of one sort. An earlier design interleaved the kinds by raw
+/// sortOrder; on a fresh install, where nothing has a sortOrder yet, that
+/// degenerated to an alphabetical mix of folders and playlists that then
+/// reshuffled on the first reorder.
 ///
-/// Attribute sorts (name, last played, duration, …) are a different question:
-/// they have no meaning for folders, and mixing a folder into a duration sort
-/// would be arbitrary. Under an attribute sort the caller passes
-/// `keepsFoldersFirst: true`, which puts the folders — name-ordered — ahead of
-/// the playlists in the caller's chosen order, still as one list.
+/// Attribute sorts (name, last played, duration, …) have no meaning for
+/// folders. Under an attribute sort the caller passes `keepsFoldersFirst:
+/// true`, which concatenates the folders — name-ordered by the caller — ahead
+/// of the playlists in the caller's chosen order, rather than re-sorting.
 public enum PlaylistFolderBrowseListBuilder {
-  /// The interleaved row order for one parent.
+  /// The row order for one parent: folders first, then playlists.
   ///
   /// - Parameters:
   ///   - folderSiblings: the parent's subfolders.
   ///   - playlistSiblings: the playlists placed directly in the parent, already
   ///     filtered by whatever the view hides (offline, search, smart playlists).
   ///   - keepsFoldersFirst: `true` when an attribute sort is active, in which
-  ///     case the two given orders are concatenated rather than merged.
+  ///     case the two given orders are concatenated as-is rather than sorted
+  ///     with the sibling comparator.
   public static func rowIdentities(
     folderSiblings: [PlaylistFolderSibling],
     playlistSiblings: [PlaylistFolderSibling],
