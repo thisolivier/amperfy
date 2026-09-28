@@ -23,6 +23,14 @@
 import CoreData
 import XCTest
 
+/// Deterministic server-shaped (22-char alphanumeric) folder ids for tests.
+/// The AMP-24 plausibility rule demotes any other shape to a pending creation,
+/// so a fixture standing in for a SERVER-ISSUED id must look like one.
+private func fid(_ label: String) -> String {
+  let stem = "folder" + label.filter { $0.isLetter || $0.isNumber }
+  return String((stem + String(repeating: "0", count: 22)).prefix(22))
+}
+
 // MARK: - PlaylistFolderPlacementSyncTest
 
 /// Tests for placement-driven membership reconciliation.
@@ -144,7 +152,7 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
   // MARK: - 1. Placements drive membership
 
   func testPlacementsFromEnvelopeCreateLocalMemberships() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
     seedLocalPlaylist(id: "pl-1", name: "Riffs")
     seedLocalPlaylist(id: "pl-2", name: "Solos")
 
@@ -152,52 +160,52 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-rock", name: "Rock", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("rock"))", name: "Rock", parentId: ""),
         ],
         placements: [
           NavidromeOrganizationPlacement(
-            playlistId: "pl-1", folderId: "folder-rock", sortOrder: 10
+            playlistId: "pl-1", folderId: "\(fid("rock"))", sortOrder: 10
           ),
           NavidromeOrganizationPlacement(
-            playlistId: "pl-2", folderId: "folder-rock", sortOrder: 20
+            playlistId: "pl-2", folderId: "\(fid("rock"))", sortOrder: 20
           ),
         ]
       )
     }
     try await store.syncFromServer()
 
-    XCTAssertEqual(storedPlacementEdges(), ["pl-1@folder-rock", "pl-2@folder-rock"])
+    XCTAssertEqual(storedPlacementEdges(), ["pl-1@\(fid("rock"))", "pl-2@\(fid("rock"))"])
     XCTAssertEqual(store.folders.first?.playlistIds, ["pl-1", "pl-2"])
   }
 
   /// The contract allows a playlist in several folders at once — placements are
   /// edges, not a single membership.
   func testPlaylistCanBePlacedInSeveralFolders() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
-    seedLocalFolder(serverId: "folder-favs", name: "Favourites")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("favs"))", name: "Favourites")
     seedLocalPlaylist(id: "pl-1", name: "Riffs")
 
     configureStore {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-rock", name: "Rock", parentId: ""),
-          NavidromeOrganizationFolder(id: "folder-favs", name: "Favourites", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("rock"))", name: "Rock", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("favs"))", name: "Favourites", parentId: ""),
         ],
         placements: [
-          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: "folder-rock"),
-          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: "folder-favs"),
+          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: fid("rock")),
+          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: fid("favs")),
         ]
       )
     }
     try await store.syncFromServer()
 
-    XCTAssertEqual(storedPlacementEdges(), ["pl-1@folder-favs", "pl-1@folder-rock"])
+    XCTAssertEqual(storedPlacementEdges(), ["pl-1@\(fid("favs"))", "pl-1@\(fid("rock"))"])
   }
 
   /// Placement ordering is what the folder tree exposes as playlist order.
   func testPlacementSortOrderDrivesPlaylistOrderWithinAFolder() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
     seedLocalPlaylist(id: "pl-a", name: "Alpha")
     seedLocalPlaylist(id: "pl-b", name: "Bravo")
     seedLocalPlaylist(id: "pl-c", name: "Charlie")
@@ -206,18 +214,18 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-rock", name: "Rock", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("rock"))", name: "Rock", parentId: ""),
         ],
         placements: [
           // Deliberately reversed relative to name order.
           NavidromeOrganizationPlacement(
-            playlistId: "pl-c", folderId: "folder-rock", sortOrder: 10
+            playlistId: "pl-c", folderId: "\(fid("rock"))", sortOrder: 10
           ),
           NavidromeOrganizationPlacement(
-            playlistId: "pl-a", folderId: "folder-rock", sortOrder: 30
+            playlistId: "pl-a", folderId: "\(fid("rock"))", sortOrder: 30
           ),
           NavidromeOrganizationPlacement(
-            playlistId: "pl-b", folderId: "folder-rock", sortOrder: 20
+            playlistId: "pl-b", folderId: "\(fid("rock"))", sortOrder: 20
           ),
         ]
       )
@@ -229,7 +237,7 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
 
   /// A placement with no sortOrder sorts after the ordered ones.
   func testPlacementWithoutSortOrderSortsLast() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
     seedLocalPlaylist(id: "pl-ordered", name: "Zulu")
     seedLocalPlaylist(id: "pl-unordered", name: "Alpha")
 
@@ -237,14 +245,14 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-rock", name: "Rock", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("rock"))", name: "Rock", parentId: ""),
         ],
         placements: [
           NavidromeOrganizationPlacement(
-            playlistId: "pl-unordered", folderId: "folder-rock", sortOrder: nil
+            playlistId: "pl-unordered", folderId: "\(fid("rock"))", sortOrder: nil
           ),
           NavidromeOrganizationPlacement(
-            playlistId: "pl-ordered", folderId: "folder-rock", sortOrder: 10
+            playlistId: "pl-ordered", folderId: "\(fid("rock"))", sortOrder: 10
           ),
         ]
       )
@@ -257,7 +265,7 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
   // MARK: - 2. Never fabricate
 
   func testPlacementForUnknownPlaylistIsSkippedNotFabricated() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
     seedLocalPlaylist(id: "pl-known", name: "Known")
 
     let playlistCountBefore = library.getPlaylists(for: account).count
@@ -266,19 +274,19 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-rock", name: "Rock", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("rock"))", name: "Rock", parentId: ""),
         ],
         placements: [
-          NavidromeOrganizationPlacement(playlistId: "pl-known", folderId: "folder-rock"),
+          NavidromeOrganizationPlacement(playlistId: "pl-known", folderId: fid("rock")),
           NavidromeOrganizationPlacement(
-            playlistId: "pl-this-device-has-never-seen", folderId: "folder-rock"
+            playlistId: "pl-this-device-has-never-seen", folderId: "\(fid("rock"))"
           ),
         ]
       )
     }
     try await store.syncFromServer()
 
-    XCTAssertEqual(storedPlacementEdges(), ["pl-known@folder-rock"])
+    XCTAssertEqual(storedPlacementEdges(), ["pl-known@\(fid("rock"))"])
     XCTAssertEqual(
       library.getPlaylists(for: account).count, playlistCountBefore,
       "Folder sync must never create playlists"
@@ -294,10 +302,10 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-rock", name: "Rock", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("rock"))", name: "Rock", parentId: ""),
         ],
         placements: [
-          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: "folder-ghost"),
+          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: fid("ghost")),
         ]
       )
     }
@@ -309,19 +317,19 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
   // MARK: - 3. Empty folder is not a missing folder
 
   func testFolderWithNoPlacementsSurvivesAsAnEmptyFolder() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
-    seedLocalFolder(serverId: "folder-empty", name: "Empty")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("empty"))", name: "Empty")
     seedLocalPlaylist(id: "pl-1", name: "Riffs")
 
     configureStore {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-rock", name: "Rock", parentId: ""),
-          NavidromeOrganizationFolder(id: "folder-empty", name: "Empty", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("rock"))", name: "Rock", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("empty"))", name: "Empty", parentId: ""),
         ],
         placements: [
-          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: "folder-rock"),
+          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: fid("rock")),
         ]
       )
     }
@@ -336,29 +344,29 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
   /// A previously-filed playlist whose placement the server dropped becomes
   /// unfiled — but the playlist itself must survive untouched.
   func testDroppedPlacementUnfilesThePlaylistWithoutDeletingIt() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
     seedLocalPlaylist(id: "pl-1", name: "Riffs")
 
     configureStore {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-rock", name: "Rock", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("rock"))", name: "Rock", parentId: ""),
         ],
         placements: [
-          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: "folder-rock"),
+          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: fid("rock")),
         ]
       )
     }
     try await store.syncFromServer()
-    XCTAssertEqual(storedPlacementEdges(), ["pl-1@folder-rock"])
+    XCTAssertEqual(storedPlacementEdges(), ["pl-1@\(fid("rock"))"])
 
     // Second pass: the server still owns folders, but no longer files pl-1.
     configureStore {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-rock", name: "Rock", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("rock"))", name: "Rock", parentId: ""),
         ],
         placements: []
       )
@@ -376,19 +384,19 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
   /// Deleting a folder cascades to its placements but must not touch playlists —
   /// the Nullify/Cascade split the v52 model was designed around.
   func testDeletingAFolderServerSideKeepsItsPlaylists() async throws {
-    seedLocalFolder(serverId: "folder-doomed", name: "Doomed")
-    seedLocalFolder(serverId: "folder-keep", name: "Keep")
+    seedLocalFolder(serverId: "\(fid("doomed"))", name: "Doomed")
+    seedLocalFolder(serverId: "\(fid("keep"))", name: "Keep")
     seedLocalPlaylist(id: "pl-1", name: "Riffs")
 
     configureStore {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-doomed", name: "Doomed", parentId: ""),
-          NavidromeOrganizationFolder(id: "folder-keep", name: "Keep", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("doomed"))", name: "Doomed", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("keep"))", name: "Keep", parentId: ""),
         ],
         placements: [
-          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: "folder-doomed"),
+          NavidromeOrganizationPlacement(playlistId: "pl-1", folderId: fid("doomed")),
         ]
       )
     }
@@ -398,7 +406,7 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-keep", name: "Keep", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("keep"))", name: "Keep", parentId: ""),
         ],
         placements: []
       )
@@ -423,7 +431,7 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-rock", name: "Rock", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("rock"))", name: "Rock", parentId: ""),
         ],
         placements: [
           NavidromeOrganizationPlacement(
@@ -717,7 +725,7 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
   /// at migration would have been schema-clean and would have silently discarded
   /// every existing device's folder organization.
   func testLegacyMembershipsAreCarriedOverToPlacements() async throws {
-    let folderMO = seedLocalFolder(serverId: "folder-rock", name: "Rock")
+    let folderMO = seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
     let firstPlaylist = seedLocalPlaylist(id: "pl-b", name: "Bravo")
     let secondPlaylist = seedLocalPlaylist(id: "pl-a", name: "Alpha")
     folderMO.addToPlaylists(firstPlaylist.managedObject)
@@ -730,7 +738,7 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
       account: account.managedObject
     )
 
-    XCTAssertEqual(storedPlacementEdges(), ["pl-a@folder-rock", "pl-b@folder-rock"])
+    XCTAssertEqual(storedPlacementEdges(), ["pl-a@\(fid("rock"))", "pl-b@\(fid("rock"))"])
     // Carried-over edges get a stable order, taken from the name order the
     // pre-v2 UI displayed.
     XCTAssertEqual(store.folders.first?.playlistIds, ["pl-a", "pl-b"])
@@ -739,14 +747,14 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
   /// The backfill must not resurrect memberships a user has since removed, so it
   /// only runs while there are no placements at all.
   func testBackfillDoesNotRunWhenPlacementsAlreadyExist() async throws {
-    let folderMO = seedLocalFolder(serverId: "folder-rock", name: "Rock")
+    let folderMO = seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
     let legacyPlaylist = seedLocalPlaylist(id: "pl-legacy", name: "Legacy")
     let currentPlaylist = seedLocalPlaylist(id: "pl-current", name: "Current")
     folderMO.addToPlaylists(legacyPlaylist.managedObject)
 
     let placementMO = PlaylistFolderPlacementMO(context: testContext)
     placementMO.playlist = currentPlaylist.managedObject
-    placementMO.folderId = "folder-rock"
+    placementMO.folderId = "\(fid("rock"))"
     placementMO.account = account.managedObject
     try? testContext.save()
 
@@ -756,7 +764,7 @@ class PlaylistFolderPlacementSyncTest: XCTestCase {
       account: account.managedObject
     )
 
-    XCTAssertEqual(storedPlacementEdges(), ["pl-current@folder-rock"])
+    XCTAssertEqual(storedPlacementEdges(), ["pl-current@\(fid("rock"))"])
   }
 }
 

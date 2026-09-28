@@ -264,6 +264,118 @@ extension PlaylistFolderStore {
   }
 }
 
+// MARK: - Seeding an empty server (AMP-24)
+
+extension PlaylistFolderStore {
+  /// Push this device's entire folder tree to a server that speaks folders v2
+  /// but holds no organization at all.
+  ///
+  /// The recovery path for a stranded tree. A tree built before the
+  /// pending-create machinery existed (folders-v1 plain ids, or the era when
+  /// the server had no folder API to receive pushes) carries NON-temporary
+  /// ids, so it is invisible to ``retryPendingFolderCreations(in:)`` and —
+  /// deliberately — protected from the empty-server wipe guard. The result was
+  /// a folder tree that lived on exactly one device forever, one lost phone
+  /// away from gone.
+  ///
+  /// Seeding demotes every stranded folder to a fresh temporary id (repointing
+  /// its children and placements, and recording the id change so screens keep
+  /// resolving), then lets the existing replay/adoption machinery push it like
+  /// any offline creation — inheriting its partial-failure story verbatim:
+  /// whatever does not land stays pending, immune to reconciliation deletes,
+  /// and is retried on every future sync. Explicit ROOT placements (ordering
+  /// at the top level) are pushed separately since no folder adoption carries
+  /// them.
+  ///
+  /// Only ever called when the capability gate has CONFIRMED a v2 server whose
+  /// organization is empty, so there is nothing server-side to collide with or
+  /// clobber.
+  func seedEmptyServerFromLocalTree(in context: NSManagedObjectContext) async {
+    guard folderCreateRequester != nil else { return }
+
+    let demotedFolderCount = await MainActor.run {
+      self.demoteStrandedFoldersToPending(in: context)
+    }
+    logger.notice(
+      """
+      Seeding an empty server with this device's folder tree: \
+      \(demotedFolderCount, privacy: .public) stranded folder(s) demoted to \
+      pending; replaying creations.
+      """
+    )
+    await retryPendingFolderCreations(in: context)
+    await pushExplicitRootPlacements(in: context)
+  }
+
+  /// Give every folder that carries a non-temporary id — one the CURRENT
+  /// server has never confirmed — a fresh temporary id, so the pending-create
+  /// replay picks it up. Children and placements are repointed, and the old
+  /// id is recorded as adopted-to-the-temporary-id so anything still holding
+  /// it (a scoped screen, a drag in flight) resolves through to the live id
+  /// chain. Returns how many folders were demoted.
+  @MainActor
+  func demoteStrandedFoldersToPending(in context: NSManagedObjectContext) -> Int {
+    demoteFoldersToPending(in: context) { !PlaylistFolder.isTemporaryId($0) }
+  }
+
+  /// Demote only folders whose ids the server could never have issued (the
+  /// folders-v1 UUID era). Safe to run on EVERY sync, whatever the server tree
+  /// holds: such an id cannot refer to a server row, so it is always
+  /// local-first work awaiting push, never server state to mirror-delete.
+  @MainActor
+  func demoteImplausiblyIdentifiedFoldersToPending(in context: NSManagedObjectContext) -> Int {
+    demoteFoldersToPending(in: context) {
+      !PlaylistFolder.isTemporaryId($0) && !PlaylistFolder.isPlausibleServerId($0)
+    }
+  }
+
+  @MainActor
+  private func demoteFoldersToPending(
+    in context: NSManagedObjectContext,
+    where shouldDemote: (String) -> Bool
+  )
+    -> Int {
+    let allFolderMOs = (try? context.fetch(PlaylistFolderMO.fetchRequest())) ?? []
+    var demotedFolderCount = 0
+    for folderMO in allFolderMOs where shouldDemote(folderMO.id) {
+      let strandedId = folderMO.id
+      let temporaryId = PlaylistFolder.makeTemporaryId()
+      repointFolderReferences(from: strandedId, to: temporaryId, in: context)
+      folderMO.id = temporaryId
+      recordFolderIdAdoption(temporaryFolderId: strandedId, serverFolderId: temporaryId)
+      demotedFolderCount += 1
+    }
+    if demotedFolderCount > 0 {
+      try? context.save()
+    }
+    return demotedFolderCount
+  }
+
+  /// Upsert every explicit root placement (folder id `""`). Folder adoptions
+  /// replay the placements filed INSIDE each folder, but root-level ordering
+  /// rows belong to no folder and would otherwise never reach the server.
+  func pushExplicitRootPlacements(in context: NSManagedObjectContext) async {
+    guard let placementUpsertRequester else { return }
+    let rootPlacementPushes: [PlaylistFolderPlacementPush] = await MainActor.run {
+      self.fetchPlacements(folderId: PlaylistFolderRootId.canonical, in: context)
+        .compactMap { placementMO in
+          guard let playlistId = placementMO.playlist?.id, !playlistId.isEmpty
+          else { return nil }
+          return PlaylistFolderPlacementPush(
+            playlistId: playlistId, sortOrder: placementMO.sortOrderValue
+          )
+        }
+    }
+    for rootPlacementPush in rootPlacementPushes {
+      try? await placementUpsertRequester(
+        PlaylistFolderRootId.literal,
+        rootPlacementPush.playlistId,
+        rootPlacementPush.sortOrder
+      )
+    }
+  }
+}
+
 // MARK: - PlaylistFolderPlacementPush
 
 /// One placement waiting to be told to the server after its folder adopts a real

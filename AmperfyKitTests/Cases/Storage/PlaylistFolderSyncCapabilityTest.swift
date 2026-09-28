@@ -23,6 +23,16 @@
 import CoreData
 import XCTest
 
+/// Deterministic server-shaped (22-char alphanumeric) folder ids for tests.
+/// The AMP-24 plausibility rule demotes any other shape to a pending creation,
+/// so a fixture standing in for a SERVER-ISSUED id must look like one.
+private func fid(_ label: String) -> String {
+  let stem = "folder" + label.filter { $0.isLetter || $0.isNumber }
+  return String((stem + String(repeating: "0", count: 22)).prefix(22))
+}
+
+// MARK: - PlaylistFolderSyncCapabilityTest
+
 /// Regression tests for the playlist-folder sync capability probe.
 ///
 /// This fork shipped against a Navidrome folder API that was never deployed, so
@@ -98,8 +108,8 @@ class PlaylistFolderSyncCapabilityTest: XCTestCase {
   // MARK: - 1. Stock Navidrome (404) must never delete
 
   func testEndpointNotFoundLeavesLocalFoldersUntouched() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
-    seedLocalFolder(serverId: "folder-jazz", name: "Jazz")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("jazz"))", name: "Jazz")
 
     configureStore { throw NavidromeApiError.notFound }
     try await store.syncFromServer()
@@ -119,8 +129,8 @@ class PlaylistFolderSyncCapabilityTest: XCTestCase {
   /// The never-deployed v1 fork answered with a bare JSON array. A 200 is not
   /// proof of anything — only the envelope is.
   func testLegacyArrayResponseLeavesLocalFoldersUntouched() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
-    seedLocalFolder(serverId: "folder-jazz", name: "Jazz")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("jazz"))", name: "Jazz")
 
     let legacyArrayBody = """
     [{"id":"server-only","name":"Server Only","parent_id":null}]
@@ -133,7 +143,7 @@ class PlaylistFolderSyncCapabilityTest: XCTestCase {
 
   /// A JSON object that simply lacks `folderApiVersion` is equally unproven.
   func testObjectWithoutFolderApiVersionLeavesLocalFoldersUntouched() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
 
     let bodyWithoutVersion = """
     {"folders":[],"placements":[]}
@@ -146,7 +156,7 @@ class PlaylistFolderSyncCapabilityTest: XCTestCase {
 
   /// A well-formed envelope that predates the agreed contract is also refused.
   func testFolderApiVersionBelowMinimumLeavesLocalFoldersUntouched() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
 
     configureStore {
       NavidromeFolderOrganizationResponse(
@@ -163,18 +173,18 @@ class PlaylistFolderSyncCapabilityTest: XCTestCase {
   // MARK: - 3. A genuine v2 envelope lets reconciliation proceed
 
   func testV2EnvelopeReconcilesFoldersIncludingDeletion() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
-    seedLocalFolder(serverId: "folder-stale", name: "Stale")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("stale"))", name: "Stale")
 
     let envelopeBody = """
     {
       "folderApiVersion": 2,
       "folders": [
-        {"id":"folder-rock","name":"Rock Renamed","parentId":"","sortOrder":0},
-        {"id":"folder-new","name":"New From Server","parentId":"","sortOrder":1}
+        {"id":"\(fid("rock"))","name":"Rock Renamed","parentId":"","sortOrder":0},
+        {"id":"\(fid("new"))","name":"New From Server","parentId":"","sortOrder":1}
       ],
       "placements": [
-        {"playlistId":"pl-1","folderId":"folder-rock","sortOrder":0}
+        {"playlistId":"pl-1","folderId":"\(fid("rock"))","sortOrder":0}
       ]
     }
     """
@@ -193,7 +203,7 @@ class PlaylistFolderSyncCapabilityTest: XCTestCase {
       NavidromeFolderOrganizationResponse(
         folderApiVersion: 2,
         folders: [
-          NavidromeOrganizationFolder(id: "folder-root", name: "Root", parentId: ""),
+          NavidromeOrganizationFolder(id: "\(fid("root"))", name: "Root", parentId: ""),
         ],
         placements: []
       )
@@ -207,9 +217,9 @@ class PlaylistFolderSyncCapabilityTest: XCTestCase {
   // MARK: - 4. Empty-wipe belt — the exact shape of the Aug-2 data loss
 
   func testEmptyServerOrganizationDoesNotWipeNonEmptyLocalFolders() async throws {
-    seedLocalFolder(serverId: "folder-rock", name: "Rock")
-    seedLocalFolder(serverId: "folder-jazz", name: "Jazz")
-    seedLocalFolder(serverId: "folder-metal", name: "Metal", parentId: "folder-rock")
+    seedLocalFolder(serverId: "\(fid("rock"))", name: "Rock")
+    seedLocalFolder(serverId: "\(fid("jazz"))", name: "Jazz")
+    seedLocalFolder(serverId: "\(fid("metal"))", name: "Metal", parentId: fid("rock"))
 
     let emptyOrganizationBody = """
     {"folderApiVersion": 2, "folders": [], "placements": []}

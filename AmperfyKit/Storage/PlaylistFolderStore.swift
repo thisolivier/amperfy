@@ -141,6 +141,20 @@ public struct PlaylistFolder: Codable, Identifiable, Equatable {
   public static func isTemporaryId(_ folderId: String) -> Bool {
     folderId.hasPrefix(temporaryIdPrefix)
   }
+
+  /// Whether `folderId` could have been issued by the server at all.
+  ///
+  /// Navidrome mints folder ids as 22-character nanoids over `[0-9A-Za-z]`
+  /// (see the `id` doc above). Anything else — most importantly the 36-char
+  /// dashed UUIDs the folders-v1 client minted locally — can NEVER refer to a
+  /// server row, so treating such an id as server state to be mirrored (and
+  /// deleted when absent from an envelope) destroys local-first data. Sync
+  /// demotes implausible ids to pending creations instead.
+  public static func isPlausibleServerId(_ folderId: String) -> Bool {
+    folderId.count == 22 && folderId.allSatisfy { character in
+      character.isASCII && (character.isLetter || character.isNumber)
+    }
+  }
 }
 
 // MARK: - PlaylistFolderStore
@@ -807,9 +821,19 @@ public final class PlaylistFolderStore: @unchecked Sendable {
   public func resolveFolderId(_ folderId: String) -> String {
     adoptedFolderIdLock.lock()
     defer { adoptedFolderIdLock.unlock() }
-    // One hop is enough: adoption only ever maps a temporary id to a server id,
-    // and a server id is never superseded.
-    return adoptedFolderIdsByTemporaryId[folderId] ?? folderId
+    // Follow the chain: adoption usually maps a temporary id straight to a
+    // server id, but the AMP-24 seeding path first demotes a stranded
+    // (non-temporary) id to a fresh temporary one, which then adopts — so a
+    // caller holding the ORIGINAL id needs two hops. Bounded defensively; the
+    // map cannot cycle because every recorded target is freshly minted or
+    // server-issued.
+    var resolvedFolderId = folderId
+    var hopCount = 0
+    while let nextFolderId = adoptedFolderIdsByTemporaryId[resolvedFolderId], hopCount < 8 {
+      resolvedFolderId = nextFolderId
+      hopCount += 1
+    }
+    return resolvedFolderId
   }
 
   /// `nil` (the root) passes through untouched — the root has no id to adopt.

@@ -43,11 +43,37 @@ extension PlaylistFolderStore {
     guard let context = managedObjectContext,
           let organizationFetcher = folderOrganizationFetcher else { return }
 
+    // A folder id that could never have been issued by the server (the
+    // folders-v1 client minted dashed UUIDs locally) must not masquerade as
+    // server state: reconciliation would delete it for being absent from the
+    // envelope. Demote such ids to pending creations unconditionally — they
+    // are local-first work awaiting push, whatever the server tree holds.
+    let demotedImplausibleCount = await MainActor.run {
+      self.demoteImplausiblyIdentifiedFoldersToPending(in: context)
+    }
+    if demotedImplausibleCount > 0 {
+      logger.notice(
+        """
+        \(demotedImplausibleCount, privacy: .public) folder(s) carried ids the \
+        server could never have issued (folders-v1 era); demoted to pending \
+        creations for upload.
+        """
+      )
+    }
+
     // Push before pulling. Folders created while offline are still carrying
     // temporary ids; re-POSTing them now means anything that lands is already in
     // the envelope fetched below, so reconciliation sees one consistent tree
     // rather than a folder it is about to consider unknown.
     await retryPendingFolderCreations(in: context)
+
+    // A v1-era tree implies v1-era root ordering too: explicit root placements
+    // belong to no folder, so no adoption ever replays them. Push them in the
+    // same pass their folders were rescued — still before the fetch below, so
+    // the envelope reconciled against already contains them.
+    if demotedImplausibleCount > 0 {
+      await pushExplicitRootPlacements(in: context)
+    }
 
     let probeOutcome: Result<NavidromeFolderOrganizationResponse, Error>
     do {
@@ -72,11 +98,30 @@ extension PlaylistFolderStore {
     case let .skipEmptyServerOrganizationWouldWipeLocalFolders(localFolderCount):
       logger.warning(
         """
-        Playlist folder sync skipped: server confirmed folder support but \
-        reported an empty organization while \(localFolderCount, privacy: .public) \
-        local folder(s) exist. Refusing to mass-delete; local folders kept.
+        Playlist folder sync: server confirmed folder support but reported an \
+        empty organization while \(localFolderCount, privacy: .public) local \
+        folder(s) exist. Refusing to mass-delete; seeding the server with this \
+        device's tree instead (AMP-24).
         """
       )
+      // The refusal used to be the whole story, which left a tree built before
+      // the pending-create machinery (non-temporary ids) stranded on one
+      // device forever: invisible to the replay, protected from the wipe, and
+      // never uploaded. Seed the empty server from the local tree, then
+      // converge in this same pass: placements are pushed before the re-fetch
+      // below (the adoption race rule), so a successful seed reconciles
+      // against an envelope that already contains everything just pushed.
+      // A partial seed leaves the stragglers pending — retried next sync,
+      // immune to reconciliation deletes — and the re-fetch still reconciles
+      // whatever landed.
+      await seedEmptyServerFromLocalTree(in: context)
+      if let seededOrganization = try? await organizationFetcher(),
+         seededOrganization.folderApiVersion >= 2,
+         !seededOrganization.folders.isEmpty {
+        await reconcile(organization: seededOrganization, in: context)
+        notifyChange()
+        await MainActor.run { self.exportCurrentTree() }
+      }
 
     case let .reconcile(organization):
       await reconcile(organization: organization, in: context)

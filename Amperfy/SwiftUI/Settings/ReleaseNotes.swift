@@ -37,6 +37,21 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 95,
+      date: "2026-09-28",
+      title: "Build 95 — Your playlist folders finally reach the server",
+      whatsNew: [
+        "Fixed: the folder tree you rebuilt on this phone never actually uploaded — it lived only on this device, which is why other devices (like the Mac) showed no folders. On first launch of this build the app pushes the whole tree (folders, filed playlists, and your root ordering) to the server, then keeps it in sync like any other data.",
+        "If any part of the upload can't land (offline, server hiccup), those folders simply wait and retry on every sync — nothing is ever dropped or overwritten.",
+        "Safety hardening: folders from the old system can no longer be mistaken for server-deleted ones, so no sync can wipe them — even if folders get created on another device first.",
+      ],
+      testingFocus: [
+        "Open the app on this phone, visit Playlists, give it a few seconds — then open the Mac app (or any other device): the same folder tree should appear there.",
+        "Check the phone's own tree is exactly as you left it: same folders, same nesting, same playlists inside, same ordering.",
+        "File or move a playlist on one device and confirm it shows up on the other after a refresh.",
+      ]
+    ),
+    ReleaseNote(
       id: 94,
       date: "2026-09-27",
       title: "Build 94 — Old tracks stop masquerading as new",
