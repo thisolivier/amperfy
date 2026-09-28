@@ -130,7 +130,17 @@ public final class NavidromeServerApi: Sendable {
     guard let token = jwtToken.wrappedValue else {
       throw NavidromeApiError.unauthorized
     }
-    return HTTPHeaders(["Authorization": "Bearer \(token)"])
+    // BOTH header spellings, deliberately. `x-nd-authorization` is Navidrome's
+    // canonical native-API header and the only one current upstream accepts —
+    // sending only `Authorization: Bearer` 401'd every call against the
+    // rebased server (and each failed call's re-login tripped the server's
+    // auth rate limiter, which is how the build-95 folder seeding stalled).
+    // Plain `Authorization` is kept for the older fork images that accepted
+    // only it.
+    return HTTPHeaders([
+      "x-nd-authorization": "Bearer \(token)",
+      "Authorization": "Bearer \(token)",
+    ])
   }
 
   // MARK: - Generic Request Helpers

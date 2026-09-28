@@ -37,6 +37,17 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 96,
+      date: "2026-09-28",
+      title: "Build 96 — Folder upload unblocked",
+      whatsNew: [
+        "Hotfix on top of build 95: the folder-tree upload was reaching the server but being turned away at the door — the upgraded server insists on its own authentication header spelling. The app now sends both spellings, so the upload (and all other folder syncing) goes through.",
+      ],
+      testingFocus: [
+        "Open the app, visit Playlists, wait a few seconds — your folder tree should now appear on the server and, shortly after, on the Mac.",
+      ]
+    ),
+    ReleaseNote(
       id: 95,
       date: "2026-09-28",
       title: "Build 95 — Your playlist folders finally reach the server",
