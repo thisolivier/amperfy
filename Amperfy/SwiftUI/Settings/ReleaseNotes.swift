@@ -37,6 +37,21 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 97,
+      date: "2026-09-28",
+      title: "Build 97 — One-time reset for the server's new track IDs",
+      whatsNew: [
+        "The server permanently switched to its new track-ID scheme (this cures the duplicate 'recently added' entries at the source). On first launch this build renames every downloaded file to its new ID and then runs one automatic full resync — you'll see the sync screen once.",
+        "Your downloads carry over through the rename — no re-downloading. Playlists, folders, favourites, ratings and play counts all come back from the server. Only local play-progress and the play queue reset.",
+        "After the resync the duplicates are gone for good.",
+      ],
+      testingFocus: [
+        "First launch shows the sync screen once — let it finish.",
+        "Spot-check downloaded songs still play offline afterwards.",
+        "Recently Added should be duplicate-free; folders and playlists intact.",
+      ]
+    ),
+    ReleaseNote(
       id: 96,
       date: "2026-09-28",
       title: "Build 96 — Folder upload unblocked",
