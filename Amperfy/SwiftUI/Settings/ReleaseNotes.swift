@@ -37,6 +37,18 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 98,
+      date: "2026-09-28",
+      title: "Build 98 — Cleanup after the ID switchover",
+      whatsNew: [
+        "Removes the one-time migration machinery from build 97 now that every device has switched to the server's new track IDs. No behaviour changes — just a lighter, tidier app.",
+        "Heads-up: if any device skipped build 97, run a manual resync from Settings after installing this build.",
+      ],
+      testingFocus: [
+        "Normal launch, no sync screen, everything where you left it.",
+      ]
+    ),
+    ReleaseNote(
       id: 97,
       date: "2026-09-28",
       title: "Build 97 — One-time reset for the server's new track IDs",

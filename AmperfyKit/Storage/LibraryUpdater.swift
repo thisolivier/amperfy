@@ -157,53 +157,10 @@ public class LibraryUpdater {
         .streamingFormatPreference
     }
     carryOverLegacyPlaylistItemsSyncStateIfNeeded()
-    relinkCachesForCanonicalServerIdsIfNeeded()
-  }
-
-  /// One-time recovery from the 2026-09-28 server id migration: the server
-  /// re-encoded ~87% of its track ids (deterministically — see
-  /// ``NavidromeCanonicalId``), so every locally cached file, named
-  /// `<oldId>.<ext>` on disk, would orphan on the next resync. Rename each
-  /// cached song/lyrics/embedded-artwork file to the id the server now
-  /// serves, then force a full resync THIS launch: the resync's
-  /// cached-item adoption re-creates stub rows from the (renamed) filenames,
-  /// the server sync hydrates them, and downloads carry over intact. All
-  /// server-side state (plays, ratings, playlists, folders) re-syncs down.
-  ///
-  /// Self-gating on a defaults flag: runs exactly once per device. Artwork
-  /// caches are deliberately NOT relinked (their ids are composite strings;
-  /// artwork re-fetches cheaply on demand).
-  @MainActor
-  private func relinkCachesForCanonicalServerIdsIfNeeded() {
-    let defaults = UserDefaults.standard
-    let relinkDoneKey = "amperfy.fork.canonicalIdCacheRelinkDone"
-    guard !defaults.bool(forKey: relinkDoneKey) else { return }
-
-    os_log(
-      "Perform blocking library update (START): canonical-id cache relink",
-      log: log, type: .info
-    )
-    var renamedFileCount = 0
-    for accountInfo in storage.settings.accounts.allAccounts {
-      let directories = [
-        fileManager.getOrCreateAbsoluteSongsDirectory(for: accountInfo),
-        fileManager.getOrCreateAbsoluteLyricsDirectory(for: accountInfo),
-        fileManager.getOrCreateAbsoluteEmbeddedArtworksDirectory(for: accountInfo),
-      ]
-      for directoryURL in directories.compactMap({ $0 }) {
-        renamedFileCount += NavidromeCanonicalId.relinkFiles(in: directoryURL)
-      }
-    }
-    defaults.set(true, forKey: relinkDoneKey)
-
-    // Force the full resync now: it wipes the stale-id rows and re-adopts the
-    // renamed files under their new ids. Downloads survive; local-only play
-    // progress and queue state do not (accepted cost of the id flip).
-    storage.settings.app.isLibrarySynced = false
-    os_log(
-      "Perform blocking library update (DONE): canonical-id cache relink — %d file(s) renamed; full resync forced",
-      log: log, type: .info, renamedFileCount
-    )
+    // The one-time canonical-id cache relink (builds 97) was removed after
+    // every device ran it — see docs/backlog.md ND-9/ND-10 for the incident
+    // record. A device that skipped build 97 heals with a manual
+    // Settings → resync (downloads re-download rather than relink).
   }
 
   /// One-time carry-over of the legacy UserDefaults-backed playlist items-sync
