@@ -243,14 +243,31 @@ public class AddToPlaylistManager {
           }
           self.playlist.append(playables: songsToAdd)
           self.onDoneCB?()
+          // Inside the `do`: this confirmation used to sit after the catch, so
+          // a refused upload reported a successful sync.
+          if songsToAdd.count > Self.warningElementsToAddCount {
+            self.appDelegate.eventLogger.info(
+              topic: "Add Songs to Playlist",
+              message: "The Playlist \"\(self.playlist.name)\" has been successfully synced to the server."
+            )
+          }
         } catch {
-          self.appDelegate.eventLogger.report(topic: "Add Songs to Playlist", error: error)
-        }
-        if songsToAdd.count > Self.warningElementsToAddCount {
-          self.appDelegate.eventLogger.info(
-            topic: "Add Songs to Playlist",
-            message: "The Playlist \"\(self.playlist.name)\" has been successfully synced to the server."
-          )
+          // The picker has already been dismissed, but the playlist edit
+          // screen behind it is still a presented sheet, so a notification
+          // banner would be discarded (see `TopMostAlertPresenter`). A refusal
+          // is final and gets a modal; transient failures keep the banner.
+          if let rejection = PlaylistAddRejection(
+            error: error,
+            playlistName: self.playlist.name,
+            songCount: songsToAdd.count
+          ) {
+            TopMostAlertPresenter.display(
+              rejection: rejection,
+              eventLogger: self.appDelegate.eventLogger
+            )
+          } else {
+            self.appDelegate.eventLogger.report(topic: "Add Songs to Playlist", error: error)
+          }
         }
       }
     }

@@ -195,17 +195,41 @@ class PlaylistSelectorVC: SingleSnapshotFetchedResultsTableViewController<Playli
     guard !selectedPlaylits.isEmpty else { return }
 
     let localCopySelectedPlaylits = selectedPlaylits
-    Task { @MainActor in do {
+    Task { @MainActor in
+      // One do/catch per playlist: a server that refuses one playlist must not
+      // abandon the adds for the others, which a single catch around the loop
+      // did without telling anybody.
       for (playlist, songs) in localCopySelectedPlaylits {
-        try await self.appDelegate.getMeta(self.account.info).librarySyncer.syncUpload(
-          playlistToAddSongs: playlist,
-          songs: songs
-        )
-        playlist.append(playables: songs)
+        do {
+          try await self.appDelegate.getMeta(self.account.info).librarySyncer.syncUpload(
+            playlistToAddSongs: playlist,
+            songs: songs
+          )
+          playlist.append(playables: songs)
+        } catch {
+          self.report(addFailure: error, playlist: playlist, songCount: songs.count)
+        }
       }
-    } catch {
-      self.appDelegate.eventLogger.report(topic: "Playlist Add Songs", error: error)
-    }}
+    }
+  }
+
+  /// A refused add has to be shown as a modal: this screen is itself a
+  /// presented sheet, and a notification banner raised while a sheet is up is
+  /// discarded (see `TopMostAlertPresenter`). Transient failures keep the
+  /// banner — they are worth a glance, not an interruption.
+  private func report(addFailure error: Error, playlist: Playlist, songCount: Int) {
+    if let rejection = PlaylistAddRejection(
+      error: error,
+      playlistName: playlist.name,
+      songCount: songCount
+    ) {
+      TopMostAlertPresenter.display(
+        rejection: rejection,
+        eventLogger: appDelegate.eventLogger
+      )
+    } else {
+      appDelegate.eventLogger.report(topic: "Playlist Add Songs", error: error)
+    }
   }
 
   @IBAction
