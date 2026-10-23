@@ -158,6 +158,42 @@ Still unassigned, and out of AMP-28's scope because nothing mutates their
 contents behind the user's back: `AlbumDetailVC`, `ArtistDetailVC`,
 `GenreDetailVC`, `PodcastDetailVC`.
 
+### …and a refreshed header must not read mid-save
+
+Wiring the hook up got the header refreshing but one save behind: a rolled-back
+2-song add on a 6-song playlist settled on **"5 Songs · 15m"** — duration final,
+count stale.
+
+The asymmetry is the tell. `duration` is mutated **eagerly** inside the mutator,
+before the save. `songCount` was only recomputed in `PlaylistMO.willSave()` —
+and `save()` opens by calling `processPendingChanges`, which posts
+`objectsDidChange`, which is what drives the FRC and therefore the header. So
+every refresh read `songCount` *before* `willSave` corrected it. Compounded by
+the rollback saving once per song, the last notification of a 2-song rollback
+reported 5 against 4 rows, and nothing fired afterwards.
+
+Three changes, in order of how much they matter:
+
+1. **`songCount` is now maintained eagerly** by every count-changing `Playlist`
+   mutator (`append`, `insert`, `remove(at:)`, `removeAllItems`, the batch
+   remove), exactly as `duration` always was. `willSave` stays as a backstop for
+   the XML parser delegates, which mutate `items` through the managed object.
+   Note the count is *not* computed on read: `Playlist.songCount` must not fault
+   a playlist's `items` relationship just to draw one row in a list of hundreds,
+   which is why the denormalisation exists and why the fix is to write it at
+   every mutation.
+2. **The rollback is one save**, via `remove(firstOccurrencesOfPlayables:)`. The
+   queue rows are resolved *before* the rollback runs, so a looped rollback
+   interrupted part-way left phantom songs with nothing queued to correct them.
+   One save also repaints the list once at the final state rather than walking
+   it down through every intermediate count.
+3. **`snapshotDidChange` is deferred by one main-actor hop**, so the hook reads
+   settled state whatever else is denormalised later.
+
+`PlaylistSongCountConsistencyTest` pins the invariant at the only moment that
+matters: at every `objectsDidChange`, the count a header would render equals the
+rows a list would show.
+
 ## Working patterns
 
 - **The row holds relationships, not id strings.** A freshly created playlist

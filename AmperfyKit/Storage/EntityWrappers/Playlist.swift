@@ -254,6 +254,7 @@ public class Playlist: Identifyable {
     createAndAppendPlaylistItem(for: playable)
     updateChangeDate()
     updateDuration(byIncreasingDuration: playable.duration)
+    refreshSongCount()
     updateArtworkItems()
     library.saveContext()
   }
@@ -264,6 +265,7 @@ public class Playlist: Identifyable {
     }
     updateChangeDate()
     updateDuration(byIncreasingDuration: playablesToAppend.reduce(0) { $0 + $1.duration })
+    refreshSongCount()
     updateArtworkItems()
     library.saveContext()
   }
@@ -396,6 +398,7 @@ public class Playlist: Identifyable {
 
     updateChangeDate()
     updateDuration(byIncreasingDuration: playablesToInsert.reduce(0) { $0 + $1.duration })
+    refreshSongCount()
     if insertIndex < Self.artworkItemMaxLookCount {
       updateArtworkItems()
     }
@@ -441,6 +444,7 @@ public class Playlist: Identifyable {
 
     updateChangeDate()
     updateDuration(byReducingDuration: Int(itemToBeRemovedMO.playable.combinedDuration))
+    refreshSongCount()
     if index < Self.artworkItemMaxLookCount {
       updateArtworkItems()
     }
@@ -453,6 +457,72 @@ public class Playlist: Identifyable {
       .firstIndex(where: { $0.playable == targetPlayableMO }) {
       remove(at: targetIndex)
     }
+  }
+
+  /// Remove one occurrence of each playable in a SINGLE save.
+  ///
+  /// Added for the AMP-28 rollback, which undoes a whole refused batch. Calling
+  /// `remove(firstOccurrenceOfPlayable:)` in a loop saves once per song, and
+  /// that was wrong twice over:
+  ///
+  /// - **Integrity.** The upload worker resolves the queue rows *before*
+  ///   rolling back, so a crash part-way through a looped rollback left phantom
+  ///   songs in the playlist with nothing queued to ever correct them. One save
+  ///   makes the rollback all-or-nothing.
+  /// - **Churn.** Each save drove a separate fetched-results update, so one
+  ///   logical rollback repainted the list N times and walked the header down
+  ///   through every intermediate count.
+  ///
+  /// Indices are resolved and removed highest-first so earlier removals cannot
+  /// shift the positions of later ones.
+  public func remove(firstOccurrencesOfPlayables playables: [AbstractPlayable]) {
+    guard !playables.isEmpty else { return }
+
+    // Each playable claims one distinct position, so a deliberate duplicate add
+    // (two queue rows for the same song) removes exactly the two copies it
+    // created rather than the same one twice.
+    var claimedIndices = Set<Int>()
+    var durationToReduce = 0
+    for playable in playables {
+      let targetPlayableMO = playable.playableManagedObject
+      guard let targetIndex = managedObject.items.indices.first(where: {
+        managedObject.items[$0].playable == targetPlayableMO && !claimedIndices.contains($0)
+      }) else { continue }
+      claimedIndices.insert(targetIndex)
+      durationToReduce += Int(managedObject.items[targetIndex].playable.combinedDuration)
+    }
+    guard !claimedIndices.isEmpty else { return }
+
+    let lowestRemovedIndex = claimedIndices.min() ?? 0
+    for indexToRemove in claimedIndices.sorted(by: >) {
+      let itemToBeRemovedMO = managedObject.items[indexToRemove]
+      managedObject.removeFromItems(at: indexToRemove)
+      library.deletePlaylistItemMO(item: itemToBeRemovedMO)
+    }
+
+    updateChangeDate()
+    updateDuration(byReducingDuration: durationToReduce)
+    refreshSongCount()
+    if lowestRemovedIndex < Self.artworkItemMaxLookCount {
+      updateArtworkItems()
+    }
+    library.saveContext()
+  }
+
+  /// Bring the denormalised `songCount` back in step with the rows.
+  ///
+  /// Called by every mutator that changes the item count, immediately BEFORE
+  /// the save. `PlaylistMO.willSave` does the same thing, but it runs too late
+  /// to be the only writer: `save()` opens by calling `processPendingChanges`,
+  /// which posts `objectsDidChange`, so the fetched-results controllers — and
+  /// any header refreshed off one — read the count before `willSave` had
+  /// corrected it, and rendered the previous save's value.
+  ///
+  /// `duration` never had this problem because it was always mutated eagerly,
+  /// which is exactly why a rolled-back add showed the right duration beside a
+  /// count that was one save stale.
+  private func refreshSongCount() {
+    managedObject.refreshSongCount()
   }
 
   public func getFirstIndex(item: PlaylistItem) -> Int? {
@@ -468,6 +538,7 @@ public class Playlist: Identifyable {
   public func removeAllItems() {
     managedObject.removeAllItems()
     updateChangeDate()
+    refreshSongCount()
     updateArtworkItems()
     managedObject.duration = 0
     managedObject.remoteDuration = 0

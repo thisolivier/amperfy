@@ -26,10 +26,19 @@ import Foundation
 
 @objc(PlaylistMO)
 public final class PlaylistMO: NSManagedObject {
+  /// Backstop only. `songCount` is kept in step eagerly by the `Playlist`
+  /// mutators (see `Playlist.refreshSongCount`), because `willSave` runs too
+  /// late to be the only writer: `save()` opens by calling
+  /// `processPendingChanges`, which posts `objectsDidChange` — so every
+  /// fetched-results controller, and every header refreshed off one, read the
+  /// count BEFORE this ran and therefore saw the previous save's value.
+  ///
+  /// This stays as a safety net for any path that mutates `items` through the
+  /// managed object directly (the XML parser delegates do).
   override public func willSave() {
     super.willSave()
     if hasChangedSongs {
-      updateSongCount()
+      refreshSongCount()
     }
   }
 
@@ -37,7 +46,13 @@ public final class PlaylistMO: NSManagedObject {
     changedValues().keys.contains(#keyPath(items))
   }
 
-  fileprivate func updateSongCount() {
+  /// Recompute the denormalised count from the rows. Cheap and idempotent.
+  ///
+  /// The denormalisation is deliberate — `Playlist.songCount` must not fault a
+  /// playlist's `items` relationship just to render a row in a list of
+  /// hundreds of playlists — so the cure for staleness is to write it at every
+  /// mutation rather than to compute it on read.
+  func refreshSongCount() {
     guard Int16(clamping: items.count) != songCount else { return }
     songCount = Int16(clamping: items.count)
   }

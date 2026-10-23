@@ -234,10 +234,14 @@ public final class PlaylistAddUploadService {
 
   /// Undo the optimistic local append for a batch the server refused, one
   /// occurrence per queued row so a deliberate duplicate add removes exactly
-  /// the copy it added.
+  /// the copies it added.
+  ///
+  /// One save for the whole batch, not one per song. The queue rows are already
+  /// resolved by the time this runs, so a looped rollback interrupted part-way
+  /// would have left phantom songs with nothing queued to correct them; and
+  /// saving per song drove a separate fetched-results update each time, walking
+  /// the list and its header down through every intermediate count.
   private func rollBackLocalAppend(for batch: PendingPlaylistSongAddBatch) {
-    for song in batch.songs {
-      batch.playlist.remove(firstOccurrenceOfPlayable: song)
-    }
+    batch.playlist.remove(firstOccurrencesOfPlayables: batch.songs)
   }
 }
