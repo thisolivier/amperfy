@@ -109,8 +109,23 @@ extension LibrarySyncerProxy: LibrarySyncer {
     try await activeSyncer.syncDownPlaylistsWithoutSongs()
   }
 
+  /// The one choke point every per-playlist fetch goes through — including
+  /// `Playlist.fetchFromServer` — so it is where the AMP-28 reconciliation
+  /// guard belongs.
+  ///
+  /// `syncDown` is server-wins and positional: it rewrites `items` from the
+  /// response envelope and deletes whatever the server did not mention. A song
+  /// still queued for upload is precisely that, so the fetch would erase an add
+  /// the user can see. `defer` rather than a trailing call so a fetch that
+  /// throws part-way cannot leave the tail truncated either.
   @MainActor
   func syncDown(playlist: Playlist) async throws {
+    defer {
+      PendingPlaylistSongAddReconciler.reapplyPendingAdds(
+        to: playlist,
+        store: PendingPlaylistSongAddStore(library: storage.main.library)
+      )
+    }
     try await activeSyncer.syncDown(playlist: playlist)
   }
 

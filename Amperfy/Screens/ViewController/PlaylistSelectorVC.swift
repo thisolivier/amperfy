@@ -242,9 +242,19 @@ class PlaylistSelectorVC: PlaylistFolderBrowsingTableViewController {
 
   // MARK: - Adding songs
 
-  /// Uploads the given playables to the playlist and appends them locally.
+  /// Appends the given playables locally, records them in the durable
+  /// pending-adds queue, and kicks the upload worker.
   /// When `showConfirmationAt` is provided, a transient checkmark is flashed on
-  /// that row so the user gets non-blocking feedback that the add succeeded.
+  /// that row so the user gets non-blocking feedback that the add was taken.
+  ///
+  /// AMP-28 changed three things here. The upload is no longer a
+  /// fire-and-forget `Task` whose only failure handling was a banner the
+  /// presented picker swallows; the offline early-return is gone, because
+  /// "offline" was being spent as "done" and the add was then erased by the
+  /// next fetch; and the enqueue happens in the same breath as the local
+  /// append, so what the user sees and what the device owes the server cannot
+  /// disagree. The worker owns everything after that — retry, rollback on a
+  /// permanent refusal, and a modal alert when it happens.
   private func addPendingSongs(
     to playlist: Playlist,
     playables: [AbstractPlayable],
@@ -254,19 +264,16 @@ class PlaylistSelectorVC: PlaylistFolderBrowsingTableViewController {
     guard !songs.isEmpty else { return }
 
     playlist.append(playables: songs)
+    let uploadService = appDelegate.playlistAddUploadService(for: account)
+    uploadService.enqueue(songs: songs, to: playlist)
+
     if let indexPath {
       flashAddedConfirmation(at: indexPath)
     }
 
-    guard appDelegate.storage.settings.user.isOnlineMode else { return }
-    Task { @MainActor in do {
-      try await self.appDelegate.getMeta(self.account.info).librarySyncer.syncUpload(
-        playlistToAddSongs: playlist,
-        songs: songs
-      )
-    } catch {
-      self.appDelegate.eventLogger.report(topic: "Playlist Add Songs", error: error)
-    }}
+    Task { @MainActor in
+      await uploadService.flushPendingAdds()
+    }
   }
 
   private func flashAddedConfirmation(at indexPath: IndexPath) {

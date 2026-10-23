@@ -92,8 +92,10 @@ public class AddToPlaylistManager {
   public var elementsToAdd = [AbstractPlayable]()
   public var rootView: UIViewController?
 
-  private var appDelegate: AppDelegate
-  private static let warningElementsToAddCount = 100
+  /// Internal rather than private so the AMP-28 commit path can live in its own
+  /// file (`AddToPlaylistManager+Adding.swift`) instead of growing this one.
+  let appDelegate: AppDelegate
+  static let warningElementsToAddCount = 100
 
   init() {
     self.appDelegate = (UIApplication.shared.delegate as! AppDelegate)
@@ -222,37 +224,16 @@ public class AddToPlaylistManager {
     )
   }
 
+  /// AMP-28: the commit itself now lives in `AddToPlaylistManager+Adding.swift`
+  /// — local append and queue row first, upload after, and the large-batch
+  /// confirmation only once the server has actually taken the songs. This
+  /// method is back to being nothing but the over-100-songs confirmation.
   @IBAction
   func doneBarButtonPressed(_ sender: UIBarButtonItem) {
     let songsToAdd = elementsToAdd.filterSongs()
     guard !songsToAdd.isEmpty else {
       rootView?.dismiss(animated: true, completion: nil)
       return
-    }
-
-    func uploadPlaylistChanges() {
-      rootView?.dismiss(animated: true, completion: nil)
-
-      Task { @MainActor in
-        do {
-          if let account = playlist.account {
-            try await self.appDelegate.getMeta(account.info).librarySyncer.syncUpload(
-              playlistToAddSongs: playlist,
-              songs: songsToAdd
-            )
-          }
-          self.playlist.append(playables: songsToAdd)
-          self.onDoneCB?()
-        } catch {
-          self.appDelegate.eventLogger.report(topic: "Add Songs to Playlist", error: error)
-        }
-        if songsToAdd.count > Self.warningElementsToAddCount {
-          self.appDelegate.eventLogger.info(
-            topic: "Add Songs to Playlist",
-            message: "The Playlist \"\(self.playlist.name)\" has been successfully synced to the server."
-          )
-        }
-      }
     }
 
     if songsToAdd.count > Self.warningElementsToAddCount {
@@ -262,7 +243,7 @@ public class AddToPlaylistManager {
         preferredStyle: .alert
       )
       alert.addAction(UIAlertAction(title: "Add Songs Anyway", style: .default, handler: { _ in
-        uploadPlaylistChanges()
+        self.commitPendingAdds(songsToAdd: songsToAdd)
       }))
       alert.addAction(UIAlertAction(title: "Abort", style: .default, handler: { _ in
         self.rootView?.dismiss(animated: true, completion: nil)
@@ -272,7 +253,7 @@ public class AddToPlaylistManager {
       }))
       rootView?.present(alert, animated: true, completion: nil)
     } else {
-      uploadPlaylistChanges()
+      commitPendingAdds(songsToAdd: songsToAdd)
     }
   }
 
@@ -337,6 +318,11 @@ class PlaylistAddLibraryVC: KeyCommandTableViewController {
     navigationItem.leftItemsSupplementBackButton = true
     navigationItem.leftBarButtonItem = closeButton
     navigationItem.rightBarButtonItem = doneButton
+
+    // AMP-28 parity with Route 1: the duplicate check compares against the
+    // playlist's locally-known items, so refresh them before the user starts
+    // selecting. Non-blocking — see `refreshPlaylistSongsForDuplicateCheck`.
+    addToPlaylistManager.refreshPlaylistSongsForDuplicateCheck()
   }
 
   func updateTitle() {

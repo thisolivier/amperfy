@@ -541,8 +541,8 @@ final class RecentTracksDetailVC: MultiSourceTableViewController {
   /// Collects the selected songs (in list order) and reuses the app-wide
   /// playlist picker (`PlaylistSelectorVC`) to add them — the same flow the
   /// add-to-playlist swipe action, context menu, and player use. The picker
-  /// performs the server upload + local append itself (see
-  /// `PlaylistSongAdder`, which centralises that ordering and is unit-tested).
+  /// appends locally and queues the server upload itself (AMP-28: see
+  /// `AmperfyKit/PlaylistAdds`, which owns that ordering and is unit-tested).
   /// After presenting we leave Edit mode; when the user returns, the list
   /// re-runs its fetch on `viewIsAppearing`, so with the "hide filed tracks"
   /// filter on the just-added tracks disappear live — the inbox completing
