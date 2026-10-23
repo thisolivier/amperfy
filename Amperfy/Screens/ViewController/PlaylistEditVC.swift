@@ -116,6 +116,20 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
     detailOperationsView = GenericDetailTableHeader
       .createTableHeader(configuration: detailHeaderConfig)
 
+    // AMP-28: refresh the header whenever the snapshot changes, exactly as
+    // PlaylistDetailVC does.
+    //
+    // Without this the header only updated at the explicit `refresh()` call
+    // sites below — all of them reachable only by a gesture ON this screen. So
+    // when items were deleted out from under it the rows updated (the FRC
+    // drives those) but the header did not: after a rejected add was rolled
+    // back the list correctly showed 4 songs while the header still read
+    // "6 Songs · 22m", and it stayed wrong for as long as edit mode was open,
+    // correcting only on `endEditing()`. A rollback is the one item change on
+    // this screen that the user did not initiate here, which is why the gap
+    // went unnoticed.
+    snapshotDidChange = detailOperationsView?.refresh
+
     tableView.allowsSelection = true
     tableView.allowsMultipleSelection = true
     tableView.allowsSelectionDuringEditing = true

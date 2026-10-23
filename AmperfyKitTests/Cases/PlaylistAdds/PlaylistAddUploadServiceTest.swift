@@ -327,6 +327,57 @@ final class PlaylistAddUploadServiceTest: XCTestCase {
     XCTAssertEqual(syncer.syncDownCallCount, 0, "no reconciling fetch after a refusal")
   }
 
+  /// After a rollback the playlist's own `songCount` and `duration` must be
+  /// back to their pre-add values — these are the numbers the detail header
+  /// renders ("4 Songs · 14m").
+  ///
+  /// The header reading a stale count after a rollback turned out to be a
+  /// missing refresh hook on the edit screen rather than bad data, but the data
+  /// is what any refresh will render, so it is worth pinning. Note
+  /// `Playlist.songCount` falls back to `remoteSongCount` when the stored count
+  /// is zero, and `PlaylistMO.willSave()` recomputes the stored count from
+  /// `items` — so a rollback that failed to save would silently show the
+  /// server's count instead.
+  func testRollbackRestoresTheSongCountAndDurationTheHeaderShows() async throws {
+    let playlist = makePlaylist(id: "pl-1", name: "My Mix")
+    let keptSongs = (1 ... 4).map { index -> Song in
+      let song = makeSong(id: "t-kept-\(index)")
+      song.remoteDuration = 60
+      return song
+    }
+    let refusedSongs = (1 ... 2).map { index -> Song in
+      let song = makeSong(id: "t-refused-\(index)")
+      song.remoteDuration = 60
+      return song
+    }
+    library.saveContext()
+
+    playlist.append(playables: keptSongs)
+    let songCountBeforeAdd = playlist.songCount
+    let durationBeforeAdd = playlist.duration
+    XCTAssertEqual(songCountBeforeAdd, 4)
+
+    playlist.append(playables: refusedSongs)
+    store.enqueue(songs: refusedSongs, to: playlist, account: account)
+    XCTAssertEqual(playlist.songCount, 6, "the optimistic add is reflected in the header count")
+
+    syncer.uploadErrorsToThrow = [PlaylistAddTestErrors.subsonicNotAuthorized()]
+    let summary = await makeService().flushPendingAdds()
+
+    XCTAssertEqual(summary.permanentlyFailedSongCount, 2)
+    XCTAssertEqual(playlist.playables.count, 4, "rows are back to four")
+    XCTAssertEqual(
+      playlist.songCount,
+      songCountBeforeAdd,
+      "the header's count must match the rows, not the pre-rollback value"
+    )
+    XCTAssertEqual(
+      playlist.duration,
+      durationBeforeAdd,
+      "the header's duration must come back down too"
+    )
+  }
+
   /// Subsonic error 70 is the other permanent case, and with no server message
   /// the user still gets a plain-English reason rather than a bare code.
   func testSubsonicSeventyIsPermanentWithAFallbackReason() async throws {

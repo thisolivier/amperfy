@@ -142,6 +142,22 @@ header stuck on a pre-rollback count. `PlaylistItemCellResolver` (app target) is
 the belt to that braces — it resolves by *position* when an identity fails, so a
 future regression degrades to a correct row rather than an empty one.
 
+### Rows and headers refresh by different routes
+
+The rows are driven by the FRC, the header is not. `SingleSnapshotFetchedResults`
+`TableViewController` calls `snapshotDidChange?()` after applying each snapshot,
+and a screen with a `GenericDetailTableHeader` has to opt in by assigning
+`snapshotDidChange = detailOperationsView?.refresh`. `PlaylistDetailVC` did;
+`PlaylistEditVC` did not, so its header only updated from gesture-driven call
+sites on that screen. A rollback is the one item change on the edit screen the
+user did *not* initiate there, so the rows dropped to 4 while the header kept
+reading "6 Songs · 22m" until `endEditing()` (whose `defer { refresh() }`
+explains the heal-on-exit). Both screens now assign the hook.
+
+Still unassigned, and out of AMP-28's scope because nothing mutates their
+contents behind the user's back: `AlbumDetailVC`, `ArtistDetailVC`,
+`GenreDetailVC`, `PodcastDetailVC`.
+
 ## Working patterns
 
 - **The row holds relationships, not id strings.** A freshly created playlist
