@@ -1024,9 +1024,17 @@ class SubsonicLibrarySyncer: CommonLibrarySyncer, LibrarySyncer {
     try parseForError(response: response)
   }
 
+  /// Being offline throws here instead of returning silently. The former
+  /// `guard isSyncAllowed else { return }` made "we never sent this" and "the
+  /// server accepted this" the same answer, which is how playlist adds were
+  /// lost: the caller took the silent return for success, left the songs
+  /// appended locally, and the next per-playlist fetch removed them again.
+  /// Callers go through `PlaylistAddUploadService`, which keeps the add queued
+  /// and retries it.
   @MainActor
   func syncUpload(playlistToAddSongs playlist: Playlist, songs: [Song]) async throws {
-    guard isSyncAllowed, !songs.isEmpty else { return }
+    guard !songs.isEmpty else { return }
+    guard isSyncAllowed else { throw PlaylistAddUploadError.offline }
     os_log("Upload SongsAdded on playlist \"%s\"", log: log, type: .info, playlist.name)
     try await validatePlaylistId(playlist: playlist)
     let response = try await subsonicServerApi.requestPlaylistUpdate(

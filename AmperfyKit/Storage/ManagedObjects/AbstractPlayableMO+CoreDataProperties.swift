@@ -72,6 +72,8 @@ extension AbstractPlayableMO {
   public var playlistItems: [PlaylistItemMO]
   @NSManaged
   public var scrobbleEntries: NSOrderedSet?
+  @NSManaged
+  public var pendingPlaylistSongAdds: NSSet?
 }
 
 // MARK: Generated accessors for playlistItems

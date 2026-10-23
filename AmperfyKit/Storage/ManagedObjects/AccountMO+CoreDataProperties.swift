@@ -62,6 +62,8 @@ extension AccountMO {
   public var scrobbleEntries: NSSet?
   @NSManaged
   public var searchHistories: NSSet?
+  @NSManaged
+  public var pendingPlaylistSongAdds: NSSet?
 }
 
 // MARK: Generated accessors for artworks

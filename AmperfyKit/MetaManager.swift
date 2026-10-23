@@ -77,6 +77,25 @@ public class MetaManager {
     LibrarySyncerProxy(backendApi: backendApi, account: account, storage: storage)
   }()
 
+  /// The account's queue of playlist song adds the server has not confirmed,
+  /// and the worker that drains it. One instance per account, because the
+  /// worker guards against overlapping passes and a fresh instance per caller
+  /// would not.
+  public lazy var playlistAddUploadService: PlaylistAddUploadService = {
+    PlaylistAddUploadService(
+      store: PendingPlaylistSongAddStore(library: storage.main.library),
+      librarySyncer: librarySyncer,
+      account: account,
+      isOnline: { [weak self] in
+        guard let self else { return false }
+        return storage.settings.user.isOnlineMode && networkMonitor.isConnectedToNetwork
+      },
+      reportFailure: { [weak self] error in
+        self?.eventLogger.report(topic: "Add Songs to Playlist", error: error)
+      }
+    )
+  }()
+
   public lazy var duplicateEntitiesResolver: DuplicateEntitiesResolver = {
     DuplicateEntitiesResolver(account: account, storage: storage)
   }()

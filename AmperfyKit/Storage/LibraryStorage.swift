@@ -71,6 +71,9 @@ public class LibraryStorage: PlayableFileCachable {
     Download.typeName,
     ScrobbleEntry.typeName,
     SearchHistoryItem.typeName,
+    // Deleted explicitly rather than left to the Playlist cascade: clearStorage
+    // uses NSBatchDeleteRequest, which bypasses delete rules.
+    PendingPlaylistSongAdd.typeName,
     // Accounts are not going to get deleted
   ]
   private let log = OSLog(subsystem: "Amperfy", category: "LibraryStorage")
@@ -631,6 +634,16 @@ public class LibraryStorage: PlayableFileCachable {
 
   func deleteScrobbleEntry(_ scrobbleEntry: ScrobbleEntry) {
     context.delete(scrobbleEntry.managedObject)
+  }
+
+  func createPendingPlaylistSongAdd(account: Account) -> PendingPlaylistSongAdd {
+    let pendingPlaylistSongAddMO = PendingPlaylistSongAddMO(context: context)
+    pendingPlaylistSongAddMO.account = account.managedObject
+    return PendingPlaylistSongAdd(library: self, managedObject: pendingPlaylistSongAddMO)
+  }
+
+  func deletePendingPlaylistSongAdd(_ pendingPlaylistSongAdd: PendingPlaylistSongAdd) {
+    context.delete(pendingPlaylistSongAdd.managedObject)
   }
 
   func createMusicFolder(account: Account) -> MusicFolder {
@@ -1780,6 +1793,41 @@ public class LibraryStorage: PlayableFileCachable {
     fetchRequest.fetchLimit = 1
     let entries = try? context.fetch(fetchRequest)
     return entries?.lazy.compactMap { ScrobbleEntry(managedObject: $0) }.first
+  }
+
+  // MARK: PendingPlaylistSongAdds
+
+  /// Every queued playlist song add on the device, regardless of account,
+  /// oldest first.
+  public func getAllPendingPlaylistSongAdds() -> [PendingPlaylistSongAdd] {
+    getPendingPlaylistSongAdds(predicate: nil)
+  }
+
+  /// Every queued playlist song add for `account`, oldest first, so songs reach
+  /// the server in the order the user selected them.
+  public func getPendingPlaylistSongAdds(for account: Account) -> [PendingPlaylistSongAdd] {
+    getPendingPlaylistSongAdds(predicate: getFetchPredicate(forAccount: account))
+  }
+
+  /// Every queued song add for one playlist, oldest first.
+  public func getPendingPlaylistSongAdds(for playlist: Playlist) -> [PendingPlaylistSongAdd] {
+    getPendingPlaylistSongAdds(predicate: NSPredicate(
+      format: "%K == %@",
+      #keyPath(PendingPlaylistSongAddMO.playlist),
+      playlist.managedObject.objectID
+    ))
+  }
+
+  private func getPendingPlaylistSongAdds(predicate: NSPredicate?)
+    -> [PendingPlaylistSongAdd] {
+    let fetchRequest = PendingPlaylistSongAddMO.fetchRequest()
+    fetchRequest.sortDescriptors = [
+      NSSortDescriptor(key: #keyPath(PendingPlaylistSongAddMO.createdAt), ascending: true),
+    ]
+    fetchRequest.predicate = predicate
+    let pendingAdds = try? context.fetch(fetchRequest)
+    return pendingAdds?.compactMap { PendingPlaylistSongAdd(library: self, managedObject: $0) }
+      ?? [PendingPlaylistSongAdd]()
   }
 
   // MARK: Playlists

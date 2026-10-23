@@ -66,6 +66,11 @@ extension PlaylistMO {
   public var artworkItems: [PlaylistItemMO]
   @NSManaged
   public var searchHistory: SearchHistoryItemMO?
+  /// Song adds the user made into this playlist that have not reached the
+  /// server yet. Cascade-deleted with the playlist, so a playlist that goes
+  /// away can never leave work queued against it.
+  @NSManaged
+  public var pendingSongAdds: NSSet?
 
   static let relationshipKeyPathsForPrefetching = [
     #keyPath(PlaylistMO.artworkItems),

@@ -1108,9 +1108,12 @@ class AmpacheLibrarySyncer: CommonLibrarySyncer, LibrarySyncer {
     }
   }
 
+  /// Being offline throws here instead of returning silently — see the Subsonic
+  /// twin for why that single `guard` lost playlist adds.
   @MainActor
   func syncUpload(playlistToAddSongs playlist: Playlist, songs: [Song]) async throws {
-    guard isSyncAllowed, !songs.isEmpty else { return }
+    guard !songs.isEmpty else { return }
+    guard isSyncAllowed else { throw PlaylistAddUploadError.offline }
     os_log("Upload SongsAdded on playlist \"%s\"", log: log, type: .info, playlist.name)
     try await validatePlaylistId(playlist: playlist)
     for song in songs {
