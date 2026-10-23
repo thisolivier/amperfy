@@ -543,6 +543,11 @@
 		0AD28000000000000000000C /* PendingPlaylistSongAdd.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD28000000000000000000B /* PendingPlaylistSongAdd.swift */; };
 		0AD28000000000000000000E /* PendingPlaylistSongAddMO+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD28000000000000000000D /* PendingPlaylistSongAddMO+CoreDataClass.swift */; };
 		0AD280000000000000000010 /* PendingPlaylistSongAddMO+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD28000000000000000000F /* PendingPlaylistSongAddMO+CoreDataProperties.swift */; };
+		0AD280000000000000000012 /* PlaylistAddSyncerTestDouble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD280000000000000000011 /* PlaylistAddSyncerTestDouble.swift */; };
+		0AD280000000000000000014 /* PendingPlaylistSongAddStoreTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD280000000000000000013 /* PendingPlaylistSongAddStoreTest.swift */; };
+		0AD280000000000000000016 /* PlaylistAddUploadServiceTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD280000000000000000015 /* PlaylistAddUploadServiceTest.swift */; };
+		0AD280000000000000000018 /* PendingPlaylistSongAddReconcilerTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD280000000000000000017 /* PendingPlaylistSongAddReconcilerTest.swift */; };
+		0AD28000000000000000001A /* PendingPlaylistSongAddMigrationTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD280000000000000000019 /* PendingPlaylistSongAddMigrationTest.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1172,6 +1177,11 @@
 		0AD28000000000000000000B /* PendingPlaylistSongAdd.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPlaylistSongAdd.swift; sourceTree = "<group>"; };
 		0AD28000000000000000000D /* PendingPlaylistSongAddMO+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PendingPlaylistSongAddMO+CoreDataClass.swift"; sourceTree = "<group>"; };
 		0AD28000000000000000000F /* PendingPlaylistSongAddMO+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PendingPlaylistSongAddMO+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		0AD280000000000000000011 /* PlaylistAddSyncerTestDouble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistAddSyncerTestDouble.swift; sourceTree = "<group>"; };
+		0AD280000000000000000013 /* PendingPlaylistSongAddStoreTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPlaylistSongAddStoreTest.swift; sourceTree = "<group>"; };
+		0AD280000000000000000015 /* PlaylistAddUploadServiceTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistAddUploadServiceTest.swift; sourceTree = "<group>"; };
+		0AD280000000000000000017 /* PendingPlaylistSongAddReconcilerTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPlaylistSongAddReconcilerTest.swift; sourceTree = "<group>"; };
+		0AD280000000000000000019 /* PendingPlaylistSongAddMigrationTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPlaylistSongAddMigrationTest.swift; sourceTree = "<group>"; };
 		0AD28000000000000000001B /* Amperfy v50.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Amperfy v50.xcdatamodel"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -2142,6 +2152,7 @@
 		50E6BCA223B8F22E005C1DDA /* Cases */ = {
 			isa = PBXGroup;
 			children = (
+				0AD280000000000000000002 /* PlaylistAdds */,
 				5090963626496A7500DD9826 /* Common */,
 				50E964AD25E8E23D00E3210F /* API */,
 				5095F98D23CA948A008B0805 /* Player */,
@@ -2199,6 +2210,18 @@
 				0AD280000000000000000005 /* PlaylistAddUploadService.swift */,
 				0AD280000000000000000007 /* PlaylistAddUploadOutcome.swift */,
 				0AD280000000000000000009 /* PendingPlaylistSongAddReconciler.swift */,
+			);
+			path = PlaylistAdds;
+			sourceTree = "<group>";
+		};
+		0AD280000000000000000002 /* PlaylistAdds */ = {
+			isa = PBXGroup;
+			children = (
+				0AD280000000000000000011 /* PlaylistAddSyncerTestDouble.swift */,
+				0AD280000000000000000013 /* PendingPlaylistSongAddStoreTest.swift */,
+				0AD280000000000000000015 /* PlaylistAddUploadServiceTest.swift */,
+				0AD280000000000000000017 /* PendingPlaylistSongAddReconcilerTest.swift */,
+				0AD280000000000000000019 /* PendingPlaylistSongAddMigrationTest.swift */,
 			);
 			path = PlaylistAdds;
 			sourceTree = "<group>";
@@ -2883,6 +2906,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0AD280000000000000000012 /* PlaylistAddSyncerTestDouble.swift in Sources */,
+				0AD280000000000000000014 /* PendingPlaylistSongAddStoreTest.swift in Sources */,
+				0AD280000000000000000016 /* PlaylistAddUploadServiceTest.swift in Sources */,
+				0AD280000000000000000018 /* PendingPlaylistSongAddReconcilerTest.swift in Sources */,
+				0AD28000000000000000001A /* PendingPlaylistSongAddMigrationTest.swift in Sources */,
 				50BE5D6D2850F4FB00156FC6 /* SsDirectoriesExample1ParserTest.swift in Sources */,
 				50BE5D6F2850F4FB00156FC6 /* SsPingParserTest.swift in Sources */,
 				50BE5D6C2850F4FB00156FC6 /* SsAlbumParserPreCreatedArtistsTest.swift in Sources */,
