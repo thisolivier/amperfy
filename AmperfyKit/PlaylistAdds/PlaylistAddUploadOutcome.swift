@@ -83,10 +83,12 @@ public enum PlaylistAddUploadError: LocalizedError, Equatable {
     case .offline:
       return "No connection to the server. The change is queued and will be sent later."
     case let .permanentlyRefused(playlistName, songCount, serverReason):
-      let songWord = songCount == 1 ? "Song" : "Songs"
+      let songPhrase = songCount == 1 ? "The song was" : "The songs were"
+      let reasonSentence = serverReason.hasSuffix(".") ? serverReason : serverReason + "."
       return """
-      The server refused to add \(songCount) \(songWord) to "\(playlistName)". \(serverReason) \
-      The \(songWord) have been removed from the Playlist on this device again.
+      The server refused to add \(songCount) \(songCount == 1 ? "song" : "songs") \
+      to "\(playlistName)". \(reasonSentence) \
+      \(songPhrase) removed from the playlist on this device.
       """
     }
   }
