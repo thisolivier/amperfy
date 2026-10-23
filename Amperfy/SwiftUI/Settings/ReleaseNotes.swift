@@ -37,6 +37,23 @@ enum ReleaseNotes {
   /// Most recent 5 releases, newest first. Updated at ship time.
   static let entries: [ReleaseNote] = [
     ReleaseNote(
+      id: 99,
+      date: "2026-10-23",
+      title: "Build 99 — Playlist adds that don't go missing",
+      whatsNew: [
+        "Fixed: songs you added to a playlist could silently disappear again a few minutes later. The add looked like it worked, but if the server never actually received it, the next sync quietly removed it — with no error shown anywhere.",
+        "Adds now appear instantly and are remembered on the device until the server confirms them. Add songs on the Tube or with no signal and they stay put, then upload themselves next time you open the app.",
+        "If the server genuinely refuses an add, you now get a proper pop-up saying so — and the songs are taken back out of the playlist, so what you see matches what's really there.",
+        "Also fixed: adding songs from inside a playlist's edit screen used to claim 'successfully synced' even when the upload had just failed. It now only says that when it's true.",
+      ],
+      testingFocus: [
+        "Add a few songs to a playlist from the swipe/menu picker, then pull-to-refresh that playlist a minute later — the songs must still be there.",
+        "Turn on Airplane Mode, add songs to a playlist (they should appear right away), then turn it off and reopen the app. Check the songs are on the server (another device or NaviAdmin).",
+        "Open a playlist → Edit → '+' and add a batch of songs. The sheet should close instantly with the songs already visible.",
+        "If you can make the server refuse an add, confirm you get a pop-up (not just a banner) and the songs are removed again.",
+      ]
+    ),
+    ReleaseNote(
       id: 98,
       date: "2026-09-28",
       title: "Build 98 — Cleanup after the ID switchover",
