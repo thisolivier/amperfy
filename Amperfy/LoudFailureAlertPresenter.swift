@@ -84,17 +84,11 @@ enum LoudFailureAlertPresenter {
     _ failure: PlaylistAddPermanentFailure,
     eventLogger: EventLogger
   ) {
-    let songWord = failure.songCount == 1 ? "song" : "songs"
-    let message = """
-    The server refused to add \(failure.songCount) \(songWord) to "\(failure.playlistName)".
-
-    \(failure.serverReason)
-
-    The \(songWord) were NOT added, and have been removed from the playlist on this device.
-    """
+    // Copy lives on the failure value itself (AmperfyKit) so it is unit-tested;
+    // this layer only decides how loudly to show it.
     present(
-      title: "Playlist Not Updated",
-      message: message,
+      title: failure.userFacingTitle,
+      message: failure.userFacingMessage,
       fallbackTopic: "Add Songs to Playlist",
       eventLogger: eventLogger
     )

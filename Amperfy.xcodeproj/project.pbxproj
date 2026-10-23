@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A29000000000000000000012 /* PlaylistAddFailureCopyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A28000000000000000000012 /* PlaylistAddFailureCopyTest.swift */; };
+		A29000000000000000000011 /* PlaylistItemCellResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A28000000000000000000011 /* PlaylistItemCellResolver.swift */; };
+		A29000000000000000000010 /* PermanentObjectIDOnSaveTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A28000000000000000000010 /* PermanentObjectIDOnSaveTest.swift */; };
 		A2900000000000000000000F /* PendingPlaylistSongAddMigrationTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2800000000000000000000F /* PendingPlaylistSongAddMigrationTest.swift */; };
 		A29000000000000000000001 /* PendingPlaylistSongAddStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A28000000000000000000001 /* PendingPlaylistSongAddStore.swift */; };
 		A29000000000000000000002 /* PlaylistAddUploadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A28000000000000000000002 /* PlaylistAddUploadService.swift */; };
@@ -824,6 +827,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A28000000000000000000012 /* PlaylistAddFailureCopyTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistAddFailureCopyTest.swift"; sourceTree = "<group>"; };
+		A28000000000000000000011 /* PlaylistItemCellResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistItemCellResolver.swift"; sourceTree = "<group>"; };
+		A28000000000000000000010 /* PermanentObjectIDOnSaveTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PermanentObjectIDOnSaveTest.swift"; sourceTree = "<group>"; };
 		A2800000000000000000000F /* PendingPlaylistSongAddMigrationTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PendingPlaylistSongAddMigrationTest.swift"; sourceTree = "<group>"; };
 		A28000000000000000000001 /* PendingPlaylistSongAddStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PendingPlaylistSongAddStore.swift"; sourceTree = "<group>"; };
 		A28000000000000000000002 /* PlaylistAddUploadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaylistAddUploadService.swift"; sourceTree = "<group>"; };
@@ -1681,6 +1687,7 @@
 		A2A000000000000000000101 /* PlaylistAdds */ = {
 			isa = PBXGroup;
 			children = (
+				A28000000000000000000012 /* PlaylistAddFailureCopyTest.swift */,
 				A2800000000000000000000F /* PendingPlaylistSongAddMigrationTest.swift */,
 				A2800000000000000000000A /* PendingPlaylistSongAddStoreTest.swift */,
 				A2800000000000000000000B /* PlaylistAddUploadServiceTest.swift */,
@@ -1894,6 +1901,7 @@
 		505CA20B2B88E95400AA81CD /* TableViewHelper */ = {
 			isa = PBXGroup;
 			children = (
+				A28000000000000000000011 /* PlaylistItemCellResolver.swift */,
 				50E1D3972B8A82BA0001A572 /* KeyCommandTableViewController.swift */,
 				50120A2426281C1900B037B1 /* BasicTableViewController.swift */,
 				50DE29F02B90855100ABA78E /* KeyCommandCollectionViewController.swift */,
@@ -2141,6 +2149,7 @@
 		5095F98E23CA949C008B0805 /* Storage */ = {
 			isa = PBXGroup;
 			children = (
+				A28000000000000000000010 /* PermanentObjectIDOnSaveTest.swift */,
 				5095F98F23CA94BC008B0805 /* ManagedObjects */,
 				A5B0630000000000000050A0 /* ResultController */,
 				A5B0A40000000000000050A0 /* PlaylistMembershipQueryTest.swift */,
@@ -3342,6 +3351,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A29000000000000000000011 /* PlaylistItemCellResolver.swift in Sources */,
 				A29000000000000000000008 /* LoudFailureAlertPresenter.swift in Sources */,
 				A29000000000000000000009 /* AppDelegatePlaylistAddExtensions.swift in Sources */,
 				A2900000000000000000000E /* AddToPlaylistManager+Adding.swift in Sources */,
@@ -3905,6 +3915,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A29000000000000000000012 /* PlaylistAddFailureCopyTest.swift in Sources */,
+				A29000000000000000000010 /* PermanentObjectIDOnSaveTest.swift in Sources */,
 				A2900000000000000000000F /* PendingPlaylistSongAddMigrationTest.swift in Sources */,
 				A2900000000000000000000A /* PendingPlaylistSongAddStoreTest.swift in Sources */,
 				A2900000000000000000000B /* PlaylistAddUploadServiceTest.swift in Sources */,

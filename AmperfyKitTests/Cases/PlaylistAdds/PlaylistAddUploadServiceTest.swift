@@ -213,6 +213,83 @@ final class PlaylistAddUploadServiceTest: XCTestCase {
     XCTAssertEqual(owedIdsAtUploadTime, ["t-1", "t-2"], "and durably owed before the request")
   }
 
+  // MARK: - Create-a-new-playlist-with-songs (Route 1's "+" path)
+
+  /// A brand-new playlist has NO server id until its create request
+  /// round-trips, so this route used to upload its songs fire-and-forget right
+  /// after the create. The queue has to be able to carry work for a playlist
+  /// that is not yet on the server — which is why a pending row points at the
+  /// playlist object rather than its id.
+  func testQueuedAddSurvivesTheServerIdBeingAssignedLater() async throws {
+    let playlist = makePlaylist(id: "", name: "Brand New")
+    let song = makeSong(id: "t-1")
+    library.saveContext()
+
+    // Enqueued while the playlist is still id-less, exactly as the create path
+    // now does.
+    playlist.append(playable: song)
+    store.enqueue(songs: [song], to: playlist, account: account)
+    XCTAssertEqual(store.pendingAdds(for: playlist).count, 1)
+
+    // The create round-trip assigns the real id onto this same object.
+    playlist.id = "pl-assigned-by-server"
+    library.saveContext()
+
+    var playlistIdAtUploadTime: String?
+    syncer.onSyncUpload = { playlist, _ in
+      playlistIdAtUploadTime = playlist.id
+    }
+
+    let summary = await makeService().flushPendingAdds()
+
+    XCTAssertEqual(summary.uploadedSongCount, 1)
+    XCTAssertEqual(
+      playlistIdAtUploadTime,
+      "pl-assigned-by-server",
+      "the row resolved to the playlist's real id, not the empty one it was queued with"
+    )
+    XCTAssertEqual(store.pendingAddCount(for: account), 0)
+  }
+
+  /// The create response describes a brand-new, EMPTY playlist, and
+  /// `SsPlaylistSongsParserDelegate` deletes every local item past the end of
+  /// the server's list — so creating a playlist with songs in it wiped them
+  /// locally. The rows survive that, and the reconciliation guard restores the
+  /// items, which is what makes the new playlist's count right immediately.
+  func testLocalAppendSurvivesTheCreateResponseWipingTheItems() async throws {
+    let playlist = makePlaylist(id: "", name: "Brand New")
+    let songs = [makeSong(id: "t-1"), makeSong(id: "t-2")]
+    library.saveContext()
+
+    playlist.append(playables: songs)
+    store.enqueue(songs: songs, to: playlist, account: account)
+    XCTAssertEqual(playlist.playables.count, 2)
+
+    // What createPlaylistRemote's parse does to this playlist.
+    playlist.removeAllItems()
+    playlist.id = "pl-assigned-by-server"
+    library.saveContext()
+    XCTAssertTrue(playlist.playables.isEmpty, "the create response wiped the local append")
+
+    // What the guard on syncUpload(playlistToUpdateName:) then does.
+    let restoredCount = PendingPlaylistSongAddReconciler.reapplyPendingAdds(
+      to: playlist,
+      store: store
+    )
+
+    XCTAssertEqual(restoredCount, 2)
+    XCTAssertEqual(
+      playlist.playables.map(\.id),
+      ["t-1", "t-2"],
+      "the songs are back locally before any further network call"
+    )
+
+    // And they still go up.
+    let summary = await makeService().flushPendingAdds()
+    XCTAssertEqual(summary.uploadedSongCount, 2)
+    XCTAssertEqual(store.pendingAddCount(for: account), 0)
+  }
+
   // MARK: - Permanent refusal
 
   /// Subsonic error 50: the rows are resolved, the optimistic append is rolled

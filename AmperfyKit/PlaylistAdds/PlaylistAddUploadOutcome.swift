@@ -46,6 +46,32 @@ public struct PlaylistAddPermanentFailure: Sendable, Equatable {
     self.songCount = songCount
     self.serverReason = serverReason
   }
+
+  /// The alert title. Names the outcome from the user's point of view — the
+  /// playlist did not change — rather than the mechanism.
+  public var userFacingTitle: String { "Playlist Not Updated" }
+
+  /// The alert body: what was refused, the server's reason, and the fact that
+  /// the local copy has been rolled back so what they see is the truth.
+  ///
+  /// Built here rather than in the presenter so it is unit-testable; the app
+  /// target only decides *how* to show it. Verb agreement included — a single
+  /// refused song read "The song were NOT added".
+  public var userFacingMessage: String {
+    let isSingleSong = songCount == 1
+    let songWord = isSingleSong ? "song" : "songs"
+    let wasOrWere = isSingleSong ? "was" : "were"
+    let hasOrHave = isSingleSong ? "has" : "have"
+    return """
+    The server refused to add \(songCount) \(songWord) to "\(playlistName)".
+
+    \(serverReason)
+
+    The \(songWord) \(wasOrWere) NOT added, and \(
+      hasOrHave
+    ) been removed from the playlist on this device.
+    """
+  }
 }
 
 // MARK: - PlaylistAddFlushSummary

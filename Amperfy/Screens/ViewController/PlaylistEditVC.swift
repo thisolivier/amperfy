@@ -68,16 +68,18 @@ class PlaylistEditVC: SingleSnapshotFetchedResultsTableViewController<PlaylistIt
   override func createDiffableDataSource() -> BasicUITableViewDiffableDataSource {
     let source =
       PlaylistDetailDiffableDataSource(tableView: tableView) { tableView, indexPath, objectID -> UITableViewCell? in
-        guard let object = try? self.appDelegate.storage.main.context
-          .existingObject(with: objectID),
-          let playlistItemMO = object as? PlaylistItemMO
-        else {
+        // AMP-28: same stale-identity fallback as the detail screen — this is
+        // the view the "+" picker returns to, so it is the one the reported
+        // repro lands on.
+        guard let playlistItem = PlaylistItemCellResolver.resolvePlaylistItem(
+          forObjectID: objectID,
+          in: self.appDelegate.storage.main.library,
+          context: self.appDelegate.storage.main.context,
+          fetchedResultsController: self.fetchedResultsController,
+          indexPath: indexPath
+        ) else {
           return UITableViewCell()
         }
-        let playlistItem = PlaylistItem(
-          library: self.appDelegate.storage.main.library,
-          managedObject: playlistItemMO
-        )
         return self.createCell(tableView, forRowAt: indexPath, playlistItem: playlistItem)
       }
     source.playlist = playlist

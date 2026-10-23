@@ -85,7 +85,24 @@ on. Same rule as `PlaylistFolderStore+PendingCreation`.
 | `PendingPlaylistSongAddStore.swift` | The queue. Enqueue (saves immediately), read grouped into one batch per playlist, resolve (delete) or record a transient failure. Sweeps orphaned rows — a row whose playlist or song no longer exists locally can never be uploaded, so it is dropped rather than retried forever. |
 | `PlaylistAddUploadService.swift` | One drain pass per call, one request per playlist. Classifies the outcome, rolls back on a permanent refusal, reports failures through two injected closures so AmperfyKit never touches UIKit. Guards against overlapping passes. |
 | `PlaylistAddUploadOutcome.swift` | The value types crossing the boundary: `PlaylistAddPermanentFailure` (what the modal needs to say), `PlaylistAddFlushSummary` (what a pass actually did — so the >100-songs confirmation can report a real result instead of asserting success before the request was made), and `PlaylistAddUploadError.offline`. |
-| `PendingPlaylistSongAddReconciler.swift` | Re-appends queued songs that a per-playlist fetch truncated. Hooked into `LibrarySyncerProxy.syncDown(playlist:)` with `defer`, which is the single choke point every caller — including `Playlist.fetchFromServer` — routes through. |
+| `PendingPlaylistSongAddReconciler.swift` | Re-appends queued songs that a per-playlist fetch truncated. Hooked into `LibrarySyncerProxy.syncDown(playlist:)` with `defer`, which is the single choke point every caller — including `Playlist.fetchFromServer` — routes through. Also hooked into `syncUpload(playlistToUpdateName:)` — see below. |
+
+### Two places the rewrite can bite, not one
+
+`syncDown(playlist:)` is the obvious one. The other is
+`syncUpload(playlistToUpdateName:)`, which does not look like a fetch at all:
+for a playlist with no server id yet it goes through `validatePlaylistId` →
+`createPlaylistRemote`, which parses the **create** response with
+`SsPlaylistSongsParserDelegate`. That response describes a brand-new, *empty*
+playlist, so the delegate's "delete every local item past the end of the
+server's list" branch deletes the lot. Creating a playlist with songs in it
+wiped them locally while the upload went on to put them on the server — the new
+playlist read 0 songs until its detail screen was opened.
+
+Both methods therefore carry the guard. This is also why a pending row points at
+the playlist **object** and not its id: the row has to be enqueued *before* the
+create (so the user sees the right count immediately) and still resolve to the
+right playlist after the server assigns it an id.
 
 Supporting pieces outside this directory:
 
@@ -97,6 +114,33 @@ Supporting pieces outside this directory:
 - `LibraryStorage` — create / delete / fetch, account-scoped like `PlaylistMO`.
   The entity is also listed in `entitiesToDelete`: `clearStorage` uses
   `NSBatchDeleteRequest`, which bypasses the Playlist cascade.
+- `LibraryStorage.saveContext()` — assigns **permanent object IDs before
+  saving**. Not strictly part of this module, but it is what makes a local-first
+  add actually *render*: see below.
+
+## Why `saveContext` obtains permanent IDs first
+
+An add that is invisible is not an add. Every list screen is an
+`NSFetchedResultsController` feeding a
+`UITableViewDiffableDataSource<Int, NSManagedObjectID>` — the snapshot's item
+identity *is* the object ID, and each cell provider resolves it back with
+`context.existingObject(with:)`.
+
+Core Data assigns permanent IDs during `save()`, but `save()` opens by calling
+`processPendingChanges`, which posts `objectsDidChange` — exactly the
+notification the FRC reacts to. So the FRC was handed new rows while their IDs
+were still **temporary**, published a snapshot keyed on them, and a moment later
+Core Data swapped those IDs for permanent ones. Every new row's identity was
+then dead, `existingObject(with:)` threw, and all twelve snapshot-backed cell
+providers fell back to a bare `UITableViewCell()` — a row with separators and no
+title, artist or artwork. It healed only on navigating away, because a fresh
+fetch produced permanent IDs.
+
+`obtainPermanentIDs` before the save closes that window. It is one fix for the
+whole symptom family: blank rows after an add, list counts a step behind, a
+header stuck on a pre-rollback count. `PlaylistItemCellResolver` (app target) is
+the belt to that braces — it resolves by *position* when an identity fails, so a
+future regression degrades to a correct row rather than an empty one.
 
 ## Working patterns
 
