@@ -183,6 +183,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     // Use this method to undo the changes made on entering the background.
     os_log("sceneWillEnterForeground", log: self.log, type: .info)
     AmperKit.shared.threadPerformanceMonitor.isInForeground = true
+    guard appDelegate.isNormalInteraction else { return }
+    appDelegate.retryPendingPlaylistSongAdds()
   }
 
   func sceneDidEnterBackground(_ scene: UIScene) {

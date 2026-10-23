@@ -205,6 +205,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     scheduleAppRefresh()
   }
 
+  /// Retry every account's playlist song adds the server has not confirmed.
+  ///
+  /// Called when a scene comes back to the foreground rather than on a timer:
+  /// the retry rate wants to be bounded by the user returning to the app. The
+  /// queue is persistent, so this picks up adds made offline, adds whose upload
+  /// timed out, and adds made before the app was last killed. Every signed-in
+  /// account is flushed, not just the active one — a queued add on an account
+  /// that is not currently selected would otherwise wait forever. A no-op when
+  /// nothing is queued.
+  @MainActor
+  func retryPendingPlaylistSongAdds() {
+    for accountInfo in storage.settings.accounts.allAccounts {
+      let uploadService = getMeta(accountInfo).playlistAddUploadService
+      Task { @MainActor in
+        await uploadService.flushPendingAdds()
+      }
+    }
+  }
+
   func scheduleAppRefresh() {
     let request = BGAppRefreshTaskRequest(identifier: Self.refreshTaskId)
     request.earliestBeginDate = Date(timeIntervalSinceNow: 45 * 60) // Refresh after 45 minutes.

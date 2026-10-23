@@ -190,22 +190,28 @@ class PlaylistSelectorVC: SingleSnapshotFetchedResultsTableViewController<Playli
     dismiss()
   }
 
+  /// Appends the selected songs locally, records them in the durable
+  /// pending-adds queue in the same save, and only then uploads.
+  ///
+  /// This used to upload server-first and append locally afterwards. An offline
+  /// device took the silent return of `syncUpload` for success and appended
+  /// songs nothing remembered were still owed, so the next per-playlist fetch
+  /// removed them again; a failing request left them nowhere at all, and the
+  /// shared `catch` meant one failing playlist skipped every later one. The
+  /// upload worker now owns everything after the queueing: retry, rollback on a
+  /// permanent refusal, and reporting.
   func addSongsToSelectedPlaylists() {
     defer { selectedPlaylits.removeAll() }
     guard !selectedPlaylits.isEmpty else { return }
 
-    let localCopySelectedPlaylits = selectedPlaylits
-    Task { @MainActor in do {
-      for (playlist, songs) in localCopySelectedPlaylits {
-        try await self.appDelegate.getMeta(self.account.info).librarySyncer.syncUpload(
-          playlistToAddSongs: playlist,
-          songs: songs
-        )
-        playlist.append(playables: songs)
-      }
-    } catch {
-      self.appDelegate.eventLogger.report(topic: "Playlist Add Songs", error: error)
-    }}
+    let uploadService = appDelegate.getMeta(account.info).playlistAddUploadService
+    for (playlist, songs) in selectedPlaylits {
+      playlist.append(playables: songs)
+      uploadService.enqueue(songs: songs, to: playlist)
+    }
+    Task { @MainActor in
+      await uploadService.flushPendingAdds()
+    }
   }
 
   @IBAction

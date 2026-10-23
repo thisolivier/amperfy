@@ -230,28 +230,43 @@ public class AddToPlaylistManager {
       return
     }
 
+    // Appends locally, records the songs in the durable pending-adds queue in
+    // the same save, and only then uploads.
+    //
+    // This used to upload server-first and append locally afterwards, so until
+    // the round-trip finished the songs were nowhere, and if the request failed
+    // they were nowhere for good. The over-100-songs reassurance also sat
+    // outside the do/catch, so the same code path that had just swallowed the
+    // error told the user the sync had worked.
     func uploadPlaylistChanges() {
+      guard let account = playlist.account else {
+        appDelegate.eventLogger.info(
+          topic: "Add Songs to Playlist",
+          message: "These Songs could not be added: the Playlist has no server account."
+        )
+        rootView?.dismiss(animated: true, completion: nil)
+        return
+      }
+
+      playlist.append(playables: songsToAdd)
+      let uploadService = appDelegate.getMeta(account.info).playlistAddUploadService
+      uploadService.enqueue(songs: songsToAdd, to: playlist)
+      // The caller's refresh runs unconditionally now: the songs are in the
+      // playlist locally, whatever the network goes on to do.
+      onDoneCB?()
       rootView?.dismiss(animated: true, completion: nil)
 
+      let playlistName = playlist.name
+      let isLargeBatch = songsToAdd.count > Self.warningElementsToAddCount
       Task { @MainActor in
-        do {
-          if let account = playlist.account {
-            try await self.appDelegate.getMeta(account.info).librarySyncer.syncUpload(
-              playlistToAddSongs: playlist,
-              songs: songsToAdd
-            )
-          }
-          self.playlist.append(playables: songsToAdd)
-          self.onDoneCB?()
-        } catch {
-          self.appDelegate.eventLogger.report(topic: "Add Songs to Playlist", error: error)
-        }
-        if songsToAdd.count > Self.warningElementsToAddCount {
-          self.appDelegate.eventLogger.info(
-            topic: "Add Songs to Playlist",
-            message: "The Playlist \"\(self.playlist.name)\" has been successfully synced to the server."
-          )
-        }
+        let summary = await uploadService.flushPendingAdds()
+        // Only claim a sync happened when one actually did. An offline device or
+        // a failing request gets reported by the upload worker instead.
+        guard isLargeBatch, summary.didUploadAnything, summary.isFullyDrained else { return }
+        self.appDelegate.eventLogger.info(
+          topic: "Add Songs to Playlist",
+          message: "The Playlist \"\(playlistName)\" has been successfully synced to the server."
+        )
       }
     }
 
