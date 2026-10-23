@@ -84,6 +84,11 @@ extension PlaylistMO {
   /// means the playlist is implicitly at the root, unordered.
   @NSManaged
   public var folderPlacements: NSSet?
+  /// Song adds the user made into this playlist that have not reached the
+  /// server yet (AMP-28). Cascade-deleted with the playlist, so a playlist
+  /// that goes away can never leave work queued against it.
+  @NSManaged
+  public var pendingSongAdds: NSSet?
 
   static let relationshipKeyPathsForPrefetching = [
     #keyPath(PlaylistMO.artworkItems),

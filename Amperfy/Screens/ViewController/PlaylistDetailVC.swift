@@ -108,16 +108,17 @@ class PlaylistDetailVC: SingleSnapshotFetchedResultsTableViewController<Playlist
   override func createDiffableDataSource() -> BasicUITableViewDiffableDataSource {
     let source =
       PlaylistDetailDiffableDataSource(tableView: tableView) { tableView, indexPath, objectID -> UITableViewCell? in
-        guard let object = try? self.appDelegate.storage.main.context
-          .existingObject(with: objectID),
-          let playlistItemMO = object as? PlaylistItemMO
-        else {
+        // AMP-28: resolve by position when the snapshot's identity has gone
+        // stale, rather than rendering a bare (visibly empty) cell.
+        guard let playlistItem = PlaylistItemCellResolver.resolvePlaylistItem(
+          forObjectID: objectID,
+          in: self.appDelegate.storage.main.library,
+          context: self.appDelegate.storage.main.context,
+          fetchedResultsController: self.fetchedResultsController,
+          indexPath: indexPath
+        ) else {
           return UITableViewCell()
         }
-        let playlistItem = PlaylistItem(
-          library: self.appDelegate.storage.main.library,
-          managedObject: playlistItemMO
-        )
         return self.createCell(tableView, forRowAt: indexPath, playlistItem: playlistItem)
       }
     source.playlist = playlist

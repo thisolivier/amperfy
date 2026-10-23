@@ -189,7 +189,22 @@ class SingleSnapshotFetchedResultsTableViewController<ResultType>:
         snapshot as NSDiffableDataSourceSnapshot<Int, NSManagedObjectID>,
         animatingDifferences: false
       )
-      self.snapshotDidChange?()
+
+      // AMP-28: deferred by one main-actor hop, deliberately.
+      //
+      // This callback runs inside `processPendingChanges`, which Core Data
+      // calls at the START of `save()` — so anything it reads sees the context
+      // mid-save, before `willSave` has brought denormalised attributes into
+      // step. Subscribers are header refreshes, which read exactly such
+      // attributes (`songCount`), so a synchronous call rendered values one
+      // save stale. The counts are now also maintained eagerly at mutation
+      // time, which is the real fix; this makes the hook read settled state
+      // regardless, so the next denormalised field added to a header does not
+      // quietly reintroduce the bug.
+      let snapshotDidChange = self.snapshotDidChange
+      Task { @MainActor in
+        snapshotDidChange?()
+      }
     }
   }
 }

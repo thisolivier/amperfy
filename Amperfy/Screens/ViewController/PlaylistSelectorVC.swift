@@ -204,6 +204,18 @@ class PlaylistSelectorVC: PlaylistFolderBrowsingTableViewController {
   /// create-and-name the playlist on the server first (single awaited path that
   /// assigns the real id onto this same object), then push the songs, then file
   /// it into the folder using the now-assigned id.
+  ///
+  /// AMP-28 changed two things. The songs no longer go up through a bare
+  /// `syncUpload(playlistToAddSongs:)` — this was the last route still doing
+  /// fire-and-forget, so a failure here was the one remaining way to lose an
+  /// add silently; they are enqueued like every other add and the worker owns
+  /// retry, rollback and reporting. And the enqueue happens BEFORE the server
+  /// create rather than after: a pending row points at the playlist object, not
+  /// its (still empty) id, so it survives `createPlaylistRemote` parsing the
+  /// create response over this playlist and deleting the local items. The
+  /// reconciliation guard on `syncUpload(playlistToUpdateName:)` then restores
+  /// them, which is why the new playlist's song count is right immediately
+  /// instead of reading 0 until its detail screen is opened.
   private func createPlaylistAndAddPendingSongs(named name: String) {
     let library = appDelegate.storage.main.library
     let playlist = library.createPlaylist(account: account)
@@ -212,39 +224,50 @@ class PlaylistSelectorVC: PlaylistFolderBrowsingTableViewController {
 
     let songs = itemsToAdd.filterSongs()
     playlist.append(playables: songs)
-
-    guard appDelegate.storage.settings.user.isOnlineMode else {
-      // Offline: no server id will be assigned, and folders are server-backed,
-      // so we cannot reliably file until the playlist syncs. Reflect the local
-      // add now; the folder filing happens when it is next created online.
-      reloadContent()
-      return
-    }
+    let uploadService = appDelegate.playlistAddUploadService(for: account)
+    uploadService.enqueue(songs: songs, to: playlist)
+    // Show the real count straight away, online or not.
+    reloadContent()
 
     Task { @MainActor in
-      do {
-        let syncer = self.appDelegate.getMeta(self.account.info).librarySyncer
-        // Creates the playlist on the server and reconciles the assigned id
-        // onto this same object (via `validatePlaylistId`) before anything is
-        // keyed on the id.
-        try await syncer.syncUpload(playlistToUpdateName: playlist)
-        try await syncer.syncUpload(playlistToAddSongs: playlist, songs: songs)
-        // The playlist now carries its real server id — safe to file it.
-        if let parentFolderId = self.parentFolderId {
-          self.folderStore.addPlaylists([playlist.id], to: parentFolderId)
+      if self.appDelegate.storage.settings.user.isOnlineMode {
+        do {
+          let syncer = self.appDelegate.getMeta(self.account.info).librarySyncer
+          // Creates the playlist on the server and reconciles the assigned id
+          // onto this same object (via `validatePlaylistId`) before anything is
+          // keyed on the id.
+          try await syncer.syncUpload(playlistToUpdateName: playlist)
+          // The playlist now carries its real server id — safe to file it.
+          if let parentFolderId = self.parentFolderId {
+            self.folderStore.addPlaylists([playlist.id], to: parentFolderId)
+          }
+        } catch {
+          self.appDelegate.eventLogger.report(topic: "Playlist Create", error: error)
         }
-      } catch {
-        self.appDelegate.eventLogger.report(topic: "Playlist Create", error: error)
       }
+      // Runs in both modes. Offline it is a no-op that leaves the songs queued
+      // (they used to be dropped outright); online it pushes them now that the
+      // playlist exists on the server, and reconciles afterwards.
+      await uploadService.flushPendingAdds()
       self.reloadContent()
     }
   }
 
   // MARK: - Adding songs
 
-  /// Uploads the given playables to the playlist and appends them locally.
+  /// Appends the given playables locally, records them in the durable
+  /// pending-adds queue, and kicks the upload worker.
   /// When `showConfirmationAt` is provided, a transient checkmark is flashed on
-  /// that row so the user gets non-blocking feedback that the add succeeded.
+  /// that row so the user gets non-blocking feedback that the add was taken.
+  ///
+  /// AMP-28 changed three things here. The upload is no longer a
+  /// fire-and-forget `Task` whose only failure handling was a banner the
+  /// presented picker swallows; the offline early-return is gone, because
+  /// "offline" was being spent as "done" and the add was then erased by the
+  /// next fetch; and the enqueue happens in the same breath as the local
+  /// append, so what the user sees and what the device owes the server cannot
+  /// disagree. The worker owns everything after that — retry, rollback on a
+  /// permanent refusal, and a modal alert when it happens.
   private func addPendingSongs(
     to playlist: Playlist,
     playables: [AbstractPlayable],
@@ -254,19 +277,16 @@ class PlaylistSelectorVC: PlaylistFolderBrowsingTableViewController {
     guard !songs.isEmpty else { return }
 
     playlist.append(playables: songs)
+    let uploadService = appDelegate.playlistAddUploadService(for: account)
+    uploadService.enqueue(songs: songs, to: playlist)
+
     if let indexPath {
       flashAddedConfirmation(at: indexPath)
     }
 
-    guard appDelegate.storage.settings.user.isOnlineMode else { return }
-    Task { @MainActor in do {
-      try await self.appDelegate.getMeta(self.account.info).librarySyncer.syncUpload(
-        playlistToAddSongs: playlist,
-        songs: songs
-      )
-    } catch {
-      self.appDelegate.eventLogger.report(topic: "Playlist Add Songs", error: error)
-    }}
+    Task { @MainActor in
+      await uploadService.flushPendingAdds()
+    }
   }
 
   private func flashAddedConfirmation(at indexPath: IndexPath) {

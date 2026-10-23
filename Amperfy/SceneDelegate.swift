@@ -205,6 +205,16 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     os_log("sceneWillEnterForeground", log: self.log, type: .info)
     appDelegate.setForegroundState(true)
     resumePlaylistItemSyncIfNeeded()
+    retryPendingPlaylistSongAddsIfNeeded()
+  }
+
+  /// AMP-28: playlist song adds that have not reached the server are retried
+  /// every time the user comes back to the app. The queue is persistent, so
+  /// this picks up adds made offline, adds whose upload timed out, and adds
+  /// made before the app was killed. No-op when the queue is empty.
+  private func retryPendingPlaylistSongAddsIfNeeded() {
+    guard appDelegate.isNormalInteraction else { return }
+    appDelegate.flushPendingPlaylistSongAdds()
   }
 
   /// A playlist item sync that hit its watchdog, was cancelled, or was cut short

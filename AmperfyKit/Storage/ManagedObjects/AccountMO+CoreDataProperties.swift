@@ -66,6 +66,10 @@ extension AccountMO {
   public var playlistFolders: NSSet?
   @NSManaged
   public var playlistFolderPlacements: NSSet?
+  /// Playlist song adds this account has queued but not yet landed on the
+  /// server (AMP-28). See `PendingPlaylistSongAddStore`.
+  @NSManaged
+  public var pendingPlaylistSongAdds: NSSet?
 }
 
 // MARK: Generated accessors for artworks

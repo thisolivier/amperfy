@@ -109,13 +109,50 @@ extension LibrarySyncerProxy: LibrarySyncer {
     try await activeSyncer.syncDownPlaylistsWithoutSongs()
   }
 
+  /// The one choke point every per-playlist fetch goes through — including
+  /// `Playlist.fetchFromServer` — so it is where the AMP-28 reconciliation
+  /// guard belongs.
+  ///
+  /// `syncDown` is server-wins and positional: it rewrites `items` from the
+  /// response envelope and deletes whatever the server did not mention. A song
+  /// still queued for upload is precisely that, so the fetch would erase an add
+  /// the user can see. `defer` rather than a trailing call so a fetch that
+  /// throws part-way cannot leave the tail truncated either.
   @MainActor
   func syncDown(playlist: Playlist) async throws {
+    defer {
+      PendingPlaylistSongAddReconciler.reapplyPendingAdds(
+        to: playlist,
+        store: PendingPlaylistSongAddStore(library: storage.main.library)
+      )
+    }
     try await activeSyncer.syncDown(playlist: playlist)
   }
 
   @MainActor
+  /// The other method that can run the server-wins positional rewrite over a
+  /// playlist, so it carries the same AMP-28 reconciliation guard as
+  /// `syncDown(playlist:)`.
+  ///
+  /// It is not obvious from the name. For a playlist with no server id yet this
+  /// goes through `validatePlaylistId` → `createPlaylistRemote`, which parses
+  /// the **create** response with `SsPlaylistSongsParserDelegate` — and that
+  /// response describes a brand-new, empty playlist. The delegate's
+  /// "delete anything past the end of the server's list" branch therefore
+  /// deletes *every* local item. Creating a playlist with songs in it wiped the
+  /// songs locally while the upload went on to put them on the server, which is
+  /// why the new playlist showed 0 songs until its detail screen was opened.
+  ///
+  /// The pending-add rows point at the playlist OBJECT rather than its id —
+  /// chosen precisely for this case — so they survive the wipe and the guard
+  /// can put the items straight back.
   func syncUpload(playlistToUpdateName playlist: Playlist) async throws {
+    defer {
+      PendingPlaylistSongAddReconciler.reapplyPendingAdds(
+        to: playlist,
+        store: PendingPlaylistSongAddStore(library: storage.main.library)
+      )
+    }
     try await activeSyncer.syncUpload(playlistToUpdateName: playlist)
   }
 

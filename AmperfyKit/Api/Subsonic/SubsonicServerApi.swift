@@ -1039,6 +1039,33 @@ final class SubsonicServerApi: URLCleanser, Sendable {
           continuation.resume(throwing: notFoundError)
           return
         }
+        // AMP-28: the status code is consulted BEFORE the body.
+        //
+        // This used to accept `response.data` first, so any non-2xx reply that
+        // happened to carry a body — a 500 with an HTML error page, a 403 from
+        // a reverse proxy — parsed as a successful (and usually empty) result.
+        // For a playlist-add upload that reads as "the server took it", which
+        // is exactly the silent loss AMP-28 is about. 2xx with a body stays the
+        // fast path; anything else now throws even when a body is present.
+        let httpStatusCode = response.response?.statusCode
+        if let httpStatusCode, !(200 ... 299).contains(httpStatusCode) {
+          let cleanedURL = self.cleanse(url: response.request?.url)
+          os_log(
+            "API HTTP %i: %s",
+            log: self.log,
+            type: .error,
+            httpStatusCode,
+            cleanedURL.description
+          )
+          continuation.resume(throwing: ResponseError(
+            type: .api,
+            statusCode: httpStatusCode,
+            message: "HTTP \(httpStatusCode)",
+            cleansedURL: cleanedURL,
+            data: response.data
+          ))
+          return
+        }
         if let data = response.data {
           continuation.resume(returning: APIDataResponse(data: data, url: url))
           return

@@ -71,6 +71,9 @@ public class LibraryStorage: PlayableFileCachable {
     Download.typeName,
     ScrobbleEntry.typeName,
     SearchHistoryItem.typeName,
+    // Batch-deleted explicitly rather than left to the Playlist cascade:
+    // `clearStorage` uses NSBatchDeleteRequest, which bypasses delete rules.
+    PendingPlaylistSongAdd.typeName,
     // Accounts are not going to get deleted
   ]
   private let log = OSLog(subsystem: "Amperfy", category: "LibraryStorage")
@@ -631,6 +634,58 @@ public class LibraryStorage: PlayableFileCachable {
 
   func deleteScrobbleEntry(_ scrobbleEntry: ScrobbleEntry) {
     context.delete(scrobbleEntry.managedObject)
+  }
+
+  // MARK: PendingPlaylistSongAdds (AMP-28)
+
+  public func createPendingPlaylistSongAdd(account: Account) -> PendingPlaylistSongAdd {
+    let pendingAddMO = PendingPlaylistSongAddMO(context: context)
+    pendingAddMO.account = account.managedObject
+    return PendingPlaylistSongAdd(library: self, managedObject: pendingAddMO)
+  }
+
+  public func deletePendingPlaylistSongAdd(_ pendingAdd: PendingPlaylistSongAdd) {
+    context.delete(pendingAdd.managedObject)
+  }
+
+  /// Every queued add for `account`, oldest first, so songs reach the server
+  /// in the order the user tapped them.
+  public func getPendingPlaylistSongAdds(for account: Account) -> [PendingPlaylistSongAdd] {
+    let fetchRequest = PendingPlaylistSongAddMO.fetchRequest()
+    fetchRequest.sortDescriptors = [
+      NSSortDescriptor(key: #keyPath(PendingPlaylistSongAddMO.createdAt), ascending: true),
+    ]
+    fetchRequest.predicate = getFetchPredicate(forAccount: account)
+    let pendingAddMOs = try? context.fetch(fetchRequest)
+    return pendingAddMOs?.compactMap { PendingPlaylistSongAdd(library: self, managedObject: $0) }
+      ?? [PendingPlaylistSongAdd]()
+  }
+
+  /// Every queued add for one playlist, oldest first.
+  public func getPendingPlaylistSongAdds(for playlist: Playlist) -> [PendingPlaylistSongAdd] {
+    let fetchRequest = PendingPlaylistSongAddMO.fetchRequest()
+    fetchRequest.sortDescriptors = [
+      NSSortDescriptor(key: #keyPath(PendingPlaylistSongAddMO.createdAt), ascending: true),
+    ]
+    fetchRequest.predicate = NSPredicate(
+      format: "%K == %@",
+      #keyPath(PendingPlaylistSongAddMO.playlist),
+      playlist.managedObject.objectID
+    )
+    let pendingAddMOs = try? context.fetch(fetchRequest)
+    return pendingAddMOs?.compactMap { PendingPlaylistSongAdd(library: self, managedObject: $0) }
+      ?? [PendingPlaylistSongAdd]()
+  }
+
+  /// Every queued add on the device, regardless of account, oldest first.
+  public func getAllPendingPlaylistSongAdds() -> [PendingPlaylistSongAdd] {
+    let fetchRequest = PendingPlaylistSongAddMO.fetchRequest()
+    fetchRequest.sortDescriptors = [
+      NSSortDescriptor(key: #keyPath(PendingPlaylistSongAddMO.createdAt), ascending: true),
+    ]
+    let pendingAddMOs = try? context.fetch(fetchRequest)
+    return pendingAddMOs?.compactMap { PendingPlaylistSongAdd(library: self, managedObject: $0) }
+      ?? [PendingPlaylistSongAdd]()
   }
 
   func createMusicFolder(account: Account) -> MusicFolder {
@@ -3169,8 +3224,51 @@ public class LibraryStorage: PlayableFileCachable {
     }
   }
 
+  /// Saves pending changes, having first given every newly inserted object a
+  /// PERMANENT object ID.
+  ///
+  /// The ordering is load-bearing and it is what cures the blank-rows bug.
+  /// Every list screen is an `NSFetchedResultsController` feeding a
+  /// `UITableViewDiffableDataSource<Int, NSManagedObjectID>` — the snapshot's
+  /// item identity *is* the object ID, and each cell provider resolves it back
+  /// with `context.existingObject(with:)`.
+  ///
+  /// Core Data assigns permanent IDs during `save()`, but `save()` opens by
+  /// calling `processPendingChanges`, which posts `objectsDidChange` — and that
+  /// is precisely the notification the FRC reacts to. So the FRC was handed the
+  /// inserts while their IDs were still *temporary*, published a snapshot keyed
+  /// on them, and a moment later Core Data swapped those IDs for permanent
+  /// ones. Every new row's identity was then dead: `existingObject(with:)`
+  /// threw, and the cell providers fell back to a bare `UITableViewCell()` —
+  /// a row with separators and no title, artist or artwork. It healed only on
+  /// navigating away, because a fresh fetch produced permanent IDs.
+  ///
+  /// `obtainPermanentIDs` before the save closes that window: the FRC never
+  /// sees an identity that is about to change. This is the single fix for the
+  /// whole symptom family (blank rows after an add, list counts a step behind,
+  /// a header stuck on a pre-rollback count) across all twelve snapshot-backed
+  /// screens, which is why it lives here and not in one view controller.
+  ///
+  /// Cost is negligible: `save()` does this same work a moment later anyway,
+  /// in one batched round-trip for the inserted objects only.
   public func saveContext() {
     if context.hasChanges {
+      let insertedObjects = Array(context.insertedObjects)
+      if !insertedObjects.isEmpty {
+        do {
+          try context.obtainPermanentIDs(for: insertedObjects)
+        } catch {
+          // Non-fatal: the save below still works and still assigns IDs. The
+          // only loss is that this batch's rows may render blank until the
+          // next fetch — the pre-fix behaviour, not a regression.
+          os_log(
+            "CoreData could not pre-assign permanent IDs: %s",
+            log: log,
+            type: .error,
+            (error as NSError).localizedDescription
+          )
+        }
+      }
       do {
         try context.save()
       } catch {

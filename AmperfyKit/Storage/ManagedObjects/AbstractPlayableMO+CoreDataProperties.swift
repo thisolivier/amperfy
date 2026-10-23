@@ -72,6 +72,9 @@ extension AbstractPlayableMO {
   public var playlistItems: [PlaylistItemMO]
   @NSManaged
   public var scrobbleEntries: NSOrderedSet?
+  /// Queued-but-not-yet-uploaded playlist adds naming this playable (AMP-28).
+  @NSManaged
+  public var pendingPlaylistSongAdds: NSSet?
 }
 
 // MARK: Generated accessors for playlistItems
